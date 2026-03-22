@@ -1,0 +1,223 @@
+name: cv-matching
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: cvm-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-admin123}
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet -u $$MONGO_INITDB_ROOT_USERNAME -p $$MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --eval \"db.adminCommand('ping').ok\" | grep 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - cvm_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: cvm-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - cvm_net
+
+  qdrant:
+    image: qdrant/qdrant:v1.17.0
+    container_name: cvm-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/6333'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - cvm_net
+
+  gateway-backend:
+    image: node:20-alpine
+    container_name: cvm-gateway-backend
+    working_dir: /workspace
+    command: ["sh", "-c", "echo 'apps/backend is scaffolded. Replace with real Dockerfile/command.'; tail -f /dev/null"]
+    volumes:
+      - ./apps/backend:/workspace
+    environment:
+      NODE_ENV: development
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongo:27017
+      REDIS_URL: redis://redis:6379
+      QDRANT_URL: http://qdrant:6333
+      EMBEDDING_SERVICE_URL: http://worker-embedding-sbert:8010
+    ports:
+      - "3001:3001"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      worker-embedding-sbert:
+        condition: service_healthy
+    networks:
+      - cvm_net
+    profiles:
+      - app
+
+  frontend:
+    image: node:20-alpine
+    container_name: cvm-frontend
+    working_dir: /workspace
+    command: ["sh", "-c", "echo 'apps/frontend is scaffolded. Replace with real Dockerfile/command.'; tail -f /dev/null"]
+    volumes:
+      - ./apps/frontend:/workspace
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
+      INTERNAL_API_BASE_URL: http://gateway-backend:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gateway-backend
+    networks:
+      - cvm_net
+    profiles:
+      - app
+
+  worker-parsing:
+    image: python:3.11-slim
+    container_name: cvm-worker-parsing
+    working_dir: /workspace
+    command: ["sh", "-c", "echo 'workers/parsing is scaffolded. Replace with parser worker startup.'; tail -f /dev/null"]
+    volumes:
+      - ./workers/parsing:/workspace
+    environment:
+      REDIS_URL: redis://redis:6379
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongo:27017
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    networks:
+      - cvm_net
+    profiles:
+      - workers
+
+  worker-scoring:
+    image: python:3.11-slim
+    container_name: cvm-worker-scoring
+    working_dir: /workspace
+    command: ["sh", "-c", "echo 'workers/scoring is scaffolded. Replace with scoring worker startup.'; tail -f /dev/null"]
+    volumes:
+      - ./workers/scoring:/workspace
+    environment:
+      REDIS_URL: redis://redis:6379
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongo:27017
+      QDRANT_URL: http://qdrant:6333
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    networks:
+      - cvm_net
+    profiles:
+      - workers
+
+  worker-notification:
+    image: python:3.11-slim
+    container_name: cvm-worker-notification
+    working_dir: /workspace
+    command: ["sh", "-c", "echo 'workers/notification is scaffolded. Replace with notification worker startup.'; tail -f /dev/null"]
+    volumes:
+      - ./workers/notification:/workspace
+    environment:
+      REDIS_URL: redis://redis:6379
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongo:27017
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    networks:
+      - cvm_net
+    profiles:
+      - workers
+
+  worker-embedding-sbert:
+    build:
+      context: ./workers/embedding-sbert
+    container_name: cvm-worker-embedding-sbert
+    environment:
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "8010:8010"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8010/health', timeout=2)\"",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - cvm_net
+    profiles:
+      - app
+      - workers
+
+  upstream-ai-core:
+    build:
+      context: ./upstream/resume-matcher/apps/backend
+    container_name: cvm-upstream-ai-core
+    environment:
+      ENVIRONMENT: development
+      QDRANT_URL: http://qdrant:6333
+    ports:
+      - "8000:8000"
+    depends_on:
+      - qdrant
+    networks:
+      - cvm_net
+    profiles:
+      - upstream
+
+volumes:
+  mongo_data:
+  redis_data:
+  qdrant_data:
+
+networks:
+  cvm_net:
+    driver: bridge

@@ -1,0 +1,91 @@
+name: Backend Integration
+
+on:
+  push:
+    paths:
+      - "apps/backend/**"
+      - "workers/embedding-sbert/**"
+      - "docker-compose.yml"
+      - ".github/workflows/backend-integration.yml"
+  pull_request:
+    paths:
+      - "apps/backend/**"
+      - "workers/embedding-sbert/**"
+      - "docker-compose.yml"
+      - ".github/workflows/backend-integration.yml"
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: apps/backend
+        run: npm ci
+
+      - name: Start infra and embedding worker
+        run: docker compose --profile app up -d mongo redis qdrant worker-embedding-sbert
+
+      - name: Wait for healthy services
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..90}; do
+            out=$(docker compose ps --format json)
+            mongo_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-mongo"))[0].Health // ""')
+            redis_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-redis"))[0].Health // ""')
+            qdrant_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-qdrant"))[0].Health // ""')
+            emb_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-worker-embedding-sbert"))[0].Health // ""')
+
+            if [[ "$mongo_ok" == "healthy" && "$redis_ok" == "healthy" && "$qdrant_ok" == "healthy" && "$emb_ok" == "healthy" ]]; then
+              echo "All services are healthy"
+              exit 0
+            fi
+
+            sleep 2
+          done
+
+          echo "Services did not become healthy in time"
+          docker compose ps
+          docker compose logs --tail 100
+          exit 1
+
+      - name: Bootstrap Qdrant
+        working-directory: apps/backend
+        env:
+          MONGO_URI: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
+          EMBEDDING_SERVICE_URL: http://127.0.0.1:8010
+        run: npm run bootstrap:qdrant
+
+      - name: Seed demo data
+        working-directory: apps/backend
+        env:
+          MONGO_URI: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
+          EMBEDDING_SERVICE_URL: http://127.0.0.1:8010
+        run: npm run seed:demo
+
+      - name: Run integration tests
+        working-directory: apps/backend
+        env:
+          RUN_INTEGRATION_TESTS: "1"
+          MONGO_URI: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
+          EMBEDDING_SERVICE_URL: http://127.0.0.1:8010
+        run: npm run test:integration
+
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose logs --tail 200
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
