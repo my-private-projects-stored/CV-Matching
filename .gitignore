@@ -1,0 +1,64 @@
+# ----- Environment files -----
+.env
+.env.*
+!.env.example
+
+# ----- Logs and runtime files -----
+*.log
+*.out
+*.err
+*.pid
+*.pid.lock
+
+# ----- Node.js / JavaScript -----
+**/node_modules/
+**/.npm/
+**/.pnpm-store/
+**/.yarn/
+**/.next/
+**/dist/
+**/build/
+**/coverage/
+**/.turbo/
+**/.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ----- Python -----
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.ipynb_checkpoints/
+**/.venv/
+**/venv/
+
+# ----- Test and report artifacts -----
+**/.nyc_output/
+**/htmlcov/
+**/test-results/
+
+# ----- IDE / Editor -----
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+
+# ----- OS files -----
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ----- Temporary files -----
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# ----- Docker local overrides -----
+**/docker-compose.override.yml
