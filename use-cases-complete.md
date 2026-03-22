@@ -202,3 +202,153 @@ Phần này bổ sung các Use Case nền tảng (Common Web Features) để ho�
 1. Cần mô tả rõ công thức weighted fusion (tỷ trọng SBERT và TF-IDF/BM25) trong chương phương pháp nghiên cứu.
 2. Cần bổ sung tiêu chí đánh giá hệ thống: Precision@K, Recall@K, NDCG hoặc thời gian phản hồi trung bình.
 3. Cần làm rõ cơ chế fairness và giới hạn của mô hình AI để đảm bảo tính học thuật và đạo đức nghiên cứu.
+
+---
+
+## 9. Bổ sung Use Case theo feature set Resume Matcher gốc (UC-RM)
+
+Mục tiêu phần này là lấp khoảng trống giữa bộ Use Case NCKH hiện tại và các chức năng sản phẩm đã mô tả trong README và trang Features của dự án gốc.
+
+### UC-RM-01: Candidate quản lý Master Resume
+- **Brief Description:** Candidate tạo một hồ sơ resume gốc (master resume) để tái sử dụng khi tối ưu theo nhiều JD khác nhau.
+- **Primary Actor:** Candidate
+- **Pre-conditions:** Candidate đã đăng nhập và có quyền truy cập trình quản lý resume.
+- **Main Flow:**
+  1. Candidate tạo hoặc import resume gốc từ dữ liệu hiện có.
+  2. Hệ thống lưu phiên bản master resume kèm metadata chỉnh sửa.
+  3. Candidate cập nhật các section cơ bản (summary, experience, skills, projects).
+  4. Hệ thống lưu lịch sử phiên bản để phục vụ tái sử dụng.
+- **Post-conditions:** Master resume khả dụng để tailor theo từng JD.
+
+### UC-RM-02: Candidate tailor resume theo Job Description bằng AI
+- **Brief Description:** Candidate nhập JD mục tiêu và yêu cầu hệ thống AI đề xuất nội dung resume phù hợp.
+- **Primary Actor:** Candidate
+- **Pre-conditions:** Đã có master resume hợp lệ.
+- **Main Flow:**
+  1. Candidate dán JD vào giao diện tailoring.
+  2. Hệ thống trích xuất yêu cầu chính từ JD.
+  3. AI đối chiếu với master resume và sinh đề xuất nội dung tối ưu.
+  4. Candidate duyệt/chỉnh sửa đề xuất trước khi lưu.
+- **Post-conditions:** Tạo tailored resume cho JD cụ thể.
+
+### UC-RM-03: Candidate chỉnh sửa resume bằng Resume Builder (live preview)
+- **Brief Description:** Candidate chỉnh sửa nội dung resume trong trình builder và xem preview theo thời gian thực.
+- **Primary Actor:** Candidate
+- **Pre-conditions:** Tailored resume hoặc master resume đã tồn tại.
+- **Main Flow:**
+  1. Candidate mở Resume Builder.
+  2. Candidate chỉnh sửa nội dung từng section.
+  3. Hệ thống cập nhật preview ngay khi thay đổi.
+  4. Candidate lưu phiên bản chỉnh sửa.
+- **Post-conditions:** Resume được cập nhật với trải nghiệm WYSIWYG.
+
+### UC-RM-04: Candidate quản lý section nâng cao
+- **Brief Description:** Candidate thực hiện các thao tác nâng cao với section như đổi tên, sắp xếp, ẩn/hiện và thêm section tùy biến.
+- **Primary Actor:** Candidate
+- **Pre-conditions:** Resume đang mở trong builder.
+- **Main Flow:**
+  1. Candidate đổi tên section.
+  2. Candidate kéo-thả để đổi thứ tự section.
+  3. Candidate ẩn section khỏi PDF nhưng vẫn giữ dữ liệu chỉnh sửa.
+  4. Candidate thêm hoặc xóa section tùy biến.
+- **Post-conditions:** Cấu trúc resume linh hoạt theo mục tiêu ứng tuyển.
+
+### UC-RM-05: Candidate chọn template resume
+- **Brief Description:** Candidate chọn mẫu trình bày resume phù hợp với ngữ cảnh ứng tuyển.
+- **Primary Actor:** Candidate
+- **Pre-conditions:** Resume có dữ liệu tối thiểu để render.
+- **Main Flow:**
+  1. Candidate xem danh sách template.
+  2. Candidate chọn template mong muốn.
+  3. Hệ thống render preview theo template đã chọn.
+- **Post-conditions:** Resume sử dụng template phù hợp và nhất quán.
+
+### UC-RM-06: Candidate tinh chỉnh formatting controls
+- **Brief Description:** Candidate tùy chỉnh các thông số định dạng như khổ giấy, margin, spacing, typography, compact mode.
+- **Primary Actor:** Candidate
+- **Pre-conditions:** Resume đang mở trong builder.
+- **Main Flow:**
+  1. Candidate chọn khổ giấy (A4/US Letter).
+  2. Candidate điều chỉnh margin và spacing.
+  3. Candidate điều chỉnh typography và bật/tắt compact mode.
+  4. Hệ thống cập nhật preview ngay lập tức.
+- **Post-conditions:** Resume đạt chất lượng trình bày theo mong muốn.
+
+### UC-RM-07: Candidate xem JD Match View
+- **Brief Description:** Candidate xem đối chiếu side-by-side giữa JD và resume kèm keyword highlight và match percentage.
+- **Primary Actor:** Candidate
+- **Pre-conditions:** Đã có tailored resume hoặc kết quả matching tương ứng.
+- **Main Flow:**
+  1. Candidate mở màn hình JD Match View.
+  2. Hệ thống hiển thị JD ở một bên và resume ở bên còn lại.
+  3. Hệ thống tô sáng keyword match và hiển thị match percentage.
+- **Post-conditions:** Candidate đánh giá nhanh mức độ phù hợp trước khi nộp.
+
+### UC-RM-08: Candidate sử dụng Resume Enrichment
+- **Brief Description:** Hệ thống hỏi các câu hỏi mục tiêu để làm giàu nội dung resume và bổ sung bullet points mới.
+- **Primary Actor:** Candidate
+- **Pre-conditions:** Resume có nội dung cơ bản để AI phân tích.
+- **Main Flow:**
+  1. Candidate kích hoạt tính năng Enhance/Enrichment.
+  2. Hệ thống đặt bộ câu hỏi ngắn theo ngữ cảnh kinh nghiệm.
+  3. Candidate trả lời.
+  4. AI sinh bullet points bổ sung mà không ghi đè nội dung cũ.
+- **Post-conditions:** Resume giàu thông tin hơn và tăng khả năng khớp JD.
+
+### UC-RM-09: Candidate tạo Cover Letter và Email theo JD
+- **Brief Description:** Candidate tạo thư xin việc và email ứng tuyển dựa trên resume + JD mục tiêu.
+- **Primary Actor:** Candidate
+- **Pre-conditions:** Có JD và resume đủ dữ liệu đầu vào.
+- **Main Flow:**
+  1. Candidate chọn tạo Cover Letter hoặc Email.
+  2. Hệ thống sinh nội dung bằng AI.
+  3. Candidate chỉnh sửa và lưu.
+- **Post-conditions:** Có bộ tài liệu ứng tuyển đầy đủ.
+
+### UC-RM-10: Candidate xuất PDF (WYSIWYG)
+- **Brief Description:** Candidate xuất resume (và tài liệu liên quan) ra PDF theo đúng preview.
+- **Primary Actor:** Candidate
+- **Pre-conditions:** Resume đã hoàn tất chỉnh sửa.
+- **Main Flow:**
+  1. Candidate nhấn Export PDF.
+  2. Hệ thống render PDF từ phiên bản hiện tại.
+  3. Candidate tải file PDF về thiết bị.
+- **Post-conditions:** Candidate nhận được PDF ổn định định dạng để nộp hồ sơ.
+
+### UC-RM-11: Candidate cấu hình ngôn ngữ UI và ngôn ngữ nội dung AI
+- **Brief Description:** Candidate cấu hình ngôn ngữ giao diện và ngôn ngữ nội dung AI độc lập.
+- **Primary Actor:** Candidate
+- **Pre-conditions:** Hệ thống đã bật i18n và hỗ trợ nhiều ngôn ngữ.
+- **Main Flow:**
+  1. Candidate chọn ngôn ngữ UI.
+  2. Candidate chọn ngôn ngữ sinh nội dung AI.
+  3. Hệ thống áp dụng cấu hình cho toàn bộ workflow.
+- **Post-conditions:** Trải nghiệm đa ngôn ngữ đúng mục tiêu sử dụng.
+
+### UC-RM-12: User cấu hình chế độ privacy và AI provider
+- **Brief Description:** User chọn chạy local provider (ví dụ Ollama) hoặc cloud provider theo nhu cầu bảo mật/chi phí.
+- **Primary Actor:** Candidate, Recruiter/HR
+- **Pre-conditions:** Hệ thống hỗ trợ nhiều AI provider.
+- **Main Flow:**
+  1. User mở trang cài đặt AI provider.
+  2. User chọn local hoặc cloud provider.
+  3. User cấu hình endpoint/API key theo provider đã chọn.
+  4. Hệ thống kiểm tra kết nối và lưu cấu hình.
+- **Post-conditions:** Workflow AI hoạt động theo chính sách riêng tư mong muốn.
+
+## 10. Ma trận gợi ý liên kết UC-RM với thành phần kỹ thuật
+
+| Use Case | Thành phần kỹ thuật chính | Kết quả đầu ra |
+|---|---|---|
+| UC-RM-01 | Resume storage, versioning service, profile APIs | Master resume có phiên bản |
+| UC-RM-02 | LLM tailoring engine, JD parser, content rewrite APIs | Tailored resume theo JD |
+| UC-RM-03 | Next.js builder UI, state management, preview renderer | Trình sửa resume realtime |
+| UC-RM-04 | Section schema + drag/drop UI + visibility flags | Cấu trúc section linh hoạt |
+| UC-RM-05 | Template registry, template renderer | Resume theo template đã chọn |
+| UC-RM-06 | Print/layout config service + preview sync | Kiểm soát định dạng đầu ra |
+| UC-RM-07 | Matching explain API + keyword highlight renderer | Màn hình đối chiếu JD-Resume |
+| UC-RM-08 | Enrichment question flow + content expansion engine | Bullet points bổ sung có kiểm soát |
+| UC-RM-09 | LLM generation APIs cho cover letter/email | Bộ tài liệu ứng tuyển bổ sung |
+| UC-RM-10 | PDF generation pipeline (WYSIWYG) | File PDF sẵn sàng nộp |
+| UC-RM-11 | i18n framework + language preference storage | UI/content đa ngôn ngữ |
+| UC-RM-12 | Provider config, secret management, connectivity check | Chế độ AI local/cloud có kiểm soát |
