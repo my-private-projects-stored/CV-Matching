@@ -1,4 +1,4 @@
-# Feature Gap Analysis
+﻿# Feature Gap Analysis
 ## Smart CV Matching vs Resume Matcher Original Features
 
 Nguon doi chieu:
@@ -11,7 +11,7 @@ Nguon doi chieu:
 
 | # | Feature tu du an goc | Co trong use-cases-complete.md | Muc do bao phu | Ghi chu |
 |---|---|---|---|---|
-| 1 | JD creation va AI scoring pipeline | Co (UC-01..UC-05) | Day du | Dat muc tieu NCKH matching |
+| 1 | JD creation va AI scoring pipeline | Co (UC-CORE-01..UC-CORE-05) | Day du | Dat muc tieu NCKH matching |
 | 2 | Upload CV + parsing | Co (UC-02) | Day du | Da co flow loi/ngoai le |
 | 3 | Ranked dashboard | Co (UC-04) | Day du | Co filter/pagination |
 | 4 | Explainable feedback (matched/missing) | Co (UC-05) | Day du | Co de xuat cai thien CV |
@@ -21,7 +21,7 @@ Nguon doi chieu:
 | 8 | Section controls (rename/reorder/hide/custom) | Chua | Thieu | Chua co use case UX cho builder |
 | 9 | Resume templates (chon template) | Chua | Thieu | README + Features page de cap ro |
 | 10 | Formatting controls (page size/margins/spacing/typography/compact) | Chua | Thieu | Chua co UC ve dieu khien dinh dang |
-| 11 | PDF export WYSIWYG | Co mot phan (UC-Basic-12 la tai CV goc) | Thieu | Chua co UC xuat PDF resume da tailor |
+| 11 | PDF export WYSIWYG | Co mot phan (UC-BASIC-12 la tai CV goc) | Thieu | Chua co UC xuat PDF resume da tailor |
 | 12 | JD Match view side-by-side + keyword highlight + match % | Chua | Thieu | Can UC giao dien so sanh |
 | 13 | Resume enrichment (hoi dap va bo sung bullet) | Chua | Thieu | Chua co luong hoi dap nang cao profile |
 | 14 | Cover Letter generator | Chua | Thieu | README de cap ro |
@@ -56,3 +56,4 @@ Nguon doi chieu:
 2. UC-RM-01, UC-RM-04, UC-RM-05, UC-RM-06 (nhom nang cao chat luong builder).
 3. UC-RM-08, UC-RM-09 (nhom gia tang noi dung AI).
 4. UC-RM-11, UC-RM-12 (nhom van hanh quoc te va bao mat).
+
