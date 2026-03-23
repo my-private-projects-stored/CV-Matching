@@ -32,7 +32,7 @@
   - `workers/scoring`
   - `workers/notification`
 - Đã tạo đường dẫn adapter theo định hướng kiến trúc:
-  - `apps/backend/app/services/adapters`
+  - `apps/backend/src/infrastructure/qdrant`
 
 ### 4) Thiết lập docker-compose master tại root
 - Đã tạo file: `docker-compose.yml` tại root monorepo.
@@ -274,3 +274,922 @@
   - re-index model version,
   - integration test không skip.
 - Sẵn sàng chuyển sang giai đoạn phát triển nghiệp vụ cao hơn (queue production, fairness metrics, optimization ranking).
+
+### 18) Xác nhận sẵn sàng bắt đầu xây dựng Frontend/Backend
+- Đã kiểm tra nhanh trạng thái repository và các chỉ dấu sẵn sàng:
+  - `apps/backend/package.json`: **OK**.
+  - `apps/frontend/package.json`: **chưa có** (frontend root hiện chưa scaffold chạy độc lập).
+  - `upstream/resume-matcher/apps/frontend/package.json`: **OK**.
+- Kết luận:
+  - **Backend:** Có thể bắt đầu triển khai tính năng ngay.
+  - **Frontend:** Có thể bắt đầu ngay theo 1 trong 2 hướng:
+    1. scaffold frontend tại `apps/frontend` (khuyến nghị để bám kiến trúc monorepo hiện tại), hoặc
+    2. phát triển trực tiếp từ frontend upstream rồi đồng bộ về root sau.
+
+### 19) Thiết lập quy ước cập nhật tiến độ theo yêu cầu user
+- Đã ghi nhận yêu cầu: từ thời điểm này, mỗi task hoàn thành sẽ được cập nhật vào `task-completed.md`.
+- Quy ước áp dụng ngay:
+  - mỗi task có tiêu đề riêng,
+  - mô tả kết quả chính,
+  - trạng thái/kết luận ngắn gọn để theo dõi liên tục.
+
+### 20) Triển khai phương án lai cho Frontend (root-first)
+- Đã bắt đầu triển khai theo đúng phương án user chốt:
+  - không chỉnh trực tiếp trong upstream,
+  - dựng frontend chính ở `apps/frontend`,
+  - đồng bộ từ upstream theo hướng migrate dần.
+- Đã đồng bộ bộ nền tảng frontend từ `upstream/resume-matcher/apps/frontend` sang `apps/frontend`:
+  - file cấu hình: `package.json`, `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `postcss.config.mjs`, `vitest.config.ts`, `vitest.setup.ts`, `.env.sample`, `.gitignore`, `.prettierrc`.
+  - thư mục chính: `app`, `components`, `hooks`, `i18n`, `lib`, `messages`, `public`, `tests`.
+
+### 21) Xác minh frontend root chạy độc lập trong monorepo
+- Đã cài dependencies tại `apps/frontend` bằng `npm install` (thành công).
+- Đã chạy build kiểm chứng tại `apps/frontend`.
+- Đã xử lý lỗi tương thích Next.js:
+  - sửa `apps/frontend/next.config.ts`, loại bỏ key experimental không hợp lệ `turbopackUseSystemTlsCerts`.
+- Kết quả cuối cùng:
+  - `npm run build` **thành công**,
+  - các route chính đã được generate thành công (`/`, `/builder`, `/dashboard`, `/settings`, `/tailor`, và các route dynamic print/resume).
+
+### 22) Chuẩn hóa lớp cấu hình API frontend theo backend monorepo
+- Đã cập nhật `apps/frontend/next.config.ts`:
+  - đổi `BACKEND_ORIGIN` mặc định sang `http://127.0.0.1:3001`.
+- Đã refactor `apps/frontend/lib/api/client.ts` để khớp Express API:
+  - chuyển base path mặc định từ `/api/v1` sang `/api`,
+  - bổ sung hỗ trợ biến môi trường `NEXT_PUBLIC_API_BASE_URL` và `INTERNAL_API_BASE_URL`,
+  - giữ alias tương thích ngược `API_URL` cho code hiện có.
+- Đã cập nhật `apps/frontend/.env.sample` cho chuẩn monorepo:
+  - `NEXT_PUBLIC_API_BASE_URL=/`
+  - `INTERNAL_API_BASE_URL=http://127.0.0.1:3001`
+  - `BACKEND_ORIGIN=http://127.0.0.1:3001`
+
+### 23) Kiểm tra kết nối Frontend <-> Backend ở runtime
+- Đã khởi động hạ tầng phụ trợ bằng Docker Compose:
+  - `mongo`, `redis`, `qdrant`, `worker-embedding-sbert`.
+- Đã chạy backend monorepo ở local với env tương ứng (`MONGO_URI`, `QDRANT_URL`, `EMBEDDING_SERVICE_URL`).
+- Đã kiểm tra trực tiếp backend health:
+  - `http://127.0.0.1:3001/api/health` trả `{\"status\":\"ok\"}`.
+- Đã kiểm tra qua frontend proxy rewrite:
+  - `http://127.0.0.1:3000/api/health` trả `{\"status\":\"ok\"}`.
+
+### 24) Bắt đầu migrate cụm nền tảng Layout + i18n + Settings
+- Đã hoàn thiện migration baseline của cụm nền tảng tại `apps/frontend`:
+  - Layout root hoạt động,
+  - i18n config/messages/context hoạt động,
+  - Settings page compile và render được trong root frontend.
+- Đã bổ sung fallback migration trong `apps/frontend/lib/api/config.ts`:
+  - khi `/status` chưa có (404), tự fallback sang `/health` và trả về trạng thái hệ thống tối thiểu,
+  - giúp module Settings/System Status hoạt động trong giai đoạn backend đang migrate endpoint.
+- Đã chạy lại build sau migration:
+  - `npm run build` **thành công**.
+
+### 25) Tạo lớp adapter API cho Settings để map dần endpoint upstream sang backend monorepo
+- Đã triển khai adapter theo nguyên tắc:
+  - ưu tiên gọi endpoint backend thật (`/config/*`, `/status`),
+  - nếu backend chưa hỗ trợ (404/405/501) thì tự fallback về local adapter store để không làm vỡ UI Settings.
+- Đã cập nhật `apps/frontend/lib/api/config.ts`:
+  - thêm bộ helper lưu/đọc local (`localStorage`) cho các nhóm cấu hình: LLM, feature flags, language, prompts, API keys,
+  - map `testLlmConnection` fallback qua `/api/health`,
+  - chuẩn hóa `resetDatabase` fallback để reset local adapter state,
+  - giữ luồng lỗi chuẩn cho các status khác ngoài nhóm fallback.
+- Kết quả:
+  - Settings module có thể hoạt động ổn định trong giai đoạn backend monorepo chưa đầy đủ endpoint cấu hình,
+  - sẵn sàng cho bước kế tiếp: thay dần từng fallback bằng endpoint backend thật.
+- Đã verify sau thay đổi:
+  - `npm run build` tại `apps/frontend` **thành công**.
+
+### 26) Triển khai endpoint backend thật cho Status + Language + Feature Flags
+- Đã bổ sung model cấu hình hệ thống:
+  - `apps/backend/src/models/SystemConfig.js`
+- Đã bổ sung service cấu hình và trạng thái:
+  - `apps/backend/src/services/config.service.js`
+  - Chức năng:
+    - đọc/ghi `feature config` (`enable_cover_letter`, `enable_outreach_message`),
+    - đọc/ghi `language config` (`ui_language`, `content_language`, `supported_languages`),
+    - trả `system status` động từ dữ liệu MongoDB (`/status`).
+- Đã bổ sung controller + routes:
+  - `apps/backend/src/controllers/config.controller.js`
+  - `apps/backend/src/routes/config.routes.js`
+  - wiring vào `apps/backend/src/routes/index.js`.
+- Endpoint mới đã hoạt động:
+  - `GET /api/status`
+  - `GET /api/config/language`
+  - `PUT /api/config/language`
+  - `GET /api/config/features`
+  - `PUT /api/config/features`
+- Đã kiểm thử read/write thực tế với backend đang chạy local:
+  - Language config cập nhật và đọc lại thành công,
+  - Feature flags cập nhật và đọc lại thành công,
+  - System status trả về đúng schema cho frontend Settings.
+
+### 27) Triển khai endpoint backend thật cho LLM Config + LLM Test
+- Đã mở rộng service cấu hình tại:
+  - `apps/backend/src/services/config.service.js`
+  - Bổ sung logic:
+    - lưu/đọc cấu hình LLM (`provider`, `model`, `api_base`, `api_key`),
+    - masking `api_key` khi trả về frontend,
+    - kiểm tra hợp lệ provider,
+    - test cấu hình LLM mức config-level (`/llm-test`) với mã lỗi chuẩn cho case thiếu API key.
+- Đã mở rộng controller/routes:
+  - `apps/backend/src/controllers/config.controller.js`
+  - `apps/backend/src/routes/config.routes.js`
+- Endpoint mới đã hoạt động:
+  - `GET /api/config/llm-api-key`
+  - `PUT /api/config/llm-api-key`
+  - `POST /api/config/llm-test`
+- Đã đồng bộ trạng thái hệ thống:
+  - `GET /api/status` nay phản ánh `llm_configured` và `llm_healthy` dựa trên cấu hình LLM đã lưu.
+- Kết quả kiểm thử thực tế:
+  - PUT lưu config thành công và GET trả về key dạng mask (`sk-t****90`),
+  - `/llm-test` trả `healthy:false` + `error_code: api_key_required` khi thiếu key,
+  - `/llm-test` trả `healthy:true` cho cấu hình hợp lệ,
+  - `/status` phản ánh đúng `llm_configured:true` sau khi lưu cấu hình.
+
+### 28) Triển khai endpoint backend thật cho Prompts + API Keys + Reset
+- Đã mở rộng backend config module để hoàn thiện contract Settings còn lại:
+  - `apps/backend/src/services/config.service.js`
+  - `apps/backend/src/controllers/config.controller.js`
+  - `apps/backend/src/routes/config.routes.js`
+- Endpoint mới đã hoạt động:
+  - `GET /api/config/prompts`
+  - `PUT /api/config/prompts`
+  - `GET /api/config/api-keys`
+  - `POST /api/config/api-keys`
+  - `DELETE /api/config/api-keys/:provider`
+  - `DELETE /api/config/api-keys?confirm=CLEAR_ALL_KEYS`
+  - `POST /api/config/reset` (body `{ confirm: "RESET_ALL_DATA" }`)
+- Hành vi chính đã triển khai:
+  - prompt config có validate `default_prompt_id`,
+  - API keys được mask khi trả về, hỗ trợ update theo từng provider,
+  - reset xóa dữ liệu nghiệp vụ (Job/Resume/Application) và reset cấu hình hệ thống liên quan.
+- Kết quả kiểm thử thực tế:
+  - prompts GET/PUT/GET chạy đúng,
+  - api-keys GET/POST/DELETE-provider/DELETE-all chạy đúng,
+  - reset chạy thành công và `/status` phản ánh dữ liệu đã về trạng thái sạch.
+
+### 29) Gỡ fallback frontend Settings và chuyển sang backend-first hoàn toàn
+- Đã cập nhật `apps/frontend/lib/api/config.ts`:
+  - loại bỏ toàn bộ local fallback adapter (`localStorage`) cho các nhóm:
+    - `status`,
+    - `llm-api-key`/`llm-test`,
+    - `features`,
+    - `language`,
+    - `prompts`,
+    - `api-keys`,
+    - `reset`.
+  - giữ luồng lỗi chuẩn: endpoint nào lỗi sẽ trả thông báo lỗi backend tương ứng.
+- Đã build lại frontend sau khi gỡ fallback:
+  - `npm run build` tại `apps/frontend` **thành công**.
+- Đã kiểm tra runtime backend-first:
+  - các endpoint Settings chính đều trả `200` khi gọi trực tiếp,
+  - `POST /api/config/llm-test` trả `200` với payload mẫu,
+  - xác nhận frontend giờ có thể chạy theo mô hình backend-first đúng kiến trúc monorepo.
+
+### 30) Kiểm tra E2E luồng Settings qua API thật + bổ sung test tự động
+- Đã thực hiện kiểm tra E2E theo backend-first cho Settings API (không dùng fallback local):
+  - xác minh các endpoint config/status hoạt động đồng bộ khi gọi runtime.
+- Đã bổ sung test integration tự động mới cho backend:
+  - `apps/backend/tests/integration/config-endpoints.test.mjs`
+  - Bao phủ các luồng:
+    - `status`,
+    - `language` GET/PUT,
+    - `features` GET/PUT,
+    - `prompts` GET/PUT,
+    - `llm-api-key` GET/PUT,
+    - `llm-test`,
+    - `api-keys` GET/POST/DELETE-provider/DELETE-all,
+    - `reset` (invalid confirm + valid confirm) và kiểm tra dữ liệu sau reset.
+- Đã chạy toàn bộ integration tests:
+  - lệnh: `npm run test:integration` (với `RUN_INTEGRATION_TESTS=1`)
+  - kết quả: **2/2 tests PASS**.
+
+### 31) Bổ sung test frontend cho Settings API client (`lib/api/config.ts`)
+- Đã thêm test unit mới cho frontend API layer:
+  - `apps/frontend/tests/config-api.test.ts`
+- Phạm vi kiểm thử đã bao phủ:
+  - `fetchSystemStatus`: gọi đúng endpoint `/status` và parse payload,
+  - `updateLlmConfig`: gửi đúng method/body và nổi lỗi `detail` từ backend,
+  - `fetchLlmConfig`: parse dữ liệu cấu hình trả về,
+  - `fetchApiKeyStatus`: parse danh sách trạng thái provider,
+  - `deleteApiKey`: xử lý đúng `204 No Content`,
+  - `clearAllApiKeys` và `resetDatabase`: gọi đúng endpoint/params/body theo contract.
+- Đã chạy kiểm thử trực tiếp file mới:
+  - lệnh: `npm run test -- tests/config-api.test.ts`
+  - kết quả: **1 test file PASS, 6/6 tests PASS**.
+
+### 32) Chạy full frontend test suite và ổn định hóa test `DiffPreviewModal`
+- Đã chạy toàn bộ frontend tests tại `apps/frontend`:
+  - lệnh: `npm run test`
+  - lần đầu phát hiện 1 test fail cũ ở `tests/diff-preview-modal.test.tsx` do selector icon theo class không ổn định theo phiên bản `lucide-react`.
+- Đã fix theo hướng ổn định (không phụ thuộc class generated):
+  - cập nhật component `apps/frontend/components/tailor/diff-preview-modal.tsx` thêm `data-testid` cho 2 icon cảnh báo:
+    - `high-risk-warning-banner-icon`
+    - `high-risk-change-icon`
+  - cập nhật test `apps/frontend/tests/diff-preview-modal.test.tsx` để assert theo `data-testid` thay vì query class `.lucide-triangle-alert`.
+- Đã chạy lại full suite sau khi sửa:
+  - kết quả: **4 test files PASS, 71/71 tests PASS**.
+
+### 33) Mở rộng test coverage cho frontend API modules `resume` và `enrichment`
+- Đã bổ sung 2 test files mới:
+  - `apps/frontend/tests/resume-api.test.ts`
+  - `apps/frontend/tests/enrichment-api.test.ts`
+- Nội dung coverage chính đã thêm:
+  - `resume-api`:
+    - verify request payload cho `uploadJobDescriptions`,
+    - verify error mapping cho `improveResume`, `deleteResume`,
+    - verify endpoint encode + parse response cho `fetchResume`, `fetchJobDescription`,
+    - verify URL generation cho `getResumePdfUrl` (default + custom settings/locale).
+  - `enrichment-api`:
+    - verify endpoint/method/credentials cho `analyzeResume`,
+    - verify error mapping với backend `detail`,
+    - verify payload mapping cho `generateEnhancements`, `applyEnhancements`, `applyRegeneratedItems`,
+    - verify generic error fallback cho `regenerateItems` khi backend không trả JSON detail.
+- Đã chạy test theo file mới:
+  - lệnh: `npm run test -- tests/resume-api.test.ts tests/enrichment-api.test.ts`
+  - kết quả: **2 test files PASS, 12/12 tests PASS**.
+- Đã chạy lại full frontend suite sau khi thêm coverage:
+  - lệnh: `npm run test`
+  - kết quả: **6 test files PASS, 83/83 tests PASS**.
+
+### 34) Sửa lỗi TypeScript trong test `resume-api.test.ts` do sai union type của `TemplateSettings`
+- Nguyên nhân:
+  - fixture custom settings trong test dùng giá trị không hợp lệ với type strict:
+    - `SpacingLevel` chỉ nhận `1..5`,
+    - `headerFont/bodyFont` chỉ nhận `serif | sans-serif | mono`,
+    - `accentColor` chỉ nhận `blue | green | orange | red`.
+- Đã sửa tại `apps/frontend/tests/resume-api.test.ts`:
+  - `spacing`: đổi sang giá trị hợp lệ (`section: 4`, `item: 3`, `lineHeight: 2`),
+  - `fontSize`: đổi sang level hợp lệ (`base: 4`, `headerScale: 2`),
+  - `headerFont/bodyFont`: đổi sang `serif` và `sans-serif`,
+  - `accentColor`: đổi sang `blue`,
+  - cập nhật assertion URL tương ứng (`fontSize=4`).
+- Đã xác minh sau sửa:
+  - `npm run test -- tests/resume-api.test.ts`: **PASS (6/6)**,
+  - `npx tsc --noEmit`: **TS_EXIT=0**.
+
+### 35) Bổ sung test cho `lib/api/client.ts` (base URL, endpoint normalization, timeout)
+- Đã thêm test file mới:
+  - `apps/frontend/tests/client-api.test.ts`
+- Coverage đã triển khai:
+  - xác minh default config: `API_BASE_URL='/'`, `API_BASE='/api'`, `getUploadUrl()` đúng,
+  - xác minh normalize env `NEXT_PUBLIC_API_BASE_URL` và build `API_BASE`,
+  - xác minh `apiFetch`:
+    - normalize endpoint tương đối (`health` -> `/api/health`),
+    - giữ nguyên absolute URL,
+    - không double-prefix khi endpoint đã bắt đầu bằng `/api/`,
+  - xác minh helper methods `apiPost/apiPatch/apiPut/apiDelete` set đúng method/headers/body,
+  - xác minh timeout/abort hoạt động khi request vượt ngưỡng timeout.
+- Đã sửa ổn định test:
+  - tránh set env thành chuỗi `"undefined"` bằng cách dùng `delete process.env.*`,
+  - xử lý assertion timeout để không tạo unhandled rejection.
+- Kết quả xác minh:
+  - `npm run test -- tests/client-api.test.ts`: **PASS (6/6)**,
+  - `npm run test` toàn bộ frontend: **7 test files PASS, 89/89 tests PASS**.
+
+### 36) Mở rộng coverage SSR cho `lib/api/client.ts` (nhánh `INTERNAL_API_BASE_URL`)
+- Đã bổ sung test mới trong `apps/frontend/tests/client-api.test.ts`:
+  - xác minh khi runtime không có `window` (server-side) và `NEXT_PUBLIC_API_BASE_URL='/'`,
+  - `API_BASE` được resolve đúng từ `INTERNAL_API_BASE_URL` (ví dụ `http://gateway-backend:3001/api`).
+- Đã cải thiện độ ổn định test globals:
+  - thêm `vi.unstubAllGlobals()` trong `afterEach` để cleanup các `stubGlobal` giữa các test.
+- Kết quả xác minh:
+  - `npm run test -- tests/client-api.test.ts`: **PASS (7/7)**,
+  - `npm run test` toàn bộ frontend: **7 test files PASS, 90/90 tests PASS**.
+
+### 37) Chốt quality gate frontend trong CI (lint + typecheck + test + build)
+- Đã tạo workflow mới:
+  - `.github/workflows/frontend-quality.yml`
+- Quality gate đã được bật cho `apps/frontend` với các bước bắt buộc:
+  - `npm ci`
+  - `npm run lint`
+  - `npm run typecheck`
+  - `npm run test:coverage`
+  - `npm run build`
+- Đã cập nhật script frontend tương ứng tại `apps/frontend/package.json`:
+  - thêm `typecheck`
+  - thêm `test:coverage`
+
+### 38) Đặt ngưỡng coverage tối thiểu cho frontend test suite
+- Đã cập nhật `apps/frontend/vitest.config.ts`:
+  - bật coverage provider `v8`,
+  - reporter `text` + `lcov`,
+  - threshold tối thiểu:
+    - `lines: 50`
+    - `functions: 45`
+    - `statements: 50`
+    - `branches: 45`
+- Đã bảo đảm dependency coverage trong frontend package:
+  - `@vitest/coverage-v8`.
+
+### 39) Mở rộng negative tests cho Reset và API Keys (backend integration)
+- Đã cập nhật test `apps/backend/tests/integration/config-endpoints.test.mjs` với các nhánh lỗi bổ sung:
+  - `POST /config/api-keys` với provider không hợp lệ -> kỳ vọng `400`.
+  - `POST /config/api-keys` với key rỗng/khoảng trắng -> normalize thành chưa cấu hình.
+  - `DELETE /config/api-keys/:provider` với provider không hợp lệ -> kỳ vọng `400`.
+  - `DELETE /config/api-keys/:provider` với provider hợp lệ nhưng chưa cấu hình -> kỳ vọng `204`.
+  - `DELETE /config/api-keys` thiếu `confirm` -> kỳ vọng `400`.
+- Đã xác minh test integration backend chạy pass sau cập nhật:
+  - `npm run test:integration` (với `RUN_INTEGRATION_TESTS=1`) -> **PASS (2/2)**.
+
+### 40) Bổ sung xác minh build/runtime path ở CI backend
+- Đã cập nhật workflow `.github/workflows/backend-integration.yml`:
+  - thêm bước `Smoke runtime endpoints` sau integration test.
+  - workflow sẽ khởi chạy backend runtime (`npm run start`) trên CI,
+  - sau đó gọi smoke endpoints:
+    - `GET /api/health`
+    - `GET /api/status`
+- Mục tiêu đạt được:
+  - không chỉ kiểm thử logic, mà còn xác nhận đường chạy runtime/deploy path ở mức smoke trong CI.
+
+### 41) Triển khai feature-first vòng 1 theo Use Case: Job Board (UC-CORE-01 + UC-BASIC-06)
+- Đã mở rộng backend Job API để phục vụ luồng duyệt/lọc JD (không chỉ create/update/delete):
+  - cập nhật `apps/backend/src/services/job.service.js`:
+    - bổ sung normalize payload JD (tự sinh `cleanText` từ `title + description + requirements` khi thiếu),
+    - bổ sung `listJobs(query)` với filter theo `search/category/status/location` + pagination,
+    - bổ sung `getJobById(jobId)`.
+  - cập nhật `apps/backend/src/controllers/job.controller.js`:
+    - thêm `listJobsHandler`,
+    - thêm `getJobHandler`.
+  - cập nhật `apps/backend/src/routes/job.routes.js`:
+    - thêm `GET /api/jobs`,
+    - thêm `GET /api/jobs/:id`.
+- Đã triển khai frontend Job Board theo chế độ feature-first:
+  - thêm API client `apps/frontend/lib/api/jobs.ts` cho list/detail jobs,
+  - thêm trang `apps/frontend/app/(default)/jobs/page.tsx`:
+    - hiển thị danh sách JD,
+    - filter theo `search/category/status/location`,
+    - có pagination,
+    - có state loading/error/empty.
+  - cập nhật `apps/frontend/app/(default)/dashboard/page.tsx`:
+    - thêm card `Browse Jobs` để điều hướng nhanh sang `/jobs`.
+- Đã xác minh sau triển khai:
+  - frontend `npm run typecheck`: **PASS**,
+  - frontend `npm run lint`: **PASS**,
+  - frontend `npm run build`: **PASS** (đã generate route `/jobs`),
+  - backend `RUN_INTEGRATION_TESTS=1 npm run test:integration`: **PASS (2/2)**.
+
+### 42) Feature-first round 2 (UC-CORE-02): mở rộng Resume API contract cho upload/list/detail/retry
+- Đã triển khai backend contract parity cho luồng upload + dashboard resume status tại:
+  - `apps/backend/src/models/Resume.js`
+  - `apps/backend/src/services/resume.service.js`
+  - `apps/backend/src/controllers/resume.controller.js`
+  - `apps/backend/src/routes/resume.routes.js`
+- Endpoint mới/đã mở rộng:
+  - `POST /api/resumes/upload` (multipart `file`, tối đa 4MB, trả `resume_id`, `processing_status`, `is_master`, `request_id`)
+  - `GET /api/resumes?resume_id=...` (trả schema `raw_resume` + `processed_resume` theo contract frontend)
+  - `GET /api/resumes/list?include_master=true|false`
+  - `POST /api/resumes/:id/retry-processing`
+  - `GET /api/resumes/:id/job-description`
+  - `PATCH /api/resumes/:id/title`
+  - `PATCH /api/resumes/:id/cover-letter`
+  - `PATCH /api/resumes/:id/outreach-message`
+- Đã bổ sung dependency backend:
+  - `multer` (memory storage) để nhận multipart upload từ frontend.
+- Đã chuẩn hóa response shape để tương thích với `apps/frontend/lib/api/resume.ts`:
+  - có `request_id` và object `data` cho fetch/update resume,
+  - có `processing_status` cho list/upload/retry.
+- Đã verify sau thay đổi:
+  - backend `npm run test:integration`: **PASS (2/2)**.
+
+### 43) Feature-first round 2 (UC-CORE-02): bổ sung endpoint generate Cover Letter và Outreach
+- Đã mở rộng backend resume module để hỗ trợ on-demand content generation khớp contract frontend:
+  - `POST /api/resumes/:id/generate-cover-letter`
+  - `POST /api/resumes/:id/generate-outreach`
+- File đã cập nhật:
+  - `apps/backend/src/services/resume.service.js`
+    - thêm helper build nội dung từ dữ liệu resume/job context,
+    - lưu kết quả vào `coverLetter` / `outreachMessage` ngay trên resume record.
+  - `apps/backend/src/controllers/resume.controller.js`
+    - thêm `generateCoverLetterHandler`, `generateOutreachHandler`.
+  - `apps/backend/src/routes/resume.routes.js`
+    - wiring 2 endpoint generation mới.
+- Response đã khớp frontend API client (`apps/frontend/lib/api/resume.ts`):
+  - trả payload có `content` và `message`.
+- Đã verify sau thay đổi:
+  - backend `npm run test:integration`: **PASS (2/2)**.
+
+### 44) Feature-first parity theo use-cases + upstream: hoàn thiện Tailor flow (`/jobs/upload`, `/resumes/improve*`)
+- Đã triển khai đầy đủ endpoint backend còn thiếu cho luồng Tailor theo contract frontend và use-case:
+  - `POST /api/jobs/upload`
+  - `POST /api/resumes/improve/preview`
+  - `POST /api/resumes/improve/confirm`
+  - `POST /api/resumes/improve` (convenience endpoint)
+- File đã cập nhật:
+  - `apps/backend/src/controllers/job.controller.js`
+    - thêm `uploadJobDescriptionsHandler` nhận `job_descriptions[]`, validate input, tạo Job record và trả `job_id[]`.
+  - `apps/backend/src/routes/job.routes.js`
+    - wiring route `POST /upload`.
+  - `apps/backend/src/services/resume.service.js`
+    - thêm logic preview/confirm/improve cho tailoring:
+      - chuẩn hóa `resume_preview` từ `parsedData`,
+      - trích từ khóa JD và gợi ý improvements,
+      - sinh `diff_summary` + `detailed_changes` tương thích UI modal,
+      - tạo tailored resume mới khi confirm (gắn `parentResumeId`, `jobId`, `jobDescription`).
+  - `apps/backend/src/controllers/resume.controller.js`
+    - thêm `previewImproveResumeHandler`, `confirmImproveResumeHandler`, `improveResumeHandler`.
+  - `apps/backend/src/routes/resume.routes.js`
+    - wiring 3 route improve mới.
+- Đã bổ sung integration test contract mới:
+  - `apps/backend/tests/integration/tailor-endpoints.test.mjs`
+  - cover luồng: `jobs/upload -> resumes/improve/preview -> resumes/improve/confirm -> fetch tailored resume`.
+- Đã xử lý ổn định test runtime:
+  - tách DB test riêng cho file tailor để tránh race với integration test khác.
+- Đã verify sau thay đổi:
+  - backend `RUN_INTEGRATION_TESTS=1 npm run test:integration`: **PASS (3/3)**.
+
+### 45) Feature-first parity theo use-cases + upstream: bổ sung export PDF (`/resumes/:id/pdf`, `/resumes/:id/cover-letter/pdf`)
+- Đã triển khai cụm endpoint PDF mà frontend đang sử dụng trong flow download:
+  - `GET /api/resumes/:id/pdf`
+  - `GET /api/resumes/:id/cover-letter/pdf`
+- File đã cập nhật:
+  - `apps/backend/src/utils/simple-pdf.js`
+    - thêm PDF generator tối giản (single-page) để xuất binary PDF ổn định không phụ thuộc Chromium.
+  - `apps/backend/src/services/resume.service.js`
+    - thêm `generateResumePdf(resumeId)` và `generateCoverLetterPdf(resumeId)`.
+    - resume PDF lấy dữ liệu từ `parsedData` (personal info, summary, skills, highlights).
+  - `apps/backend/src/controllers/resume.controller.js`
+    - thêm handler download PDF, set đúng `Content-Type: application/pdf` và `Content-Disposition`.
+  - `apps/backend/src/routes/resume.routes.js`
+    - wiring 2 route PDF mới.
+- Đã bổ sung integration test contract mới:
+  - `apps/backend/tests/integration/pdf-endpoints.test.mjs`
+  - cover các nhánh:
+    - download resume PDF thành công,
+    - download cover-letter PDF thành công,
+    - trả `404` khi resume chưa có cover letter.
+- Đã verify sau thay đổi:
+  - backend `RUN_INTEGRATION_TESTS=1 npm run test:integration`: **PASS (4/4)**.
+
+### 46) Feature-first parity theo use-cases + upstream: hoàn thiện Enrichment flow (`/enrichment/*`)
+- Đã triển khai đầy đủ module Enrichment backend để khớp contract frontend và reference upstream:
+  - `POST /api/enrichment/analyze/:resumeId`
+  - `POST /api/enrichment/enhance`
+  - `POST /api/enrichment/apply/:resumeId`
+  - `POST /api/enrichment/regenerate`
+  - `POST /api/enrichment/apply-regenerated/:resumeId`
+- File đã thêm/cập nhật:
+  - `apps/backend/src/services/enrichment.service.js`
+    - phân tích section yếu của resume (`items_to_enrich`, `questions`, `analysis_summary`),
+    - sinh `enhancements` từ câu trả lời người dùng,
+    - apply enhancements vào `parsedData`,
+    - regenerate nội dung theo instruction và apply lại vào resume.
+  - `apps/backend/src/controllers/enrichment.controller.js`
+    - validate input + mapping lỗi chuẩn (`400/404/500`) theo contract frontend.
+  - `apps/backend/src/routes/enrichment.routes.js`
+    - wiring toàn bộ route `/enrichment/*`.
+  - `apps/backend/src/routes/index.js`
+    - mount router mới tại `/api/enrichment`.
+- Đã bổ sung integration test contract mới:
+  - `apps/backend/tests/integration/enrichment-endpoints.test.mjs`
+  - cover luồng: `analyze -> enhance -> apply -> regenerate -> apply-regenerated`.
+
+### 47) Use-case backend batch: Application history + ranked dashboard + status update + explainable feedback
+- Đã triển khai module Application API để lấp các use-case lõi và nghiệp vụ tuyển dụng còn thiếu:
+  - `POST /api/applications` (tạo application cho cặp `job_id` + `resume_id`)
+  - `GET /api/applications/ranked?job_id=...` (dashboard xếp hạng ứng viên theo hybrid score)
+  - `GET /api/applications/history?candidate_id=...` (lịch sử ứng tuyển theo candidate)
+  - `PATCH /api/applications/:id/status` (cập nhật pipeline trạng thái tuyển dụng)
+  - `GET /api/applications/:id/feedback` (AI feedback + missing keywords + recommendations)
+- File đã thêm/cập nhật:
+  - `apps/backend/src/services/application.service.js`
+  - `apps/backend/src/controllers/application.controller.js`
+  - `apps/backend/src/routes/application.routes.js`
+  - `apps/backend/src/routes/index.js` (mount `/api/applications`)
+- Hành vi chính đã triển khai:
+  - chống tạo trùng application cùng cặp `job_id` + `resume_id` (trả `409`),
+  - hỗ trợ phân trang cho ranked/history,
+  - chuẩn hóa payload explainability để frontend có thể render insights/recommendations.
+- Đã bổ sung integration test contract mới:
+  - `apps/backend/tests/integration/application-endpoints.test.mjs`
+  - cover luồng: `create -> ranked -> history -> patch status -> feedback`.
+
+### 48) Use-case backend batch: Job applicant count + tải CV gốc
+- Đã triển khai thêm 2 nhóm chức năng phục vụ nghiệp vụ Recruiter theo Use Case:
+  - UC-BASIC-09: xem danh sách tin tuyển dụng có số lượng ứng viên theo từng vị trí.
+  - UC-BASIC-12: xem và tải xuống CV gốc của ứng viên.
+- File đã cập nhật:
+  - `apps/backend/src/services/job.service.js`
+    - `GET /jobs` và `GET /jobs/:id` nay trả thêm `applications_count` (aggregate từ collection Application).
+  - `apps/backend/src/models/Resume.js`
+    - bổ sung `sourceFile` để lưu metadata + binary file upload gốc.
+  - `apps/backend/src/services/resume.service.js`
+    - lưu `sourceFile` khi upload resume,
+    - thêm `downloadOriginalResumeFile(resumeId)`.
+  - `apps/backend/src/controllers/resume.controller.js`
+    - thêm `downloadOriginalResumeHandler`.
+  - `apps/backend/src/routes/resume.routes.js`
+    - thêm endpoint `GET /api/resumes/:id/download`.
+- Đã mở rộng integration test:
+  - `apps/backend/tests/integration/application-endpoints.test.mjs`
+  - bổ sung assert cho:
+    - `applications_count` ở list/detail jobs,
+    - tải CV gốc thành công qua endpoint download.
+
+### 49) Frontend feature wiring: Applications dashboard + ranking/history/feedback flow
+- Đã bổ sung API client mới cho Application module tại:
+  - `apps/frontend/lib/api/applications.ts`
+  - Hỗ trợ các thao tác:
+    - tạo application,
+    - lấy ranked candidates theo `job_id`,
+    - lấy history theo `candidate_id`,
+    - cập nhật status application,
+    - lấy explainable feedback theo application.
+- Đã tạo trang frontend mới:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - Cho phép:
+    - Recruiter load ranked candidates,
+    - Candidate load application history,
+    - cập nhật status trực tiếp,
+    - mở AI feedback (matched/missing keywords + recommendations).
+- Đã cập nhật điều hướng và hiển thị:
+  - `apps/frontend/app/(default)/dashboard/page.tsx`
+    - thêm card điều hướng nhanh sang `/applications`.
+  - `apps/frontend/app/(default)/jobs/page.tsx`
+    - hiển thị `applications_count` trên mỗi job card,
+    - thêm quick link “View ranked candidates” sang `/applications?job_id=...`.
+  - `apps/frontend/lib/api/jobs.ts`
+    - mở rộng type `JobItem` để nhận `applications_count`.
+  - `apps/frontend/lib/api/index.ts`
+    - export Application APIs cho use ở module khác.
+- Đã bổ sung unit test cho API client mới:
+  - `apps/frontend/tests/applications-api.test.ts`.
+
+### 50) Feature expansion: Application status summary + Resume original download end-to-end
+- Đã mở rộng backend Application module với endpoint summary theo job:
+  - `GET /api/applications/summary?job_id=...`
+  - Trả tổng số hồ sơ + breakdown theo `status` và `ai_status`.
+- File backend đã cập nhật:
+  - `apps/backend/src/services/application.service.js`
+  - `apps/backend/src/controllers/application.controller.js`
+  - `apps/backend/src/routes/application.routes.js`
+  - `apps/backend/tests/integration/application-endpoints.test.mjs` (thêm assert summary contract)
+- Đã mở rộng frontend Applications dashboard:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - thêm block Status Summary,
+  - thêm pagination controls cho ranked/history.
+  - `apps/frontend/lib/api/applications.ts` thêm `fetchApplicationStatusSummary(jobId)`.
+- Đã hoàn thiện luồng tải CV gốc trên frontend viewer:
+  - `apps/frontend/lib/api/resume.ts` thêm:
+    - `getOriginalResumeDownloadUrl(resumeId)`
+    - `downloadOriginalResumeFile(resumeId)`
+  - `apps/frontend/app/(default)/resumes/[id]/page.tsx` thêm nút `Download Original`.
+- Đã cập nhật unit tests frontend:
+  - `apps/frontend/tests/applications-api.test.ts` (thêm case summary)
+  - `apps/frontend/tests/resume-api.test.ts` (thêm case download CV gốc).
+
+### 51) Candidate flow enhancement: auto history routing + status filters on Applications
+- Đã mở rộng Resume API response để expose `candidate_id` cho frontend flow:
+  - `apps/backend/src/services/resume.service.js`
+    - thêm `candidate_id` vào `toResumeFetchData` và `toResumeSummary`.
+  - `apps/frontend/lib/api/resume.ts`
+    - cập nhật type để nhận `candidate_id`.
+- Đã mở rộng Dashboard để điều hướng nhanh vào lịch sử ứng tuyển của candidate:
+  - `apps/frontend/app/(default)/dashboard/page.tsx`
+    - lưu `candidateId` từ `fetchResume(masterResumeId)`,
+    - thêm card `My History` dẫn tới `/applications?candidate_id=...`.
+- Đã nâng cấp Applications page:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+    - hỗ trợ filter status cho cả ranked/history,
+    - auto-load history khi có `candidate_id` trên query string.
+- Đã cập nhật test fixture tương thích:
+  - `apps/frontend/tests/resume-api.test.ts`.
+
+### 52) Candidate flow closure: Apply trực tiếp từ Job Board bằng Master Resume
+- Đã bổ sung hành động apply trực tiếp tại Job Board:
+  - `apps/frontend/app/(default)/jobs/page.tsx`
+  - mỗi job card có nút `Apply with Master Resume`.
+- Luồng xử lý đã triển khai:
+  - tự resolve `master_resume_id` từ localStorage,
+  - fallback lấy master resume qua API list resumes (`include_master=true`) nếu localStorage chưa có,
+  - gọi backend `POST /api/applications` thông qua `createApplication`.
+- Trải nghiệm người dùng:
+  - hiển thị trạng thái apply theo từng job (`Applying...`),
+  - thông báo thành công khi nộp hồ sơ,
+  - thông báo rõ khi thiếu master resume,
+  - xử lý trường hợp apply trùng (409) thành thông báo thân thiện.
+
+### 53) UX refinement: tự động điều hướng sau khi Apply từ Job Board
+- Đã nâng cấp trải nghiệm apply ở `apps/frontend/app/(default)/jobs/page.tsx`:
+  - resolve thêm `masterCandidateId` từ Resume list (không chỉ `masterResumeId`),
+  - sau khi apply thành công: tự động redirect sang `/applications?candidate_id=...` (nếu có),
+  - nếu apply trùng (`409`): hiển thị thông báo thân thiện và vẫn redirect sang Applications,
+  - fallback sang `/applications?job_id=...` khi chưa resolve được `candidate_id`.
+- Đã bổ sung thông báo theo ngữ cảnh với trạng thái `success/error` để dễ phân biệt kết quả thao tác.
+
+### 54) Applications UX fix: auto-fetch đúng khi đổi trang/filter và khi vào từ query params
+- Đã sửa logic tải dữ liệu tại `apps/frontend/app/(default)/applications/page.tsx`:
+  - thêm cơ chế activate cho từng luồng dữ liệu (`rankedActivated`, `historyActivated`),
+  - sau khi người dùng bấm `Load` hoặc vào trang với query sẵn (`job_id` / `candidate_id`), hệ thống tự fetch dữ liệu.
+- Đã xử lý đúng hành vi pagination + filter:
+  - đổi `page` hoặc `status filter` sẽ tự gọi lại API (không còn chỉ đổi state),
+  - khi đổi input `job_id`/`candidate_id` hoặc filter thì reset page về 1 để tránh request lệch trang.
+- Kết quả:
+  - dashboard Applications hoạt động đúng kỳ vọng của use-case theo dạng data-driven table,
+  - giảm thao tác tay lặp lại (không cần bấm Load lại sau mỗi lần đổi trang/filter).
+
+### 55) i18n hardening: loại bỏ hardcoded text trên Job Board và Applications
+- Đã localize toàn bộ text hardcoded mới thêm trong 2 trang:
+  - `apps/frontend/app/(default)/jobs/page.tsx`
+  - `apps/frontend/app/(default)/applications/page.tsx`
+- Các nội dung đã chuyển sang key i18n gồm:
+  - tiêu đề/subtitle trang,
+  - label filter + placeholder,
+  - trạng thái loading/error/success,
+  - empty states,
+  - pagination labels,
+  - status/ai-status labels,
+  - feedback labels (matched/missing keywords, recommendations, ...).
+- Đã bổ sung key mới cho đủ 5 locale:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/es.json`
+  - `apps/frontend/messages/ja.json`
+  - `apps/frontend/messages/pt-BR.json`
+  - `apps/frontend/messages/zh.json`
+- Đã xác thực sau thay đổi:
+  - `npm run typecheck` -> **PASS**
+  - `npm run test -- tests/applications-api.test.ts tests/resume-api.test.ts` -> **PASS (13/13)**
+
+### 56) UC-RM-01: triển khai Master Resume Management (set/get master + UI action)
+- Đã mở rộng backend Resume API để quản lý master resume rõ ràng:
+  - `GET /api/resumes/master?candidate_id=...`
+  - `POST /api/resumes/:id/set-as-master`
+- File backend đã cập nhật:
+  - `apps/backend/src/services/resume.service.js`
+  - `apps/backend/src/controllers/resume.controller.js`
+  - `apps/backend/src/routes/resume.routes.js`
+- Đã bổ sung test integration backend cho contract mới:
+  - `apps/backend/tests/integration/master-resume-endpoints.test.mjs`
+  - bao phủ: set master mới, đảm bảo master cũ bị unset, lấy master theo candidate, validate candidate_id không hợp lệ.
+- Đã mở rộng frontend API client:
+  - `apps/frontend/lib/api/resume.ts`
+  - thêm `fetchMasterResume(candidateId?)` và `setResumeAsMaster(resumeId)`.
+- Đã wiring UI tại trang xem resume:
+  - `apps/frontend/app/(default)/resumes/[id]/page.tsx`
+  - thêm nút `Set as Master Resume` cho CV không phải master,
+  - cập nhật đồng bộ `localStorage(master_resume_id)` + status cache sau khi set thành công,
+  - localize nút tải CV gốc thay cho hardcoded string.
+- Đã cập nhật i18n key mới cho EN/VI:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`
+- Đã mở rộng unit test frontend API:
+  - `apps/frontend/tests/resume-api.test.ts`
+  - thêm test cho fetch/set master resume.
+
+### 57) UC-RM-01 mở rộng: đổi Master Resume trực tiếp từ Dashboard
+- Đã mở rộng Dashboard để candidate có thể đổi CV gốc nhanh ngay tại danh sách tailored resumes:
+  - `apps/frontend/app/(default)/dashboard/page.tsx`
+  - thêm nút `Set As Master` trên mỗi card CV đã tùy chỉnh,
+  - gọi backend `POST /api/resumes/:id/set-as-master`,
+  - đồng bộ ngay `localStorage(master_resume_id)` + status cache,
+  - refresh lại danh sách resumes sau khi đổi để phản ánh trạng thái mới.
+- Đã bổ sung trạng thái loading cho thao tác đổi master (`Setting...`) để tránh double-click.
+- Đã bổ sung i18n key cho EN/VI:
+  - `dashboard.setAsMaster`
+  - `dashboard.settingAsMaster`
+  - cập nhật tại `apps/frontend/messages/en.json` và `apps/frontend/messages/vi.json`.
+
+### 58) UC-BASIC-10/11: mở rộng Job Board với thao tác recruiter (đóng/mở/xóa job)
+- Đã mở rộng frontend Job API để hỗ trợ quản lý job theo use-case recruiter:
+  - `apps/frontend/lib/api/jobs.ts`
+  - thêm `updateJob(jobId, payload)`.
+  - thêm helper `closeJob(jobId)`, `reopenJob(jobId)`, `deleteJob(jobId)`.
+- Đã cập nhật Job Board để thao tác trực tiếp trên từng job card:
+  - `apps/frontend/app/(default)/jobs/page.tsx`
+  - thêm nút `Close Job` / `Reopen Job` / `Delete Job`,
+  - hiển thị trạng thái loading khi mutate (`Updating...`, `Deleting...`),
+  - hiển thị thông báo kết quả thành công/thất bại,
+  - disable nút Apply khi job đã đóng để tránh apply vào vị trí unavailable,
+  - tự refresh danh sách jobs sau khi cập nhật hoặc xóa.
+- Đã bổ sung i18n key cho EN/VI:
+  - cập nhật tại `apps/frontend/messages/en.json` và `apps/frontend/messages/vi.json`.
+- Đã bổ sung unit test cho Job API:
+  - `apps/frontend/tests/jobs-api.test.ts`
+  - bao phủ: build query list, update job, close/reopen mapping, delete failure contract.
+
+### 59) UC-BASIC-10: bổ sung chỉnh sửa nội dung Job trực tiếp trên Job Board
+- Đã mở rộng UI Job Board với luồng chỉnh sửa tin tuyển dụng cơ bản (inline quản trị recruiter):
+  - `apps/frontend/app/(default)/jobs/page.tsx`
+  - thêm nút `Edit Job` trên mỗi job card,
+  - mở dialog chỉnh sửa các trường: `title`, `description`, `requirements`, `category`, `location`, `experienceLevel`,
+  - gọi API `updateJob` để lưu thay đổi,
+  - hiển thị trạng thái đang lưu (`Saving...`) và thông báo kết quả thành công/thất bại,
+  - refresh danh sách sau khi lưu để đồng bộ dữ liệu mới.
+- Đã bổ sung i18n key cho EN/VI phục vụ edit dialog + labels:
+  - cập nhật tại `apps/frontend/messages/en.json` và `apps/frontend/messages/vi.json`.
+- Đã giữ tương thích với luồng quản trị đã có ở mục 58:
+  - recruiter vẫn có thể đóng/mở/xóa tin,
+  - candidate không thể apply vào job đã `closed`.
+
+### 60) UC-BASIC-08: triển khai quản lý hồ sơ công ty trong Settings (backend + frontend)
+- Đã mở rộng backend config để lưu hồ sơ công ty dưới dạng cấu hình hệ thống:
+  - `apps/backend/src/services/config.service.js`
+  - thêm key `companyProfileConfig`, default schema và sanitize cho các trường:
+    - `company_name`, `overview`, `industry`, `company_size`, `address`, `website`,
+    - `brand_primary_color`, `brand_logo_url`.
+  - thêm API service `getCompanyProfileConfig()` và `updateCompanyProfileConfig()`.
+  - bổ sung cleanup key này trong luồng `resetDatabase`.
+- Đã mở rộng backend controller/route:
+  - `apps/backend/src/controllers/config.controller.js`
+  - `apps/backend/src/routes/config.routes.js`
+  - thêm endpoint:
+    - `GET /api/config/company-profile`
+    - `PUT /api/config/company-profile`.
+- Đã mở rộng frontend API client:
+  - `apps/frontend/lib/api/config.ts`
+  - thêm `fetchCompanyProfileConfig()` và `updateCompanyProfileConfig()` + types liên quan.
+- Đã bổ sung UI quản lý Company Profile tại trang Settings:
+  - `apps/frontend/app/(default)/settings/page.tsx`
+  - thêm section `Company Profile` cho recruiter cập nhật thông tin công ty và branding,
+  - có nút lưu riêng, trạng thái loading, và đồng bộ dữ liệu từ backend khi load trang.
+- Đã bổ sung i18n EN/VI:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã cập nhật test:
+  - `apps/frontend/tests/config-api.test.ts` thêm case fetch/update company profile.
+  - `apps/backend/tests/integration/config-endpoints.test.mjs` thêm assert cho company profile endpoints.
+
+### 61) UC-BASIC-10 hoàn thiện sát mô tả: benefits + deadline + lịch sử thay đổi quan trọng
+- Đã mở rộng schema Job ở backend:
+  - `apps/backend/src/models/Job.js`
+  - thêm các trường `benefits`, `applicationDeadline`, và `importantChangeHistory` để audit thay đổi.
+- Đã nâng cấp service update/create Job:
+  - `apps/backend/src/services/job.service.js`
+  - sửa normalize payload để patch không còn ghi đè rỗng các field không gửi lên,
+  - hỗ trợ `benefits` và `applicationDeadline` (validate date, chuẩn hóa dữ liệu),
+  - tự ghi nhận `importantChangeHistory` khi có thay đổi ở các trường quan trọng (`title`, `description`, `requirements`, `benefits`, `applicationDeadline`, `status`),
+  - mở rộng clean text/embedding text để bao gồm `benefits`.
+- Đã mở rộng UI Job Board cho recruiter:
+  - `apps/frontend/app/(default)/jobs/page.tsx`
+  - thêm field `Benefits` + `Application Deadline` trong dialog Edit Job,
+  - hiển thị deadline trên card,
+  - hiển thị mốc `last change` dựa trên lịch sử thay đổi quan trọng.
+- Đã mở rộng frontend API types/payload:
+  - `apps/frontend/lib/api/jobs.ts`
+  - thêm type cho `importantChangeHistory`, `benefits`, `applicationDeadline`.
+- Đã cập nhật i18n EN/VI:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã cập nhật test:
+  - `apps/frontend/tests/jobs-api.test.ts` mở rộng case update payload với `benefits` + `applicationDeadline`.
+  - thêm integration test backend mới: `apps/backend/tests/integration/job-update-endpoints.test.mjs`.
+
+### 62) UC-BASIC-10 UX mở rộng: modal xem chi tiết lịch sử thay đổi theo từng Job
+- Đã mở rộng Job Board để recruiter xem đầy đủ timeline thay đổi quan trọng:
+  - `apps/frontend/app/(default)/jobs/page.tsx`
+  - thêm nút `View History` trên từng job card (chỉ bật khi có history),
+  - thêm dialog hiển thị danh sách thay đổi theo thứ tự mới nhất trước,
+  - mỗi bản ghi hiển thị: thời điểm thay đổi, summary, danh sách field đã thay đổi.
+- Đã bổ sung i18n EN/VI cho luồng history dialog:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+
+### 63) UC-BASIC-10 UX nâng cao: lọc lịch sử theo field + before/after diff
+- Đã mở rộng dữ liệu history ở backend để lưu chi tiết thay đổi theo từng field:
+  - `apps/backend/src/models/Job.js`
+  - thêm `importantChangeHistory[].changes[]` gồm `field`, `before`, `after`.
+- Đã nâng cấp logic ghi nhận history khi update Job:
+  - `apps/backend/src/services/job.service.js`
+  - thu thập diff chi tiết cho từng field quan trọng,
+  - serialize giá trị an toàn để hiển thị nhất quán ở UI.
+- Đã cập nhật type ở frontend API:
+  - `apps/frontend/lib/api/jobs.ts`
+  - bổ sung `changes` trong `importantChangeHistory`.
+- Đã nâng cấp modal lịch sử trên Job Board:
+  - `apps/frontend/app/(default)/jobs/page.tsx`
+  - thêm bộ lọc theo field (`All fields` hoặc field cụ thể),
+  - hiển thị before/after cho từng thay đổi,
+  - fallback tốt cho bản ghi cũ chưa có `changes`.
+- Đã bổ sung i18n EN/VI cho filter + diff labels:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã cập nhật và chạy test:
+  - `apps/backend/tests/integration/job-update-endpoints.test.mjs` (assert `changes` before/after),
+  - frontend `npm run typecheck` PASS,
+  - frontend `npm run test -- tests/jobs-api.test.ts` PASS,
+  - backend `node --test tests/integration/job-update-endpoints.test.mjs` PASS.
+
+### 64) UC-BASIC-12: recruiter tải CV gốc trực tiếp từ Ranked Candidates
+- Đã mở rộng recruiter flow tại trang Applications để truy cập nhanh CV gốc của ứng viên:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - thêm nút `Download Original CV` trên từng ứng viên trong danh sách xếp hạng,
+  - chỉ bật khi có `resume.id`,
+  - xử lý lỗi popup blocked để hiển thị thông báo hướng dẫn mở URL trực tiếp.
+- Đã tận dụng endpoint tải CV gốc có sẵn của backend thông qua frontend API:
+  - `apps/frontend/lib/api/resume.ts` (`getOriginalResumeDownloadUrl`).
+- Đã bổ sung i18n EN/VI cho action mới:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã kiểm tra lại chất lượng:
+  - frontend `npm run typecheck` PASS,
+  - frontend `npm run test -- tests/applications-api.test.ts` PASS.
+
+### 65) UC-BASIC-13 nâng cao: audit lịch sử đổi trạng thái ứng viên
+- Đã mở rộng domain Application để lưu audit trail cho trạng thái tuyển dụng:
+  - `apps/backend/src/models/Application.js`
+  - thêm `statusHistory[]` gồm `fromStatus`, `toStatus`, `changedAt`, `changedBy`.
+- Đã nâng cấp service xử lý status:
+  - `apps/backend/src/services/application.service.js`
+  - tạo bản ghi trạng thái khởi tạo khi tạo application,
+  - khi update status sẽ append lịch sử chuyển trạng thái với `changed_by`,
+  - thêm service `getApplicationStatusHistory` trả timeline mới nhất trước.
+- Đã bổ sung API backend cho status history:
+  - `apps/backend/src/controllers/application.controller.js`
+  - `apps/backend/src/routes/application.routes.js`
+  - endpoint mới: `GET /api/applications/:id/status-history`.
+- Đã mở rộng frontend API + UI recruiter:
+  - `apps/frontend/lib/api/applications.ts`
+  - thêm `fetchApplicationStatusHistory` và hỗ trợ `changed_by` khi patch status,
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - thêm nút `Status History` trong Ranked Candidates,
+  - hiển thị panel lịch sử chuyển trạng thái (from -> to, changed at, changed by).
+- Đã bổ sung i18n EN/VI:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã cập nhật test:
+  - `apps/frontend/tests/applications-api.test.ts` thêm case status history endpoint.
+  - `apps/backend/tests/integration/application-endpoints.test.mjs` thêm assert cho status history + `changed_by`.
+- Kết quả kiểm tra:
+  - frontend `npm run typecheck` PASS,
+  - frontend `npm run test -- tests/applications-api.test.ts` PASS,
+  - backend integration test cần môi trường Mongo credential hợp lệ (lần chạy tại máy local hiện tại fail do `Authentication failed`).
+
+### 66) UC-BASIC-13 bổ sung recruiter insight: hiển thị trạng thái audit gần nhất trong Ranked Candidates
+- Đã mở rộng payload ranked/history từ backend để trả `status_audit`:
+  - `apps/backend/src/services/application.service.js`
+  - mỗi ứng viên có metadata chuyển trạng thái gần nhất gồm `from_status`, `to_status`, `changed_at`, `changed_by`.
+- Đã cập nhật types frontend để nhận dữ liệu audit mới:
+  - `apps/frontend/lib/api/applications.ts`.
+- Đã nâng cấp UI recruiter ở Applications page:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - hiển thị dòng audit trạng thái gần nhất ngay trên mỗi card ứng viên đã xếp hạng.
+- Đã bổ sung i18n EN/VI:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã cập nhật test:
+  - `apps/frontend/tests/applications-api.test.ts` thêm assert cho `status_audit` + payload `changed_by` khi update status.
+  - `apps/backend/tests/integration/application-endpoints.test.mjs` thêm assert `status_audit` trong ranked response sau khi đổi status.
+- Kết quả kiểm tra đã chạy:
+  - frontend `npm run typecheck` PASS,
+  - frontend `npm run test -- tests/applications-api.test.ts` PASS.
+
+### 67) UC-BASIC-13 đề xuất tiếp theo đã triển khai: Recent Status Changes cho recruiter
+- Đã mở rộng backend API để theo dõi timeline thay đổi trạng thái theo Job:
+  - `apps/backend/src/services/application.service.js`
+  - thêm service `listRecentStatusChangesByJob(job_id, filters)` với filter theo `status`, `changed_by`, pagination,
+  - chuẩn hóa output change event gồm candidate/job/context phục vụ giám sát recruiter.
+  - `apps/backend/src/controllers/application.controller.js`
+  - `apps/backend/src/routes/application.routes.js`
+  - thêm endpoint `GET /api/applications/status-changes`.
+- Đã mở rộng frontend API:
+  - `apps/frontend/lib/api/applications.ts`
+  - thêm type `RecentStatusChangesResponse`,
+  - thêm function `fetchRecentStatusChanges`.
+- Đã nâng cấp UI trang Applications (recruiter view):
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - thêm card `Recent Status Changes`,
+  - có filter theo status + changed_by,
+  - có nút refresh độc lập và danh sách event chuyển trạng thái gần nhất.
+- Đã bổ sung i18n EN/VI cho panel mới:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã cập nhật test frontend API:
+  - `apps/frontend/tests/applications-api.test.ts` thêm case `loads recent status changes with filters`.
+- Kết quả kiểm tra đã chạy:
+  - frontend `npm run typecheck` PASS,
+  - frontend `npm run test -- tests/applications-api.test.ts` PASS (8 tests).
+
+### 68) UC-RM-07 nâng cấp: Missing Keywords Suggestions + copy nhanh trong JD Match View
+- Đã nâng cấp màn hình đối chiếu JD-Resume để hỗ trợ hành động cải thiện trực tiếp:
+  - `apps/frontend/components/builder/jd-comparison-view.tsx`
+  - tính toán danh sách từ khóa còn thiếu dựa trên JD keywords và matched keywords,
+  - hiển thị panel `Missing keywords` ngay dưới thanh thống kê,
+  - hỗ trợ copy từng keyword và copy toàn bộ danh sách keyword còn thiếu.
+- Đã bổ sung i18n EN/VI cho luồng mới:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã bổ sung test cho UI mới:
+  - `apps/frontend/tests/jd-comparison-view.test.tsx`
+  - xác nhận render danh sách từ khóa còn thiếu khi resume chưa phủ hết JD.
+- Kết quả kiểm tra đã chạy:
+  - frontend `npm run typecheck` PASS,
+  - frontend `npm run test -- tests/jd-comparison-view.test.tsx tests/applications-api.test.ts` PASS (9 tests).
+
+### 69) UC-RM-07 nâng cấp tiếp: Apply Missing Keywords trực tiếp vào Resume draft
+- Đã mở rộng JD Match View để có hành động áp dụng trực tiếp keyword còn thiếu vào CV:
+  - `apps/frontend/components/builder/jd-comparison-view.tsx`
+  - thêm prop callback `onApplyMissingKeywords` và nút `Apply to Resume` trong panel keyword.
+- Đã triển khai logic chuẩn hóa/chèn keyword tái sử dụng:
+  - `apps/frontend/lib/utils/jd-match.ts`
+  - thêm hàm `applyMissingKeywordsToResumeData`:
+    - loại trùng keyword theo so khớp không phân biệt hoa-thường,
+    - bổ sung vào `additional.technicalSkills`,
+    - append câu gợi ý keyword vào `summary` (giới hạn số keyword).
+- Đã wiring Resume Builder để nhận callback từ JD Match và cập nhật draft tại chỗ:
+  - `apps/frontend/components/builder/resume-builder.tsx`
+  - khi áp dụng thành công: cập nhật resume data, đánh dấu unsaved draft, tự chuyển về tab Resume và hiển thị thông báo.
+- Đã bổ sung i18n EN/VI cho luồng apply mới:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã bổ sung test cho callback UI và utility logic:
+  - `apps/frontend/tests/jd-comparison-view.test.tsx` thêm case `calls apply callback with missing keywords`.
+  - `apps/frontend/tests/jd-match-utils.test.ts` (mới) kiểm tra nhánh thêm keyword + nhánh không thay đổi.

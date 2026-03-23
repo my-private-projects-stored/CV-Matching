@@ -1,0 +1,195 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import "dotenv/config";
+
+import mongoose from "mongoose";
+
+import app from "../../src/app.js";
+import Application from "../../src/models/Application.js";
+import Job from "../../src/models/Job.js";
+import Resume from "../../src/models/Resume.js";
+import SystemConfig from "../../src/models/SystemConfig.js";
+
+const RUN_INTEGRATION = process.env.RUN_INTEGRATION_TESTS === "1";
+
+function getTestMongoUri() {
+  if (process.env.MONGO_URI_TEST) {
+    return process.env.MONGO_URI_TEST;
+  }
+
+  const mongoUri = process.env.MONGO_URI;
+  assert.ok(mongoUri, "MONGO_URI is required for integration test");
+
+  const url = new URL(mongoUri);
+  const dbName = (url.pathname || "/cv_matching").replace(/^\//, "") || "cv_matching";
+  url.pathname = `/${dbName}_enrichment_integration`;
+  return url.toString();
+}
+
+async function requestJson(baseUrl, method, path, body) {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const text = await response.text();
+  let json = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
+
+  return { status: response.status, json, text };
+}
+
+test(
+  "enrichment endpoints contract: analyze -> enhance -> apply -> regenerate -> apply-regenerated",
+  { skip: !RUN_INTEGRATION },
+  async () => {
+    const mongoUri = getTestMongoUri();
+    await mongoose.connect(mongoUri);
+
+    await Promise.all([
+      Application.deleteMany({}),
+      Job.deleteMany({}),
+      Resume.deleteMany({}),
+      SystemConfig.deleteMany({}),
+    ]);
+
+    const server = app.listen(0);
+    const address = server.address();
+    assert.ok(address && typeof address === "object");
+    const baseUrl = `http://127.0.0.1:${address.port}/api`;
+
+    try {
+      const resume = await Resume.create({
+        candidateId: new mongoose.Types.ObjectId(),
+        fileUrl: "upload://seed-enrichment-resume",
+        rawText: "Backend engineer with Node.js and MongoDB experience",
+        parsedData: {
+          personalInfo: {
+            name: "Enrichment Candidate",
+            title: "Backend Engineer",
+            email: "candidate@example.com",
+          },
+          summary: "Backend engineer focused on maintainable APIs.",
+          workExperience: [
+            {
+              id: 1,
+              title: "Software Engineer",
+              company: "Example Inc",
+              description: ["Built APIs"],
+            },
+          ],
+          education: [],
+          personalProjects: [
+            {
+              id: 1,
+              name: "CV Matcher",
+              role: "Developer",
+              description: ["Matching resumes to jobs"],
+            },
+          ],
+          additional: {
+            technicalSkills: ["Node.js", "MongoDB"],
+            languages: [],
+            certificationsTraining: [],
+            awards: [],
+          },
+        },
+        isMaster: true,
+        processingStatus: "ready",
+      });
+
+      const analyze = await requestJson(baseUrl, "POST", `/enrichment/analyze/${resume._id}`);
+      assert.equal(analyze.status, 200);
+      assert.equal(Array.isArray(analyze.json?.items_to_enrich), true);
+      assert.equal(Array.isArray(analyze.json?.questions), true);
+      assert.ok(analyze.json?.items_to_enrich?.length >= 1);
+
+      const firstQuestion = analyze.json.questions[0];
+      assert.equal(typeof firstQuestion?.question_id, "string");
+
+      const enhance = await requestJson(baseUrl, "POST", "/enrichment/enhance", {
+        resume_id: String(resume._id),
+        answers: [
+          {
+            question_id: firstQuestion.question_id,
+            answer: "reduced API response time by 35% and cut incidents by 20%",
+          },
+        ],
+      });
+
+      assert.equal(enhance.status, 200);
+      assert.equal(Array.isArray(enhance.json?.enhancements), true);
+      assert.equal(enhance.json.enhancements.length, 1);
+
+      const apply = await requestJson(baseUrl, "POST", `/enrichment/apply/${resume._id}`, {
+        enhancements: enhance.json.enhancements,
+      });
+
+      assert.equal(apply.status, 200);
+      assert.equal(typeof apply.json?.updated_items, "number");
+      assert.equal(apply.json.updated_items, 1);
+
+      const updatedAfterApply = await Resume.findById(resume._id).lean();
+      assert.ok(updatedAfterApply);
+      const updatedDescriptions =
+        updatedAfterApply.parsedData.workExperience[0].description || [];
+      assert.equal(updatedDescriptions.length >= 2, true);
+
+      const regenerate = await requestJson(baseUrl, "POST", "/enrichment/regenerate", {
+        resume_id: String(resume._id),
+        items: [
+          {
+            item_id: "exp_0",
+            item_type: "experience",
+            title: "Software Engineer",
+            subtitle: "Example Inc",
+            current_content: updatedDescriptions,
+          },
+        ],
+        instruction: "make it concise and achievement-focused",
+        output_language: "en",
+      });
+
+      assert.equal(regenerate.status, 200);
+      assert.equal(Array.isArray(regenerate.json?.regenerated_items), true);
+      assert.equal(regenerate.json.regenerated_items.length, 1);
+      assert.equal(Array.isArray(regenerate.json?.errors), true);
+
+      const applyRegenerated = await requestJson(
+        baseUrl,
+        "POST",
+        `/enrichment/apply-regenerated/${resume._id}`,
+        regenerate.json.regenerated_items
+      );
+
+      assert.equal(applyRegenerated.status, 200);
+      assert.equal(applyRegenerated.json?.updated_items, 1);
+
+      const finalResume = await Resume.findById(resume._id).lean();
+      assert.ok(finalResume);
+      assert.match(
+        String(finalResume.parsedData.workExperience[0].description[0]),
+        /achievement-focused/i
+      );
+    } finally {
+      await new Promise((resolve, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+      });
+
+      await mongoose.connection.dropDatabase();
+      await mongoose.disconnect();
+    }
+  }
+);

@@ -40,6 +40,87 @@ const resumeSchema = new Schema(
       default: {},
     },
 
+    // Trạng thái xử lý hiển thị cho frontend dashboard.
+    processingStatus: {
+      type: String,
+      enum: ["pending", "processing", "ready", "failed"],
+      default: "pending",
+      index: true,
+    },
+
+    // Tên file gốc khi upload.
+    filename: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+
+    // Bản gốc file upload để hỗ trợ HR tải xuống CV gốc theo use-case.
+    sourceFile: {
+      filename: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+      mimeType: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+      size: {
+        type: Number,
+        default: 0,
+      },
+      data: {
+        type: Buffer,
+        default: null,
+      },
+    },
+
+    // CV gốc (master resume) để làm baseline cho tailored resumes.
+    isMaster: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    // Tham chiếu đến CV cha nếu đây là bản tailored.
+    parentResumeId: {
+      type: Schema.Types.ObjectId,
+      ref: "Resume",
+      default: null,
+      index: true,
+    },
+
+    // Tiêu đề hiển thị trong dashboard/builder.
+    title: {
+      type: String,
+      default: null,
+      trim: true,
+      maxlength: 120,
+    },
+
+    // Nội dung generated cho các màn hình liên quan.
+    coverLetter: {
+      type: String,
+      default: null,
+    },
+    outreachMessage: {
+      type: String,
+      default: null,
+    },
+
+    // Job context cho tailored resume.
+    jobDescription: {
+      type: String,
+      default: null,
+    },
+    jobId: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+
     // Cờ đánh dấu CV đã qua pipeline phân tích hay chưa.
     isAnalyzed: {
       type: Boolean,

@@ -1,0 +1,1028 @@
+{
+  "common": {
+    "save": "Lưu",
+    "saving": "Đang lưu...",
+    "cancel": "Hủy",
+    "delete": "Xóa",
+    "edit": "Chỉnh sửa",
+    "download": "Tải xuống",
+    "loading": "Đang tải...",
+    "uploading": "Đang tải lên...",
+    "checking": "Đang kiểm tra...",
+    "processing": "Đang xử lý...",
+    "generating": "Đang tạo...",
+    "error": "Lỗi",
+    "success": "Thành công",
+    "confirm": "Xác nhận",
+    "back": "Quay lại",
+    "retry": "Thử lại",
+    "next": "Tiếp theo",
+    "continue": "Tiếp tục",
+    "finish": "Hoàn tất",
+    "optional": "Tùy chọn",
+    "close": "Đóng",
+    "ok": "OK",
+    "search": "Tìm kiếm",
+    "filter": "Bộ lọc",
+    "reset": "Đặt lại",
+    "apply": "Áp dụng",
+    "selectOption": "Chọn một tùy chọn...",
+    "unknown": "Không xác định",
+    "keysCleared": "Đã xóa khóa API thành công",
+    "databaseReset": "Đã đặt lại cơ sở dữ liệu thành công",
+    "popupBlocked": "Popup đã bị chặn. Vui lòng cho phép popup hoặc mở URL này thủ công: {url}"
+  },
+  "home": {
+    "brandLine1": "Ghép",
+    "brandLine2": "CV",
+    "docs": "Tài liệu",
+    "launchApp": "Mở ứng dụng"
+  },
+  "nav": {
+    "dashboard": "Bảng điều khiển",
+    "builder": "Trình tạo CV",
+    "tailor": "Tùy chỉnh CV",
+    "settings": "Cài đặt",
+    "backToDashboard": "Quay về bảng điều khiển",
+    "goToSettings": "Đi tới cài đặt"
+  },
+  "jobsPage": {
+    "title": "Bảng việc làm",
+    "subtitle": "Duyệt và lọc các mô tả công việc đang hoạt động",
+    "allCategories": "Tất cả danh mục",
+    "allStatus": "Tất cả trạng thái",
+    "locationPlaceholder": "Địa điểm",
+    "totalJobs": "{count} công việc",
+    "failedLoad": "Không thể tải danh sách công việc.",
+    "masterRequired": "Cần có CV gốc. Vui lòng tải CV gốc trước.",
+    "submittedRedirecting": "Ứng tuyển thành công. Đang chuyển hướng...",
+    "duplicateRedirecting": "Bạn đã ứng tuyển công việc này. Đang chuyển hướng đến trang ứng tuyển...",
+    "failedSubmit": "Gửi ứng tuyển thất bại.",
+    "failedUpdateJob": "Cập nhật công việc thất bại.",
+    "failedDeleteJob": "Xóa công việc thất bại.",
+    "jobUpdated": "Đã cập nhật công việc thành công.",
+    "jobClosed": "Đã đóng công việc thành công.",
+    "jobReopened": "Đã mở lại công việc thành công.",
+    "jobDeleted": "Đã xóa công việc thành công.",
+    "applicants": "{count} ứng viên",
+    "updated": "Cập nhật {date}",
+    "viewRankedCandidates": "Xem ứng viên đã xếp hạng",
+    "editJob": "Chỉnh sửa việc làm",
+    "viewHistory": "Xem lịch sử",
+    "closeJob": "Đóng việc làm",
+    "reopenJob": "Mở lại việc làm",
+    "deleteJob": "Xóa việc làm",
+    "editDialogTitle": "Chỉnh sửa việc làm",
+    "editDialogDescription": "Cập nhật thông tin chính của tin tuyển dụng và lưu thay đổi.",
+    "historyDialogTitle": "Lịch sử thay đổi tin tuyển dụng",
+    "historyDialogDescription": "Các cập nhật quan trọng của {title}.",
+    "noHistory": "Chưa có thay đổi quan trọng nào được ghi nhận cho tin tuyển dụng này.",
+    "noHistoryForFilter": "Không có bản ghi lịch sử nào khớp với trường đã chọn.",
+    "historyFallbackSummary": "Các trường quan trọng đã được cập nhật.",
+    "historyFilterLabel": "Lọc theo trường",
+    "historyFilterAll": "Tất cả trường",
+    "changedFieldsLabel": "Các trường đã thay đổi",
+    "beforeLabel": "Trước",
+    "afterLabel": "Sau",
+    "titleLabel": "Tiêu đề",
+    "descriptionLabel": "Mô tả",
+    "requirementsLabel": "Yêu cầu",
+    "benefitsLabel": "Quyền lợi",
+    "applicationDeadlineLabel": "Hạn nộp hồ sơ",
+    "deadlineLabel": "Hạn",
+    "lastChangeLabel": "Cập nhật gần nhất {date}",
+    "categoryLabel": "Danh mục",
+    "locationLabel": "Địa điểm",
+    "experienceLabel": "Mức kinh nghiệm",
+    "saveJobChanges": "Lưu tin tuyển dụng",
+    "savingJobChanges": "Đang lưu...",
+    "updatingJob": "Đang cập nhật...",
+    "deletingJob": "Đang xóa...",
+    "applying": "Đang ứng tuyển...",
+    "applyWithMaster": "Ứng tuyển bằng CV gốc",
+    "closedUnavailable": "Đã đóng (Không thể ứng tuyển)",
+    "noJobsTitle": "Không tìm thấy công việc",
+    "noJobsDescription": "Hãy thử thay đổi từ khóa tìm kiếm hoặc bộ lọc.",
+    "prev": "Trước",
+    "next": "Sau",
+    "pageLabel": "Trang {page} / {totalPages}",
+    "status": {
+      "active": "Đang mở",
+      "closed": "Đã đóng"
+    }
+  },
+  "applicationsPage": {
+    "title": "Đơn ứng tuyển",
+    "subtitle": "Xếp hạng ứng viên, quy trình trạng thái và phản hồi minh bạch",
+    "allStatus": "Tất cả trạng thái",
+    "load": "Tải",
+    "prev": "Trước",
+    "next": "Sau",
+    "pageLabel": "Trang {page}/{totalPages}",
+    "status": {
+      "new": "Mới",
+      "screening": "Sàng lọc",
+      "interview": "Phỏng vấn",
+      "hired": "Đã tuyển",
+      "rejected": "Từ chối"
+    },
+    "aiStatus": {
+      "pending": "Đang chờ",
+      "parsing": "Đang phân tích",
+      "scoring": "Đang chấm điểm",
+      "completed": "Hoàn tất",
+      "failed": "Thất bại"
+    },
+    "summary": {
+      "title": "Tổng quan trạng thái",
+      "totalApplications": "Tổng cộng {count} đơn ứng tuyển",
+      "aiStatusLabel": "ai: {status}"
+    },
+    "statusChanges": {
+      "title": "Các thay đổi trạng thái gần đây",
+      "refreshButton": "Làm mới thay đổi",
+      "changedByPlaceholder": "lọc theo changed_by...",
+      "transitionLine": "Chuyển trạng thái {from} -> {to}",
+      "changedByLine": "Bởi {by}",
+      "changedAtLine": "Lúc {date}",
+      "empty": "Không có thay đổi trạng thái nào theo bộ lọc đã chọn."
+    },
+    "recruiterView": {
+      "title": "Góc nhìn nhà tuyển dụng",
+      "description": "Tải danh sách ứng viên đã xếp hạng theo công việc",
+      "jobIdPlaceholder": "job_id",
+      "countCandidates": "{count} ứng viên",
+      "topHybrid": "| hybrid cao nhất {score}"
+    },
+    "candidateView": {
+      "title": "Góc nhìn ứng viên",
+      "description": "Tải lịch sử ứng tuyển theo ứng viên",
+      "candidateIdPlaceholder": "candidate_id",
+      "countApplications": "{count} đơn ứng tuyển"
+    },
+    "rankedCandidates": {
+      "title": "Ứng viên đã xếp hạng",
+      "scoreLine": "hybrid {hybrid} | ngữ nghĩa {semantic} | từ khóa {keyword}",
+      "statusAuditLine": "Trạng thái {from} -> {to} bởi {by} lúc {date}",
+      "feedbackButton": "Phản hồi",
+      "statusHistoryButton": "Lịch sử trạng thái",
+      "downloadOriginalResumeButton": "Tải CV gốc",
+      "empty": "Chưa tải ứng viên đã xếp hạng.",
+      "notAvailable": "không có"
+    },
+    "statusHistory": {
+      "title": "Lịch sử trạng thái: {name}",
+      "currentStatus": "Trạng thái hiện tại: {status}",
+      "changedAt": "Thời điểm đổi",
+      "changedBy": "Người đổi",
+      "empty": "Chưa có lịch sử trạng thái."
+    },
+    "candidateHistory": {
+      "title": "Lịch sử ứng tuyển của ứng viên",
+      "hybridLine": "hybrid {score}",
+      "empty": "Chưa tải lịch sử ứng tuyển.",
+      "notAvailable": "Không có"
+    },
+    "feedback": {
+      "title": "Phản hồi đơn ứng tuyển",
+      "statusLine": "Trạng thái {status} | AI {aiStatus}",
+      "hybrid": "Hybrid",
+      "matchedKeywords": "Từ khóa khớp",
+      "missingKeywords": "Từ khóa thiếu",
+      "none": "Không có",
+      "recommendations": "Gợi ý"
+    },
+    "errors": {
+      "jobIdRequired": "Cần job_id để tải ứng viên đã xếp hạng.",
+      "candidateIdRequired": "Cần candidate_id để tải lịch sử ứng tuyển.",
+      "resumeIdRequired": "Ứng viên này chưa có tệp CV gốc.",
+      "loadRankingFailed": "Tải xếp hạng thất bại.",
+      "loadHistoryFailed": "Tải lịch sử ứng viên thất bại.",
+      "loadStatusChangesFailed": "Tải các thay đổi trạng thái gần đây thất bại.",
+      "loadStatusHistoryFailed": "Tải lịch sử trạng thái thất bại.",
+      "updateStatusFailed": "Cập nhật trạng thái thất bại.",
+      "loadFeedbackFailed": "Tải phản hồi thất bại."
+    }
+  },
+  "dashboard": {
+    "title": "Bảng điều khiển",
+    "subtitle": "Quản lý CV và đơn ứng tuyển của bạn",
+    "myResumes": "CV của tôi",
+    "noResumes": "Chưa có CV nào",
+    "noResumesDescription": "Tải CV đầu tiên để bắt đầu",
+    "uploadResume": "Tải CV lên",
+    "createNew": "Tạo mới",
+    "lastModified": "Cập nhật lần cuối",
+    "actions": "Thao tác",
+    "preview": "Xem trước",
+    "viewResume": "Xem CV",
+    "editResume": "Sửa CV",
+    "deleteResume": "Xóa CV",
+    "downloadPdf": "Tải PDF",
+    "tailorResume": "Tùy chỉnh theo công việc",
+    "selectModule": "Chọn mô-đun",
+    "masterResume": "CV gốc",
+    "tailoredResume": "CV đã tùy chỉnh",
+    "initializeMasterResume": "Khởi tạo CV gốc",
+    "initializeSequence": "Khởi tạo quy trình",
+    "refreshStatus": "Làm mới trạng thái",
+    "retryProcessing": "Xử lý lại",
+    "retryingProcessing": "Đang xử lý lại...",
+    "deleteAndReupload": "Xóa và tải lại",
+    "processingFailedHint": "Phân tích AI thất bại. Hãy thử lại hoặc xóa và tải tệp khác.",
+    "retrySuccess": "Xử lý thành công!",
+    "retryFailed": "Xử lý lại thất bại. Hãy thử tải tệp khác.",
+    "createResume": "Tạo CV",
+    "setAsMaster": "Đặt làm CV gốc",
+    "settingAsMaster": "Đang đặt...",
+    "edited": "Đã sửa {date}",
+    "statusLine": "TRẠNG THÁI: {status}",
+    "status": {
+      "checking": "Đang kiểm tra...",
+      "processing": "Đang xử lý...",
+      "ready": "Sẵn sàng",
+      "failed": "Xử lý thất bại",
+      "pending": "Đang chờ"
+    },
+    "llmNotConfiguredTitle": "[ CHƯA CẤU HÌNH LLM ]",
+    "llmNotConfiguredMessage": "> Thiếu khóa API. Tính năng tùy chỉnh CV bị tắt cho đến khi cấu hình trong cài đặt.",
+    "setupRequiredTitle": "[ CẦN THIẾT LẬP ]",
+    "setupRequiredMessage": "> Cấu hình khóa API trong cài đặt để bật tùy chỉnh CV.",
+    "uploadDialog": {
+      "success": "Tải CV lên thành công.",
+      "successMaster": "Đã tải CV lên và đặt làm CV gốc.",
+      "successMissingId": "Tải lên thành công nhưng không nhận được ID CV.",
+      "parsingFailed": "Đã tải CV lên nhưng phân tích AI thất bại. Bạn vẫn có thể tùy chỉnh thủ công.",
+      "failed": "Tải lên thất bại.",
+      "dropzoneTitle": "Bấm hoặc kéo thả tệp",
+      "dropzoneSubtitle": "PDF, DOC, DOCX (Tối đa 4MB)",
+      "tryDifferentFile": "Thử tệp khác",
+      "parsingFailedKeepOpen": "Phân tích AI thất bại. Hãy thử tệp khác hoặc đóng hộp thoại này."
+    }
+  },
+  "builder": {
+    "title": "Trình tạo CV",
+    "editMode": "Chế độ chỉnh sửa",
+    "previewMode": "Chế độ xem trước",
+    "createAndPreview": "Tạo & xem trước",
+    "unsavedDraft": "Bản nháp chưa lưu",
+    "personalInfo": "Thông tin cá nhân",
+    "summary": "Tóm tắt",
+    "experience": "Kinh nghiệm",
+    "education": "Học vấn",
+    "skills": "Kỹ năng",
+    "projects": "Dự án",
+    "certifications": "Chứng chỉ",
+    "languages": "Ngôn ngữ",
+    "awards": "Giải thưởng",
+    "addSection": "Thêm mục",
+    "removeSection": "Xóa mục",
+    "saveChanges": "Lưu thay đổi",
+    "discardChanges": "Hủy thay đổi",
+    "placeholders": {
+      "summary": "Mô tả ngắn gọn về nền tảng chuyên môn của bạn..."
+    },
+    "contentStats": {
+      "wordsChars": "{wordCount} từ / {charCount} ký tự"
+    },
+    "additionalForm": {
+      "instructions": "Nhập các mục, mỗi mục một dòng (nhấn Enter cho từng mục).",
+      "placeholders": {
+        "technicalSkills": "React\nTypeScript\nNode.js",
+        "languages": "Tiếng Việt\nTiếng Anh",
+        "certifications": "AWS Solution Architect\nGoogle Analytics",
+        "awards": "Nhân viên xuất sắc tháng\nQuán quân Hackathon"
+      }
+    },
+    "customSections": {
+      "dialogTitle": "Thêm mục tùy chỉnh",
+      "dialogDescription": "Tạo mục mới cho CV với tên và loại tùy chỉnh.",
+      "sectionNameLabel": "Tên mục",
+      "sectionNamePlaceholder": "ví dụ: Ấn phẩm, Hoạt động tình nguyện, Chứng chỉ",
+      "sectionTypeLabel": "Loại mục",
+      "addCustomSectionButton": "Thêm mục tùy chỉnh",
+      "sectionTypes": {
+        "textBlockLabel": "Khối văn bản",
+        "textBlockDescription": "Một vùng văn bản đơn (như Tóm tắt)",
+        "itemListLabel": "Danh sách mục",
+        "itemListDescription": "Nhiều mục có chi tiết (như Kinh nghiệm)",
+        "stringListLabel": "Danh sách kỹ năng",
+        "stringListDescription": "Danh sách đơn giản (như Kỹ năng)"
+      },
+      "contentLabel": "Nội dung",
+      "contentPlaceholder": "Nhập nội dung cho {name}...",
+      "defaultTextPlaceholder": "Nhập nội dung văn bản...",
+      "entryLabel": "Mục nhập",
+      "addEntryLabel": "Thêm mục nhập",
+      "itemsLabel": "Các mục",
+      "itemsPlaceholder": "Nhập mỗi mục trên một dòng",
+      "unknownSectionType": "Loại mục không xác định: {type}",
+      "unknownDefaultSection": "Mục mặc định không xác định: {section}"
+    },
+    "sectionHeader": {
+      "renameSection": "Đổi tên mục",
+      "customTag": "Tùy chỉnh",
+      "hiddenFromPdfTag": "Ẩn khỏi PDF",
+      "hideSection": "Ẩn mục",
+      "showSection": "Hiện mục",
+      "moveUp": "Di chuyển lên",
+      "moveDown": "Di chuyển xuống",
+      "deleteSection": "Xóa mục",
+      "deleteTitle": "Xóa mục",
+      "deleteDescription": "Bạn có chắc muốn xóa \"{name}\"? Hành động này không thể hoàn tác."
+    },
+    "previewTabs": {
+      "resume": "CV",
+      "coverLetter": "THƯ XIN VIỆC",
+      "outreach": "TIN NHẮN KẾT NỐI",
+      "jdMatch": "SO KHỚP JD"
+    },
+    "footer": {
+      "moduleLabel": "Mô-đun tạo CV",
+      "singleColumn": "Một cột",
+      "twoColumn": "Hai cột"
+    },
+    "pageSize": {
+      "usLetter": "US Letter"
+    },
+    "generatePrompt": {
+      "notAvailableTitle": "{title} chưa khả dụng",
+      "notAvailableDescription": "Để tạo {title}, trước tiên hãy tùy chỉnh CV với mô tả công việc.",
+      "goToDashboard": "Đi tới bảng điều khiển",
+      "generateTitle": "Tạo {title}",
+      "coverLetterDescription": "Tạo thư xin việc theo CV và mô tả công việc.",
+      "outreachDescription": "Tạo tin nhắn kết nối ngắn gọn cho LinkedIn hoặc email theo CV và mô tả công việc.",
+      "generateButton": "Tạo {title}",
+      "coverLetterFooter": "Mẹo: tùy chỉnh CV trước để có kết quả tốt hơn.",
+      "outreachFooter": "Mẹo: viết ngắn gọn và cá nhân hóa."
+    },
+    "regenerateDialog": {
+      "title": "Tạo lại {title}?",
+      "description": "Thao tác này sẽ thay thế {title} hiện tại bằng nội dung mới. Mọi chỉnh sửa của bạn sẽ bị mất."
+    },
+    "regenerate": {
+      "buttonLabel": "AI tạo lại",
+      "selectDialog": {
+        "title": "Chọn mục để tạo lại",
+        "subtitle": "Chọn phần CV bạn muốn cải thiện",
+        "experience": "Kinh nghiệm làm việc",
+        "projects": "Dự án",
+        "skills": "Kỹ năng kỹ thuật",
+        "noItemsSelected": "Vui lòng chọn ít nhất một mục",
+        "noItemsAvailable": "Không có mục nào để tạo lại. Hãy thêm kinh nghiệm, dự án hoặc kỹ năng trước.",
+        "itemCount": {
+          "one": "{count} mục",
+          "other": "{count} mục"
+        },
+        "continueButton": "Tiếp tục"
+      },
+      "instructionDialog": {
+        "title": "Bạn muốn cải thiện điều gì?",
+        "subtitle": "Cung cấp phản hồi cụ thể để AI hiểu đúng",
+        "defaultInstruction": "Cải thiện nội dung với động từ mạnh hơn và tác động định lượng nếu có.",
+        "selectedItems": "Mục đã chọn",
+        "placeholder": "Ví dụ: thêm chỉ số định lượng, nhấn mạnh năng lực lãnh đạo, dùng nhiều động từ hành động hơn...",
+        "hint": "Hãy nêu cụ thể phần bạn chưa hài lòng",
+        "backButton": "Quay lại",
+        "generateButton": "Tạo"
+      },
+      "diffPreview": {
+        "title": "Xem trước thay đổi",
+        "subtitle": "Xem lại nội dung đã tạo trước khi áp dụng",
+        "expandItem": "Mở rộng {item}",
+        "collapseItem": "Thu gọn {item}",
+        "partialFailures": "Một số mục không thể tạo lại ({count}). Bạn vẫn có thể xem và áp dụng các mục thành công.",
+        "changesCount": "{count} mục đã thay đổi",
+        "rejectButton": "Từ chối & tạo lại",
+        "acceptButton": "Chấp nhận thay đổi",
+        "originalLabel": "Bản gốc",
+        "newLabel": "Bản mới",
+        "noContent": "Không có nội dung",
+        "applying": "Đang áp dụng...",
+        "loading": "Đang tạo nội dung cải thiện..."
+      },
+      "errors": {
+        "generationFailed": "Tạo nội dung thất bại. Vui lòng thử lại.",
+        "applyFailed": "Áp dụng thay đổi thất bại. Vui lòng thử lại.",
+        "resumeChanged": "Nội dung CV đã thay đổi sau khi tạo lại. Vui lòng tạo lại và thử lại.",
+        "noChangesToApply": "Không có thay đổi để áp dụng.",
+        "networkError": "Lỗi mạng. Vui lòng kiểm tra kết nối của bạn."
+      }
+    },
+    "jdMatch": {
+      "yourResume": "CV của bạn",
+      "matchingKeywordsHighlighted": "(từ khóa khớp được tô sáng)",
+      "jobDescriptionTitle": "Mô tả công việc",
+      "at": "tại",
+      "atSeparator": " tại ",
+      "roleSeparator": "-",
+      "aboutTitle": "Về tính năng so khớp JD",
+      "aboutDescription": "Màn hình này cho biết CV của bạn khớp với mô tả công việc đến mức nào. Từ khóa trong JD sẽ được tô vàng trong CV để bạn thấy rõ kỹ năng và thuật ngữ đã được đề cập.",
+      "highlightedKeywordsTitle": "Từ khóa được tô sáng",
+      "highlightedKeywordsDescriptionTemplate": "Những từ được tô __COLOR__ xuất hiện cả trong mô tả công việc và CV. Tỷ lệ khớp cao hơn cho thấy mức độ phù hợp với yêu cầu công việc tốt hơn.",
+      "highlightedKeywordsDescriptionPrefix": "Các từ được tô",
+      "highlightColor": "màu vàng",
+      "highlightedKeywordsDescriptionSuffix": "xuất hiện cả trong mô tả công việc và CV. Tỷ lệ khớp cao hơn cho thấy mức độ phù hợp với yêu cầu công việc tốt hơn.",
+      "tipsTitle": "Mẹo",
+      "tips": {
+        "items": {
+          "addMissingKeywords": "Dùng tab CV để bổ sung từ khóa còn thiếu",
+          "focusTechnicalSkills": "Tập trung vào kỹ năng kỹ thuật và công cụ được nêu trong JD",
+          "matchActionVerbs": "Dùng động từ hành động phù hợp với yêu cầu công việc"
+        }
+      },
+      "missingKeywordsTitle": "Từ khóa còn thiếu ({count})",
+      "copyAllMissingKeywords": "Sao chép tất cả",
+      "applyMissingKeywords": "Áp dụng vào CV",
+      "copyKeyword": "sao chép",
+      "missingKeywordsEmpty": "Mức độ phù hợp rất tốt. Không phát hiện từ khóa còn thiếu.",
+      "copiedKeywordMessage": "Đã sao chép: {keyword}",
+      "summaryKeywordHintTemplate": "Từ khóa phù hợp với vị trí này: {keywords}.",
+      "applyNoChanges": "Tất cả từ khóa còn thiếu đã có trong bản nháp CV của bạn.",
+      "applySuccess": "Đã áp dụng {count} từ khóa còn thiếu vào bản nháp CV.",
+      "stats": {
+        "keywordsExtracted": "{count} từ khóa đã trích xuất",
+        "matchesFound": "{count} điểm khớp",
+        "matchRateLabel": "Tỷ lệ khớp:"
+      }
+    },
+    "genericItemForm": {
+      "itemLabel": "Mục",
+      "addItemLabel": "Thêm {label}",
+      "fields": {
+        "title": "Tiêu đề",
+        "organization": "Tổ chức",
+        "location": "Địa điểm",
+        "years": "Thời gian",
+        "descriptionPoints": "Các ý mô tả"
+      },
+      "actions": {
+        "addPoint": "Thêm ý"
+      },
+      "placeholders": {
+        "title": "Tiêu đề",
+        "organization": "Tổ chức",
+        "location": "Địa điểm",
+        "years": "01/2020 - Nay",
+        "description": "Mô tả đóng góp của bạn..."
+      },
+      "noEntries": "// KHÔNG CÓ MỤC {label}",
+      "addFirstItem": "Thêm {label} đầu tiên"
+    },
+    "forms": {
+      "experience": {
+        "addJob": "Thêm kinh nghiệm",
+        "addFirstJob": "Thêm kinh nghiệm đầu tiên",
+        "fields": {
+          "jobTitle": "Chức danh",
+          "company": "Công ty"
+        },
+        "placeholders": {
+          "jobTitle": "Lập trình viên cao cấp",
+          "company": "Tech Corp",
+          "location": "Remote / Thành phố",
+          "years": "01/2020 - Nay",
+          "description": "Mô tả thành tựu của bạn..."
+        }
+      },
+      "education": {
+        "addSchool": "Thêm học vấn",
+        "addFirstSchool": "Thêm học vấn đầu tiên",
+        "fields": {
+          "institution": "Trường / Tổ chức",
+          "degree": "Bằng cấp",
+          "description": "Mô tả",
+          "descriptionOptional": "Mô tả (tùy chọn)"
+        },
+        "placeholders": {
+          "institution": "Tên trường đại học",
+          "degree": "Cử nhân Khoa học",
+          "years": "08/2016 - 05/2020",
+          "description": "Thông tin bổ sung..."
+        }
+      },
+      "projects": {
+        "addProject": "Thêm dự án",
+        "addFirstProject": "Thêm dự án đầu tiên",
+        "fields": {
+          "projectName": "Tên dự án",
+          "role": "Vai trò",
+          "website": "Website"
+        },
+        "placeholders": {
+          "projectName": "Resume Matcher",
+          "role": "Người tạo",
+          "years": "03/2023",
+          "github": "github.com/username/project",
+          "website": "https://project-demo.com",
+          "description": "Chi tiết dự án..."
+        }
+      }
+    },
+    "formatting": {
+      "panelTitle": "Mẫu & định dạng",
+      "template": "Mẫu",
+      "templates": {
+        "swissSingle": {
+          "name": "Một cột",
+          "description": "Bố cục toàn chiều ngang truyền thống với mật độ nội dung cao"
+        },
+        "swissTwoColumn": {
+          "name": "Hai cột",
+          "description": "Cột chính tập trung kinh nghiệm, cột phụ cho kỹ năng"
+        },
+        "modern": {
+          "name": "Hiện đại",
+          "description": "Điểm nhấn màu sắc, có thể tùy biến màu chủ đề"
+        },
+        "modernTwoColumn": {
+          "name": "Hiện đại hai cột",
+          "description": "Bố cục hai cột hiện đại với điểm nhấn màu"
+        }
+      },
+      "accentColor": "Màu nhấn",
+      "accentColors": {
+        "blue": "Xanh dương",
+        "green": "Xanh lá",
+        "orange": "Cam",
+        "red": "Đỏ"
+      },
+      "pageSize": "Kích thước trang",
+      "margins": "Lề (mm)",
+      "margin": {
+        "top": "Trên",
+        "bottom": "Dưới",
+        "left": "Trái",
+        "right": "Phải"
+      },
+      "spacing": "Khoảng cách",
+      "spacingSection": "Mục",
+      "spacingItems": "Các mục con",
+      "spacingLines": "Dòng",
+      "fontSize": "Cỡ chữ",
+      "baseFontSize": "Cơ bản",
+      "headerScale": "Tiêu đề",
+      "headerFontFamily": "Font tiêu đề",
+      "bodyFontFamily": "Font nội dung",
+      "fontNames": {
+        "serif": "Serif",
+        "sans": "Sans",
+        "mono": "Mono"
+      },
+      "options": "Tùy chọn",
+      "compactMode": "Chế độ gọn",
+      "contactIcons": "Biểu tượng liên hệ",
+      "effectiveOutput": "Kết quả áp dụng",
+      "effectiveMargins": "Lề (mm): T{top} D{bottom} L{left} P{right}",
+      "effectiveSectionGap": "Khoảng cách giữa mục",
+      "effectiveItemGap": "Khoảng cách giữa dòng",
+      "effectiveLineHeight": "Chiều cao dòng",
+      "effectiveBaseFont": "Font cơ bản",
+      "effectiveHeaderScale": "Tỷ lệ tiêu đề",
+      "effectiveHeaderFont": "Font tiêu đề",
+      "effectiveBodyFont": "Font nội dung",
+      "compactHint": "Chế độ gọn sẽ giảm khoảng cách và chiều cao dòng. Lề và cỡ chữ cơ bản được giữ nguyên.",
+      "resetDefaults": "Khôi phục mặc định"
+    },
+    "personalInfoForm": {
+      "placeholders": {
+        "name": "Nguyễn Văn A",
+        "title": "Kỹ sư phần mềm",
+        "email": "nguyenvana@example.com",
+        "phone": "+84 912 345 678",
+        "location": "TP. Hồ Chí Minh, Việt Nam",
+        "website": "portfolio.com",
+        "linkedin": "linkedin.com/in/nguyenvana",
+        "github": "github.com/nguyenvana"
+      }
+    },
+    "leftPanel": {
+      "editorPanel": "Bảng chỉnh sửa",
+      "coverLetterEditor": "Trình sửa thư xin việc",
+      "outreachEditor": "Trình sửa tin nhắn kết nối",
+      "jdMatchAnalysis": "Phân tích so khớp JD"
+    },
+    "alerts": {
+      "saveNotAvailable": "Chỉ có thể lưu khi đang chỉnh sửa CV đã tồn tại.",
+      "saveFailed": "Lưu CV thất bại. Vui lòng thử lại.",
+      "coverLetterSaveSuccess": "Đã lưu thư xin việc",
+      "outreachSaveSuccess": "Đã lưu tin nhắn kết nối",
+      "downloadSuccess": "Đã tải CV",
+      "reloadFailed": "Đã áp dụng thay đổi nhưng không thể tải lại CV. Vui lòng làm mới trang.",
+      "downloadNotAvailable": "Chỉ có thể tải xuống với CV đã lưu.",
+      "downloadFailed": "Tải CV thất bại. Vui lòng thử lại.",
+      "coverLetterSaveFailed": "Lưu thư xin việc thất bại. Vui lòng thử lại.",
+      "coverLetterDownloadRequiresResume": "Hãy lưu CV trước khi tải thư xin việc.",
+      "coverLetterMissing": "Chưa có thư xin việc. Hãy bật tính năng tạo thư xin việc trong Cài đặt và tùy chỉnh CV.",
+      "coverLetterDownloadFailed": "Tải thư xin việc thất bại: {error}",
+      "outreachSaveFailed": "Lưu tin nhắn kết nối thất bại. Vui lòng thử lại.",
+      "coverLetterGenerateFailed": "Tạo thư xin việc thất bại: {error}",
+      "outreachGenerateFailed": "Tạo tin nhắn kết nối thất bại: {error}"
+    }
+  },
+  "enrichment": {
+    "title": "Cải thiện CV",
+    "loading": {
+      "analyzingTitle": "Đang phân tích CV của bạn...",
+      "analyzingDescription": "Xác định các phần cần thêm chi tiết",
+      "generatingTitle": "Đang tạo mô tả cải thiện...",
+      "generatingDescription": "Dùng câu trả lời của bạn để cải thiện CV",
+      "applyingTitle": "Đang áp dụng cải thiện...",
+      "applyingDescription": "Đang cập nhật CV gốc"
+    },
+    "questionProgress": "Câu hỏi {current} / {total}",
+    "itemType": {
+      "experience": "Kinh nghiệm",
+      "project": "Dự án"
+    },
+    "shortcutHint": "Nhấn Shift+Enter để xuống dòng, Cmd/Ctrl+Enter để tiếp tục",
+    "preview": {
+      "title": "Xem lại nội dung mới",
+      "description": "Xem lại các gạch đầu dòng mới sẽ được thêm vào CV",
+      "applyButton": "Thêm vào CV",
+      "keepingLabel": "Giữ lại",
+      "addingLabel": "Thêm mới",
+      "existingCount": "({count} hiện có)",
+      "newCount": "({count} mới)",
+      "noExistingDescription": "Chưa có mô tả hiện có"
+    },
+    "complete": {
+      "title": "CV đã được cải thiện!",
+      "updatedCountSingular": "Đã cập nhật thành công {count} mục",
+      "updatedCountPlural": "Đã cập nhật thành công {count} mục",
+      "updatedFallback": "CV của bạn đã được cập nhật với nội dung cải thiện",
+      "doneButton": "Xong"
+    },
+    "noImprovements": {
+      "title": "CV của bạn đã rất tốt!",
+      "defaultDescription": "Không tìm thấy mục nào cần cải thiện. Phần kinh nghiệm và dự án của bạn đã đủ chi tiết."
+    },
+    "error": {
+      "title": "Đã xảy ra lỗi",
+      "unexpected": "Đã xảy ra lỗi không mong đợi"
+    }
+  },
+  "tailor": {
+    "title": "Tùy chỉnh CV",
+    "subtitle": "Tối ưu CV cho một công việc cụ thể",
+    "heroTitle": "Tùy chỉnh CV của bạn",
+    "selectResume": "Chọn CV",
+    "pasteJobDescription": "Dán mô tả công việc",
+    "pasteJobDescriptionBelow": "Dán mô tả công việc ở bên dưới",
+    "jobDescriptionPlaceholder": "Dán mô tả công việc tại đây...",
+    "promptLabel": "Mức độ tùy chỉnh",
+    "promptDescription": "Chọn mức độ điều chỉnh CV theo mô tả công việc.",
+    "promptOptions": {
+      "nudge": {
+        "label": "Điều chỉnh nhẹ",
+        "description": "Chỉnh sửa tối thiểu để phù hợp hơn với kinh nghiệm hiện có."
+      },
+      "keywords": {
+        "label": "Tăng cường từ khóa",
+        "description": "Bổ sung từ khóa liên quan mà không thay đổi vai trò hoặc phạm vi công việc."
+      },
+      "full": {
+        "label": "Tùy chỉnh toàn diện",
+        "description": "Tùy chỉnh sâu dựa trên mô tả công việc."
+      }
+    },
+    "analyzeJob": "Phân tích công việc",
+    "generateTailored": "Tạo CV đã tùy chỉnh",
+    "setupRequiredTitle": "[ CẦN THIẾT LẬP ]",
+    "noApiKeyMessage": "> Chưa cấu hình khóa API. Tùy chỉnh CV yêu cầu một nhà cung cấp LLM.",
+    "configureApiKey": "Cấu hình khóa API",
+    "configureApiKeyFirst": "Hãy cấu hình khóa API trước",
+    "charactersCount": "{count} ký tự",
+    "matchScore": "Điểm khớp",
+    "suggestions": "Gợi ý",
+    "keywords": "Từ khóa nên đưa vào",
+    "footerTagline": "BỘ MÁY TỐI ƯU HÓA BẰNG AI",
+    "diffModal": {
+      "title": "Xem lại kết quả tùy chỉnh bằng AI",
+      "subtitle": "Vui lòng kiểm tra kỹ các thay đổi để đảm bảo không có thông tin sai lệch",
+      "summary": "Tóm tắt thay đổi",
+      "skillsAdded": "Kỹ năng được thêm",
+      "skillsRemoved": "Kỹ năng bị xóa",
+      "descriptionsModified": "Mô tả đã chỉnh sửa",
+      "certificationsAdded": "Chứng chỉ được thêm",
+      "highRiskChanges": "Thay đổi rủi ro cao",
+      "warningTitle": "Phát hiện {count} mục bổ sung rủi ro cao",
+      "warningMessage": "Vui lòng xác nhận các nội dung bổ sung này có trong CV gốc hoặc đã được phản ánh trong mô tả của bạn",
+      "summaryChanges": "Thay đổi phần tóm tắt",
+      "skillChanges": "Thay đổi kỹ năng",
+      "descriptionChanges": "Thay đổi mô tả kinh nghiệm",
+      "experienceChanges": "Thay đổi mục kinh nghiệm",
+      "educationChanges": "Thay đổi học vấn",
+      "projectChanges": "Thay đổi dự án",
+      "certificationChanges": "Thay đổi chứng chỉ",
+      "rejectButton": "Từ chối & tạo lại",
+      "confirmButton": "Xác nhận & lưu"
+    },
+    "regenerateDialog": {
+      "title": "Tạo lại CV đã tùy chỉnh?",
+      "description": "Thao tác này sẽ bỏ bản xem trước hiện tại và yêu cầu AI tạo một kết quả tùy chỉnh mới.",
+      "confirmLabel": "Tạo lại"
+    },
+    "missingDiffDialog": {
+      "title": "Không thể tính toán thay đổi",
+      "description": "Không thể tạo diff cho CV này. Việc này có thể xảy ra với các CV cũ thiếu dữ liệu có cấu trúc. Bạn có thể tiếp tục lưu CV đã tùy chỉnh hoặc hủy để xem lại sau.",
+      "confirmLabel": "Tiếp tục không có diff"
+    },
+    "errors": {
+      "jobDescriptionTooShort": "Mô tả công việc quá ngắn. Vui lòng cung cấp thêm chi tiết.",
+      "apiKeyError": "Lỗi khóa API. Vui lòng kiểm tra cấu hình LLM trong Cài đặt.",
+      "rateLimit": "Đã đạt giới hạn tần suất. Vui lòng chờ một chút rồi thử lại.",
+      "failedToGenerate": "Tạo CV thất bại. Vui lòng kiểm tra cài đặt và thử lại.",
+      "failedToPreview": "Xem trước CV thất bại. Vui lòng kiểm tra cài đặt và thử lại.",
+      "failedToConfirm": "Xác nhận CV thất bại. Vui lòng thử lại."
+    }
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "subtitle": "Cấu hình tùy chọn của bạn",
+    "aiProvider": "Nhà cung cấp AI",
+    "aiProviderDescription": "Chọn nhà cung cấp AI bạn muốn dùng để phân tích CV",
+    "apiKey": "Khóa API",
+    "apiKeyPlaceholder": "Nhập khóa API của bạn",
+    "saveApiKey": "Lưu khóa API",
+    "contentLanguage": "Ngôn ngữ nội dung",
+    "contentLanguageDescription": "Ngôn ngữ cho nội dung được tạo (CV, thư xin việc)",
+    "uiLanguage": "Ngôn ngữ giao diện",
+    "uiLanguageDescription": "Ngôn ngữ hiển thị của giao diện",
+    "theme": "Giao diện",
+    "themeDescription": "Chọn giao diện màu bạn thích",
+    "lightMode": "Sáng",
+    "darkMode": "Tối",
+    "systemMode": "Theo hệ thống",
+    "dangerZone": "Vùng nguy hiểm",
+    "clearApiKeys": "Xóa khóa API",
+    "clearApiKeysDescription": "Xóa toàn bộ khóa API đã lưu trong cấu hình. Hành động này không thể hoàn tác.",
+    "resetDatabase": "Đặt lại cơ sở dữ liệu",
+    "resetDatabaseDescription": "Xóa TOÀN BỘ dữ liệu gồm CV, công việc và nội dung đã tạo. Hành động này không thể hoàn tác.",
+    "llmConfigurationTitle": "Cấu hình LLM",
+    "providerLabel": "Nhà cung cấp",
+    "statusCards": {
+      "llm": "LLM",
+      "database": "Cơ sở dữ liệu",
+      "resumes": "CV",
+      "jobs": "Công việc",
+      "improvements": "Cải thiện",
+      "masterResume": "CV gốc"
+    },
+    "statusValues": {
+      "healthy": "Hoạt động tốt",
+      "offline": "Ngoại tuyến",
+      "connected": "Đã kết nối",
+      "configured": "Đã cấu hình",
+      "notSet": "Chưa thiết lập"
+    },
+    "apiKeyMenu": {
+      "buttonLabel": "LLM API",
+      "title": "Khóa API OpenAI",
+      "description": "Cung cấp khóa để dùng các mô hình OpenAI được lưu trữ.",
+      "savedMessage": "Đã lưu khóa API.",
+      "loadError": "Không thể tải khóa API",
+      "updateError": "Không thể cập nhật khóa API"
+    },
+    "setupRequired": {
+      "title": "[ CẦN THIẾT LẬP ]",
+      "description": "> Chưa cấu hình khóa API. Hãy thêm khóa API của nhà cung cấp LLM ở bên dưới để bật tính năng tùy chỉnh CV."
+    },
+    "systemStatus": {
+      "title": "Trạng thái hệ thống",
+      "refresh": "Làm mới",
+      "unableToConnect": "Không thể kết nối tới backend",
+      "expectedAt": "Dự kiến tại: {apiUrl}",
+      "lastFetched": {
+        "never": "Chưa từng",
+        "justNow": "Vừa xong",
+        "minutesAgo": "{minutes} phút trước",
+        "hoursAgo": "{hours} giờ trước"
+      }
+    },
+    "llmConfiguration": {
+      "selectedProvider": "ĐANG CHỌN: {provider}",
+      "modelLabel": "Mô hình",
+      "defaultModel": "MẶC ĐỊNH: {model}",
+      "apiKeyLabel": "Khóa API",
+      "apiKeyOptionalForOllama": "(Tùy chọn với Ollama)",
+      "apiKeyPlaceholder": "sk-...",
+      "apiKeyNotRequiredPlaceholder": "Không bắt buộc với mô hình cục bộ",
+      "leaveBlankToKeepExistingKey": "ĐỂ TRỐNG ĐỂ GIỮ KHÓA HIỆN TẠI",
+      "baseUrlLabel": "Base URL (tùy chọn)",
+      "baseUrlPlaceholder": "ví dụ https://api.openai.com/v1",
+      "baseUrlDescription": "Ghi đè Base URL để dùng endpoint proxy/aggregator. Để trống để dùng mặc định của nhà cung cấp.",
+      "ollamaServerUrl": "URL máy chủ Ollama",
+      "ollamaServerUrlPlaceholder": "http://localhost:11434",
+      "testConnection": "Kiểm tra kết nối",
+      "errorPrefix": "LỖI: {error}",
+      "connectionSuccessful": "KẾT NỐI THÀNH CÔNG",
+      "connectionFailed": "KẾT NỐI THẤT BẠI",
+      "connectionDetails": "Nhà cung cấp: {provider} | Mô hình: {model}",
+      "testPromptLabel": "PROMPT KIỂM TRA",
+      "modelOutputLabel": "ĐẦU RA MÔ HÌNH",
+      "errorDetailLabel": "CHI TIẾT LỖI",
+      "healthErrors": {
+        "api_key_missing": "Chưa cấu hình khóa API. Vui lòng thêm khóa trong Cài đặt.",
+        "health_check_failed": "Kiểm tra sức khỏe thất bại.",
+        "duplicate_v1_path": "Kiểm tra sức khỏe thất bại. Base URL có thể đang bị lặp đường dẫn /v1.",
+        "not_found_404": "Kiểm tra sức khỏe thất bại. 404 Not Found - hãy kiểm tra Base URL có khớp với nhà cung cấp hay không.",
+        "html_response": "Kiểm tra sức khỏe thất bại. Base URL trả về HTML; có thể là URL console hoặc đường dẫn gateway không hỗ trợ."
+      },
+      "healthWarnings": {
+        "empty_content": "LLM trả về nội dung rỗng khi kiểm tra sức khỏe."
+      }
+    },
+    "contentGeneration": {
+      "title": "Tạo nội dung",
+      "description": "Bật tạo thêm nội dung trong quá trình tùy chỉnh CV. Khi bật, các tài liệu này sẽ tự động được tạo cùng với CV đã tùy chỉnh.",
+      "coverLetter": {
+        "label": "Thư xin việc",
+        "description": "Tạo thư xin việc phù hợp cùng với CV của bạn"
+      },
+      "outreachMessage": {
+        "label": "Tin nhắn kết nối",
+        "description": "Tạo tin nhắn networking cho LinkedIn hoặc email"
+      }
+    },
+    "companyProfile": {
+      "title": "Hồ sơ công ty",
+      "description": "Quản lý thông tin và nhận diện thương hiệu công ty để hiển thị nhất quán trên tin tuyển dụng.",
+      "companyName": "Tên công ty",
+      "overview": "Giới thiệu công ty",
+      "industry": "Lĩnh vực",
+      "companySize": "Quy mô công ty",
+      "address": "Địa chỉ",
+      "website": "Website",
+      "brandPrimaryColor": "Màu thương hiệu chính",
+      "brandLogoUrl": "URL logo thương hiệu",
+      "save": "Lưu hồ sơ công ty",
+      "saving": "Đang lưu..."
+    },
+    "promptSettings": {
+      "title": "Cài đặt prompt",
+      "description": "Chọn prompt mặc định dùng để tùy chỉnh CV.",
+      "defaultLabel": "Prompt tùy chỉnh mặc định"
+    },
+    "footer": {
+      "status": {
+        "checking": "Đang kiểm tra...",
+        "ready": "TRẠNG THÁI: SẴN SÀNG",
+        "setupRequired": "TRẠNG THÁI: CẦN THIẾT LẬP",
+        "offline": "TRẠNG THÁI: NGOẠI TUYẾN"
+      }
+    },
+    "errors": {
+      "unableToConnectBackend": "Không thể kết nối backend. Máy chủ có đang chạy không?",
+      "apiKeyRequired": "Nhà cung cấp đã chọn yêu cầu khóa API.",
+      "unknownProvider": "Backend trả về nhà cung cấp không xác định: {provider}",
+      "unableToSaveConfiguration": "Không thể lưu cấu hình",
+      "failedToClearApiKeys": "Xóa khóa API thất bại. Vui lòng thử lại.",
+      "failedToResetDatabase": "Đặt lại cơ sở dữ liệu thất bại. Vui lòng thử lại."
+    }
+  },
+  "resumeViewer": {
+    "resumeNotFound": "Không tìm thấy CV",
+    "loading": "Đang tải CV...",
+    "useTailorFeature": "Dùng tính năng tùy chỉnh",
+    "retryProcessing": "Xử lý lại",
+    "deleteAndStartOver": "Xóa & bắt đầu lại",
+    "returnToDashboard": "Quay về bảng điều khiển",
+    "enhanceResume": "Cải thiện CV",
+    "downloadResume": "Tải CV",
+    "downloadOriginal": "Tải bản gốc",
+    "setAsMaster": "Đặt làm CV gốc",
+    "deletedTitle": "Đã xóa CV",
+    "deletedDescriptionMaster": "CV gốc của bạn đã bị xóa vĩnh viễn khỏi hệ thống.",
+    "deletedDescriptionRegular": "CV đã bị xóa vĩnh viễn khỏi hệ thống.",
+    "deleteFailedTitle": "Xóa thất bại",
+    "errors": {
+      "processingFailed": "Xử lý CV thất bại. Dịch vụ AI không thể trích xuất dữ liệu có cấu trúc từ CV của bạn. Bạn có thể xử lý lại hoặc xóa và tải lên lại.",
+      "stillProcessing": "CV vẫn đang được xử lý. Vui lòng chờ một chút và làm mới trang.",
+      "notProcessedYet": "CV chưa được xử lý. Vui lòng dùng tính năng Tùy chỉnh để tạo CV có cấu trúc.",
+      "noDataAvailable": "Không có dữ liệu CV.",
+      "failedToLoad": "Tải dữ liệu CV thất bại.",
+      "failedToDelete": "Xóa CV thất bại. Vui lòng thử lại.",
+      "failedToSetMaster": "Không thể đặt CV này làm CV gốc. Vui lòng thử lại."
+    },
+    "titlePlaceholder": "Nhập tiêu đề CV..."
+  },
+  "preview": {
+    "margins": "Lề",
+    "calculating": "Đang tính toán...",
+    "pageBreak": "Ngắt trang",
+    "pageCountSingular": "{count} trang",
+    "pageCountPlural": "{count} trang"
+  },
+  "resume": {
+    "personalInfo": {
+      "name": "Họ và tên",
+      "title": "Chức danh",
+      "email": "Email",
+      "phone": "Số điện thoại",
+      "location": "Địa điểm",
+      "website": "Website",
+      "linkedin": "LinkedIn",
+      "github": "GitHub"
+    },
+    "sections": {
+      "personalInfo": "Thông tin cá nhân",
+      "summary": "Tóm tắt",
+      "experience": "Kinh nghiệm",
+      "education": "Học vấn",
+      "projects": "Dự án",
+      "skills": "Kỹ năng & giải thưởng",
+      "skillsOnly": "Kỹ năng",
+      "certifications": "Đào tạo & chứng chỉ",
+      "languages": "Ngôn ngữ",
+      "awards": "Giải thưởng",
+      "links": "Liên kết"
+    },
+    "defaults": {
+      "name": "Tên của bạn"
+    },
+    "additional": {
+      "technicalSkills": "Kỹ năng kỹ thuật"
+    },
+    "additionalLabels": {
+      "technicalSkills": "Kỹ năng kỹ thuật:",
+      "languages": "Ngôn ngữ:",
+      "certifications": "Chứng chỉ:",
+      "awards": "Giải thưởng:"
+    }
+  },
+  "coverLetter": {
+    "title": "Thư xin việc",
+    "generate": "Tạo thư xin việc",
+    "regenerate": "Tạo lại",
+    "copyToClipboard": "Sao chép vào clipboard",
+    "copied": "Đã sao chép!",
+    "editor": {
+      "placeholder": "Thư xin việc sẽ xuất hiện tại đây sau khi bạn tùy chỉnh CV và bật tính năng tạo thư xin việc...",
+      "tip": "MẸO: Một thư xin việc tốt thường dài khoảng 300-400 từ. Hãy chỉnh sửa thêm để cá nhân hóa."
+    },
+    "preview": {
+      "defaultName": "Tên của bạn",
+      "emptyTitle": "Chưa có nội dung thư xin việc.",
+      "emptyDescription": "Hãy bật tính năng tạo thư xin việc trong Cài đặt, sau đó tùy chỉnh một CV."
+    },
+    "print": {
+      "emptyContent": "Chưa có nội dung thư xin việc."
+    }
+  },
+  "outreach": {
+    "title": "Tin nhắn kết nối",
+    "generate": "Tạo tin nhắn kết nối",
+    "regenerate": "Tạo lại",
+    "copy": "Sao chép",
+    "copyToClipboard": "Sao chép vào clipboard",
+    "copied": "Đã sao chép!",
+    "editor": {
+      "placeholder": "Tin nhắn kết nối sẽ xuất hiện tại đây sau khi bạn tùy chỉnh CV và bật tính năng tạo tin nhắn kết nối...",
+      "tip": "MẸO: Tin nhắn kết nối nên ngắn gọn (100-150 từ). Bạn có thể sao chép và dán vào LinkedIn hoặc email."
+    },
+    "preview": {
+      "channels": {
+        "linkedin": "LinkedIn",
+        "email": "Email"
+      },
+      "howToUseTitle": "Cách sử dụng:",
+      "steps": {
+        "step1": "1. Sao chép tin nhắn bằng nút phía trên",
+        "step2": "2. Mở LinkedIn hoặc ứng dụng email của bạn",
+        "step3": "3. Dán vào và cá nhân hóa nếu cần",
+        "step4": "4. Gửi cho nhà tuyển dụng hoặc quản lý tuyển dụng"
+      },
+      "emptyTitle": "Chưa có tin nhắn kết nối.",
+      "emptyDescription": "Hãy bật tính năng tạo tin nhắn kết nối trong Cài đặt, sau đó tùy chỉnh một CV."
+    }
+  },
+  "errors": {
+    "generic": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    "networkError": "Lỗi mạng. Vui lòng kiểm tra kết nối của bạn.",
+    "unauthorized": "Vui lòng đăng nhập để tiếp tục.",
+    "notFound": "Không tìm thấy tài nguyên được yêu cầu.",
+    "validationError": "Vui lòng kiểm tra dữ liệu nhập và thử lại.",
+    "boundary": {
+      "title": "Đã xảy ra lỗi",
+      "description": "Đã xảy ra lỗi không mong đợi. Chúng tôi đã ghi lại để kiểm tra.",
+      "tryAgain": "Thử lại",
+      "reloadPage": "Tải lại trang"
+    }
+  },
+  "confirmations": {
+    "deleteResume": "Bạn có chắc muốn xóa CV này?",
+    "deleteResumeDescription": "Hành động này không thể hoàn tác.",
+    "deleteMasterResumeTitle": "Xóa CV gốc",
+    "deleteMasterResumeDescription": "Hành động này không thể hoàn tác. CV gốc của bạn sẽ bị xóa vĩnh viễn khỏi hệ thống.",
+    "deleteResumeFromSystemDescription": "Hành động này không thể hoàn tác. CV sẽ bị xóa vĩnh viễn khỏi hệ thống.",
+    "deleteResumeConfirmLabel": "Xóa CV",
+    "keepResumeCancelLabel": "Giữ CV",
+    "discardChanges": "Bạn có chắc muốn bỏ các thay đổi?",
+    "discardChangesDescription": "Mọi thay đổi chưa lưu sẽ bị mất.",
+    "clearApiKeys": "Xóa tất cả khóa API?",
+    "clearApiKeysDescription": "Bạn có chắc muốn xóa tất cả khóa API? Bạn sẽ cần nhập lại để sử dụng các tính năng AI.",
+    "resetDatabase": "Đặt lại cơ sở dữ liệu và xóa toàn bộ dữ liệu?",
+    "resetDatabaseDescription": "Thao tác này sẽ xóa vĩnh viễn TOÀN BỘ CV, mô tả công việc và nội dung được tạo. Hành động này không thể đảo ngược."
+  }
+}

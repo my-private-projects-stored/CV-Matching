@@ -71,6 +71,33 @@ const applicationSchema = new Schema(
         default: [],
       },
     },
+
+    // Lịch sử chuyển trạng thái phục vụ audit tuyển dụng.
+    statusHistory: {
+      type: [
+        {
+          fromStatus: {
+            type: String,
+            enum: ["new", "screening", "interview", "hired", "rejected"],
+            default: null,
+          },
+          toStatus: {
+            type: String,
+            enum: ["new", "screening", "interview", "hired", "rejected"],
+            required: true,
+          },
+          changedAt: {
+            type: Date,
+            default: Date.now,
+          },
+          changedBy: {
+            type: String,
+            default: "system",
+          },
+        },
+      ],
+      default: [],
+    },
   },
   {
     timestamps: true,

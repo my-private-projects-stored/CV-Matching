@@ -34,6 +34,20 @@ const jobSchema = new Schema(
       trim: true,
     },
 
+    // Quyền lợi cho vị trí tuyển dụng, phục vụ hiển thị rõ gói offer cho ứng viên.
+    benefits: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    // Deadline nhận hồ sơ ứng tuyển.
+    applicationDeadline: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+
     // Văn bản đã chuẩn hóa (clean text) để tạo embedding và chấm điểm semantic.
     cleanText: {
       type: String,
@@ -89,6 +103,49 @@ const jobSchema = new Schema(
       enum: ["active", "closed"],
       default: "active",
       required: [true, "Status is required"],
+    },
+
+    // Lưu các thay đổi quan trọng để audit thao tác recruiter.
+    importantChangeHistory: {
+      type: [
+        {
+          changedAt: {
+            type: Date,
+            required: true,
+            default: Date.now,
+          },
+          changedFields: {
+            type: [String],
+            default: [],
+          },
+          changes: {
+            type: [
+              {
+                field: {
+                  type: String,
+                  required: true,
+                  trim: true,
+                },
+                before: {
+                  type: Schema.Types.Mixed,
+                  default: null,
+                },
+                after: {
+                  type: Schema.Types.Mixed,
+                  default: null,
+                },
+              },
+            ],
+            default: [],
+          },
+          summary: {
+            type: String,
+            default: "",
+            trim: true,
+          },
+        },
+      ],
+      default: [],
     },
   },
   {

@@ -82,6 +82,30 @@ jobs:
           EMBEDDING_SERVICE_URL: http://127.0.0.1:8010
         run: npm run test:integration
 
+      - name: Smoke runtime endpoints
+        working-directory: apps/backend
+        env:
+          MONGO_URI: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
+          EMBEDDING_SERVICE_URL: http://127.0.0.1:8010
+          PORT: "3001"
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          npm run start > /tmp/backend-smoke.log 2>&1 &
+          BACKEND_PID=$!
+          trap 'kill "$BACKEND_PID" >/dev/null 2>&1 || true' EXIT
+
+          for i in {1..30}; do
+            if curl -sf "http://127.0.0.1:${PORT}/api/health" > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          curl -sf "http://127.0.0.1:${PORT}/api/health"
+          curl -sf "http://127.0.0.1:${PORT}/api/status"
+
       - name: Show service logs on failure
         if: failure()
         run: docker compose logs --tail 200
