@@ -30,7 +30,7 @@ describe('JDComparisonView', () => {
     expect(screen.getByText('redis')).toBeInTheDocument();
   });
 
-  it('calls apply callback with missing keywords', () => {
+  it('calls apply callback with missing keywords and selected mode', () => {
     const resumeData: ResumeData = {
       summary: 'Built scalable React and Node applications',
       additional: {
@@ -47,9 +47,35 @@ describe('JDComparisonView', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('builder.jdMatch.applyMissingKeywords'));
+    fireEvent.click(screen.getByText('builder.jdMatch.applyMissingKeywordsWithSummary'));
 
     expect(onApplyMissingKeywords).toHaveBeenCalledTimes(1);
-    expect(onApplyMissingKeywords).toHaveBeenCalledWith(['redis', 'typescript']);
+    expect(onApplyMissingKeywords).toHaveBeenCalledWith(
+      ['redis', 'typescript'],
+      'skills-and-summary'
+    );
+  });
+
+  it('can apply missing keywords using skills-only mode', () => {
+    const resumeData: ResumeData = {
+      summary: 'Built scalable React and Node applications',
+      additional: {
+        technicalSkills: ['React', 'Node'],
+      },
+    };
+    const onApplyMissingKeywords = vi.fn();
+
+    render(
+      <JDComparisonView
+        jobDescription="React Node TypeScript Redis"
+        resumeData={resumeData}
+        onApplyMissingKeywords={onApplyMissingKeywords}
+      />
+    );
+
+    fireEvent.click(screen.getByText('builder.jdMatch.applyMissingKeywordsSkillsOnly'));
+
+    expect(onApplyMissingKeywords).toHaveBeenCalledTimes(1);
+    expect(onApplyMissingKeywords).toHaveBeenCalledWith(['redis', 'typescript'], 'skills-only');
   });
 });

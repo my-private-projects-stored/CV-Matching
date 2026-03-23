@@ -47,6 +47,9 @@ interface RegenerateWizardProps {
   // Error state
   error: string | null;
 
+  // Language context
+  outputLanguageLabel?: string;
+
   // Actions
   onGenerate: () => void;
   onAccept: () => void;
@@ -77,6 +80,7 @@ export const RegenerateWizard: React.FC<RegenerateWizardProps> = ({
   isGenerating,
   isApplying,
   error,
+  outputLanguageLabel,
   onGenerate,
   onAccept,
   onReject,
@@ -143,6 +147,7 @@ export const RegenerateWizard: React.FC<RegenerateWizardProps> = ({
         onBack={handleBackToSelection}
         onGenerate={onGenerate}
         isGenerating={isGenerating}
+        outputLanguageLabel={outputLanguageLabel}
       />
 
       {/* Step 3: Preview Diff */}

@@ -6,6 +6,7 @@ export interface ApplyMissingKeywordsResult {
 }
 
 interface ApplyMissingKeywordsOptions {
+  includeSummaryHint?: boolean;
   buildSummaryHint: (keywords: string[]) => string;
   maxSummaryKeywords?: number;
 }
@@ -61,10 +62,13 @@ export function applyMissingKeywordsToResumeData(
 
   const summary = source.summary?.trim() ?? '';
   const summaryLower = summary.toLowerCase();
+  const includeSummaryHint = options.includeSummaryHint ?? true;
   const maxSummaryKeywords = options.maxSummaryKeywords ?? 3;
-  const summaryCandidates = newSkills
-    .filter((keyword) => !summaryLower.includes(normalizeKeyword(keyword)))
-    .slice(0, maxSummaryKeywords);
+  const summaryCandidates = includeSummaryHint
+    ? newSkills
+        .filter((keyword) => !summaryLower.includes(normalizeKeyword(keyword)))
+        .slice(0, maxSummaryKeywords)
+    : [];
 
   const summaryHint = summaryCandidates.length ? options.buildSummaryHint(summaryCandidates) : '';
   const nextSummary = summaryHint

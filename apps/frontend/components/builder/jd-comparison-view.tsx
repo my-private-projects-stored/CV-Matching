@@ -9,10 +9,12 @@ import { CheckCircle, Target } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 
+type ApplyMissingKeywordsMode = 'skills-only' | 'skills-and-summary';
+
 interface JDComparisonViewProps {
   jobDescription: string;
   resumeData: ResumeData;
-  onApplyMissingKeywords?: (keywords: string[]) => void;
+  onApplyMissingKeywords?: (keywords: string[], mode: ApplyMissingKeywordsMode) => void;
 }
 
 /**
@@ -95,11 +97,11 @@ export function JDComparisonView({
     await copyText(missingKeywords.join(', '));
   }
 
-  function applyMissingKeywords() {
+  function applyMissingKeywords(mode: ApplyMissingKeywordsMode) {
     if (!missingKeywords.length || !onApplyMissingKeywords) {
       return;
     }
-    onApplyMissingKeywords(missingKeywords);
+    onApplyMissingKeywords(missingKeywords, mode);
   }
 
   return (
@@ -152,11 +154,19 @@ export function JDComparisonView({
               {t('builder.jdMatch.copyAllMissingKeywords')}
             </Button>
             <Button
+              variant="outline"
               className="h-8 px-2 text-[11px]"
-              onClick={applyMissingKeywords}
+              onClick={() => applyMissingKeywords('skills-only')}
               disabled={!missingKeywords.length || !onApplyMissingKeywords}
             >
-              {t('builder.jdMatch.applyMissingKeywords')}
+              {t('builder.jdMatch.applyMissingKeywordsSkillsOnly')}
+            </Button>
+            <Button
+              className="h-8 px-2 text-[11px]"
+              onClick={() => applyMissingKeywords('skills-and-summary')}
+              disabled={!missingKeywords.length || !onApplyMissingKeywords}
+            >
+              {t('builder.jdMatch.applyMissingKeywordsWithSummary')}
             </Button>
           </div>
         </div>

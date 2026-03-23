@@ -14,6 +14,8 @@ import {
   fetchMasterResume,
   fetchJobDescription,
   fetchResume,
+  generateCoverLetter,
+  generateOutreachMessage,
   getOriginalResumeDownloadUrl,
   getResumePdfUrl,
   improveResume,
@@ -195,5 +197,27 @@ describe('resume API client', () => {
 
     expect(result.is_master).toBe(true);
     expect(mockedApiPost).toHaveBeenCalledWith('/resumes/resume-2/set-as-master', {});
+  });
+
+  it('generateCoverLetter posts output language when provided', async () => {
+    mockedApiPost.mockResolvedValueOnce(jsonResponse({ content: 'Generated cover letter' }));
+
+    const result = await generateCoverLetter('resume-1', 'vi');
+
+    expect(result).toBe('Generated cover letter');
+    expect(mockedApiPost).toHaveBeenCalledWith('/resumes/resume-1/generate-cover-letter', {
+      output_language: 'vi',
+    });
+  });
+
+  it('generateOutreachMessage posts output language when provided', async () => {
+    mockedApiPost.mockResolvedValueOnce(jsonResponse({ content: 'Generated outreach message' }));
+
+    const result = await generateOutreachMessage('resume-1', 'en');
+
+    expect(result).toBe('Generated outreach message');
+    expect(mockedApiPost).toHaveBeenCalledWith('/resumes/resume-1/generate-outreach', {
+      output_language: 'en',
+    });
   });
 });

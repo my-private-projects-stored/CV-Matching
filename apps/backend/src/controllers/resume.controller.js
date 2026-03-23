@@ -20,6 +20,23 @@ import {
   updateResumeById,
   updateResumeFields,
 } from "../services/resume.service.js";
+import { getLanguageConfig } from "../services/config.service.js";
+
+const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi"]);
+
+function resolveOutputLanguage(value, fallback = "en") {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (SUPPORTED_OUTPUT_LANGUAGES.has(normalized)) {
+    return normalized;
+  }
+
+  const fallbackNormalized = String(fallback || "").trim().toLowerCase();
+  if (SUPPORTED_OUTPUT_LANGUAGES.has(fallbackNormalized)) {
+    return fallbackNormalized;
+  }
+
+  return "en";
+}
 
 function requestId() {
   return `req_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -326,7 +343,12 @@ export async function getResumeJobDescriptionHandler(req, res, next) {
 
 export async function generateCoverLetterHandler(req, res, next) {
   try {
-    const content = await generateCoverLetterContent(req.params.id);
+    const configuredLanguage = await getLanguageConfig().catch(() => null);
+    const outputLanguage = resolveOutputLanguage(
+      req.body?.output_language,
+      configuredLanguage?.content_language
+    );
+    const content = await generateCoverLetterContent(req.params.id, outputLanguage);
     if (!content) {
       return res.status(404).json({ message: "Resume not found" });
     }
@@ -395,7 +417,12 @@ export async function downloadOriginalResumeHandler(req, res, next) {
 
 export async function generateOutreachHandler(req, res, next) {
   try {
-    const content = await generateOutreachContent(req.params.id);
+    const configuredLanguage = await getLanguageConfig().catch(() => null);
+    const outputLanguage = resolveOutputLanguage(
+      req.body?.output_language,
+      configuredLanguage?.content_language
+    );
+    const content = await generateOutreachContent(req.params.id, outputLanguage);
     if (!content) {
       return res.status(404).json({ message: "Resume not found" });
     }

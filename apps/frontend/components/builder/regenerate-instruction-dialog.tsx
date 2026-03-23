@@ -25,6 +25,7 @@ interface RegenerateInstructionDialogProps {
   onBack: () => void;
   onGenerate: () => void;
   isGenerating: boolean;
+  outputLanguageLabel?: string;
 }
 
 /**
@@ -44,6 +45,7 @@ export const RegenerateInstructionDialog: React.FC<RegenerateInstructionDialogPr
   onBack,
   onGenerate,
   isGenerating,
+  outputLanguageLabel,
 }) => {
   const { t } = useTranslations();
 
@@ -89,6 +91,11 @@ export const RegenerateInstructionDialog: React.FC<RegenerateInstructionDialogPr
           <DialogDescription className="font-mono text-xs text-gray-600 mt-2">
             {t('builder.regenerate.instructionDialog.subtitle')}
           </DialogDescription>
+          {outputLanguageLabel ? (
+            <p className="font-mono text-[11px] text-gray-600 mt-3 inline-flex w-fit px-2 py-1 border border-gray-300 bg-gray-50">
+              {t('builder.regenerate.instructionDialog.aiLanguageLabel')}: {outputLanguageLabel}
+            </p>
+          ) : null}
         </DialogHeader>
 
         <div className="p-6 space-y-6">

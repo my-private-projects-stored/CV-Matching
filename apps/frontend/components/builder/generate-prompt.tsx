@@ -15,6 +15,8 @@ export interface GeneratePromptProps {
   onGenerate: () => void;
   /** Whether this is a tailored resume (has job context) */
   isTailoredResume: boolean;
+  /** Current AI output language label */
+  outputLanguageLabel?: string;
   /** Additional class names */
   className?: string;
 }
@@ -24,6 +26,7 @@ export function GeneratePrompt({
   isGenerating,
   onGenerate,
   isTailoredResume,
+  outputLanguageLabel,
   className,
 }: GeneratePromptProps) {
   const { t } = useTranslations();
@@ -93,6 +96,11 @@ export function GeneratePrompt({
           ? t('builder.generatePrompt.outreachFooter')
           : t('builder.generatePrompt.coverLetterFooter')}
       </p>
+      {outputLanguageLabel ? (
+        <p className="font-mono text-[11px] text-gray-600 mt-3 px-2 py-1 border border-gray-300 bg-gray-50">
+          {t('builder.generatePrompt.aiLanguageLabel')}: {outputLanguageLabel}
+        </p>
+      ) : null}
     </div>
   );
 }

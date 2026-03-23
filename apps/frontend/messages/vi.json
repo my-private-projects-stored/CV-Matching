@@ -141,10 +141,20 @@
     "statusChanges": {
       "title": "Các thay đổi trạng thái gần đây",
       "refreshButton": "Làm mới thay đổi",
+      "clearFiltersButton": "Xóa bộ lọc",
       "changedByPlaceholder": "lọc theo changed_by...",
+      "changedAfterLabel": "Từ ngày",
+      "changedBeforeLabel": "Đến ngày",
+      "quickRangeLabel": "Khoảng nhanh",
+      "preset": {
+        "7d": "7 ngày gần đây",
+        "30d": "30 ngày gần đây",
+        "90d": "90 ngày gần đây"
+      },
       "transitionLine": "Chuyển trạng thái {from} -> {to}",
       "changedByLine": "Bởi {by}",
       "changedAtLine": "Lúc {date}",
+      "countChanges": "{count} thay đổi",
       "empty": "Không có thay đổi trạng thái nào theo bộ lọc đã chọn."
     },
     "recruiterView": {
@@ -353,6 +363,7 @@
       "coverLetterDescription": "Tạo thư xin việc theo CV và mô tả công việc.",
       "outreachDescription": "Tạo tin nhắn kết nối ngắn gọn cho LinkedIn hoặc email theo CV và mô tả công việc.",
       "generateButton": "Tạo {title}",
+      "aiLanguageLabel": "Ngôn ngữ nội dung AI",
       "coverLetterFooter": "Mẹo: tùy chỉnh CV trước để có kết quả tốt hơn.",
       "outreachFooter": "Mẹo: viết ngắn gọn và cá nhân hóa."
     },
@@ -379,6 +390,7 @@
       "instructionDialog": {
         "title": "Bạn muốn cải thiện điều gì?",
         "subtitle": "Cung cấp phản hồi cụ thể để AI hiểu đúng",
+        "aiLanguageLabel": "Ngôn ngữ nội dung AI",
         "defaultInstruction": "Cải thiện nội dung với động từ mạnh hơn và tác động định lượng nếu có.",
         "selectedItems": "Mục đã chọn",
         "placeholder": "Ví dụ: thêm chỉ số định lượng, nhấn mạnh năng lực lãnh đạo, dùng nhiều động từ hành động hơn...",
@@ -433,7 +445,8 @@
       },
       "missingKeywordsTitle": "Từ khóa còn thiếu ({count})",
       "copyAllMissingKeywords": "Sao chép tất cả",
-      "applyMissingKeywords": "Áp dụng vào CV",
+      "applyMissingKeywordsSkillsOnly": "Chỉ áp dụng vào kỹ năng",
+      "applyMissingKeywordsWithSummary": "Áp dụng vào kỹ năng + tóm tắt",
       "copyKeyword": "sao chép",
       "missingKeywordsEmpty": "Mức độ phù hợp rất tốt. Không phát hiện từ khóa còn thiếu.",
       "copiedKeywordMessage": "Đã sao chép: {keyword}",

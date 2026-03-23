@@ -39,6 +39,7 @@ const JOB_KEYWORD_STOPWORDS = new Set([
   "your",
   "will",
 ]);
+const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi"]);
 
 function shouldRegenerateResumeEmbedding(payload = {}) {
   return ["rawText", "parsedData"].some((key) => key in payload);
@@ -667,6 +668,15 @@ function normalizeSentence(value = "") {
   return text.endsWith(".") ? text : `${text}.`;
 }
 
+function resolveOutputLanguage(language) {
+  const normalized = String(language || "").trim().toLowerCase();
+  if (SUPPORTED_OUTPUT_LANGUAGES.has(normalized)) {
+    return normalized;
+  }
+
+  return "en";
+}
+
 function collectResumePdfLines(resume) {
   const preview = toResumePreviewData(resume.parsedData);
   const lines = [];
@@ -719,48 +729,76 @@ function buildRoleLine(resume) {
   return { name, role };
 }
 
-function buildContextLine(resume) {
+function buildContextLine(resume, outputLanguage = "en") {
+  const language = resolveOutputLanguage(outputLanguage);
   const source = String(resume.jobDescription || resume.rawText || "").trim();
   if (!source) {
-    return "I am excited to contribute my experience to your team and deliver measurable impact.";
+    return language === "vi"
+      ? "Toi hao hung dong gop kinh nghiem cua minh cho doi ngu va tao ra tac dong co the do luong duoc."
+      : "I am excited to contribute my experience to your team and deliver measurable impact.";
   }
 
   const clipped = source.replace(/\s+/g, " ").slice(0, 220).trim();
   if (!clipped) {
-    return "I am excited to contribute my experience to your team and deliver measurable impact.";
+    return language === "vi"
+      ? "Toi hao hung dong gop kinh nghiem cua minh cho doi ngu va tao ra tac dong co the do luong duoc."
+      : "I am excited to contribute my experience to your team and deliver measurable impact.";
+  }
+
+  if (language === "vi") {
+    return `Yeu cau cua vi tri nay phu hop voi nen tang cua toi, dac biet o cac noi dung ${clipped.toLowerCase()}.`;
   }
 
   return `Your role expectations align with my background, especially around ${clipped.toLowerCase()}.`;
 }
 
-export async function generateCoverLetterContent(resumeId) {
+export async function generateCoverLetterContent(resumeId, outputLanguage = "en") {
   const resume = await getResumeByPublicId(resumeId);
   if (!resume) return null;
 
+  const language = resolveOutputLanguage(outputLanguage);
   const { name, role } = buildRoleLine(resume);
-  const intro = normalizeSentence(`Dear Hiring Team,\n\nMy name is ${name} and I am a ${role}`);
-  const alignment = normalizeSentence(buildContextLine(resume));
-  const impact =
-    "I focus on delivering clear outcomes, collaborating effectively across teams, and continuously improving quality and efficiency.";
-  const closing =
-    "Thank you for considering my application. I would welcome the opportunity to discuss how I can contribute to your organization.\n\nSincerely,\n" +
-    name;
+  const contextLine = normalizeSentence(buildContextLine(resume, language));
 
-  const content = [intro, alignment, impact, closing].join("\n\n");
+  const intro =
+    language === "vi"
+      ? normalizeSentence(`Kinh gui Quy cong ty,\n\nToi ten la ${name} va hien la ${role}`)
+      : normalizeSentence(`Dear Hiring Team,\n\nMy name is ${name} and I am a ${role}`);
+
+  const impact =
+    language === "vi"
+      ? "Toi tap trung tao ket qua ro rang, phoi hop hieu qua lien phong ban va lien tuc cai tien chat luong cong viec."
+      : "I focus on delivering clear outcomes, collaborating effectively across teams, and continuously improving quality and efficiency.";
+
+  const closing =
+    language === "vi"
+      ?
+          "Cam on Quy cong ty da danh thoi gian xem xet ho so cua toi. Toi rat mong co co hoi trao doi them ve cach toi co the dong gop cho to chuc.\n\nTran trong,\n" +
+          name
+      :
+          "Thank you for considering my application. I would welcome the opportunity to discuss how I can contribute to your organization.\n\nSincerely,\n" +
+          name;
+
+  const content = [intro, contextLine, impact, closing].join("\n\n");
   resume.coverLetter = content;
   await resume.save();
   return content;
 }
 
-export async function generateOutreachContent(resumeId) {
+export async function generateOutreachContent(resumeId, outputLanguage = "en") {
   const resume = await getResumeByPublicId(resumeId);
   if (!resume) return null;
 
+  const language = resolveOutputLanguage(outputLanguage);
   const { name, role } = buildRoleLine(resume);
-  const line1 = `Hi, I am ${name}, a ${role}.`;
-  const line2 = normalizeSentence(buildContextLine(resume));
-  const line3 = "If useful, I would be glad to share how my background can support your team goals.";
-  const line4 = "Thank you for your time.";
+  const line1 =
+    language === "vi" ? `Chao anh/chi, toi la ${name}, hien la ${role}.` : `Hi, I am ${name}, a ${role}.`;
+  const line2 = normalizeSentence(buildContextLine(resume, language));
+  const line3 =
+    language === "vi"
+      ? "Neu phu hop, toi san long chia se cach kinh nghiem cua minh co the ho tro muc tieu cua doi ngu cua anh/chi."
+      : "If useful, I would be glad to share how my background can support your team goals.";
+  const line4 = language === "vi" ? "Cam on anh/chi da danh thoi gian." : "Thank you for your time.";
 
   const content = [line1, line2, line3, line4].join(" ");
   resume.outreachMessage = content;

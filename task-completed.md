@@ -1193,3 +1193,137 @@
 - Đã bổ sung test cho callback UI và utility logic:
   - `apps/frontend/tests/jd-comparison-view.test.tsx` thêm case `calls apply callback with missing keywords`.
   - `apps/frontend/tests/jd-match-utils.test.ts` (mới) kiểm tra nhánh thêm keyword + nhánh không thay đổi.
+
+### 70) UC-RM-07 nâng cấp tiếp: chọn mode áp dụng Missing Keywords (Skills only / Skills + Summary)
+- Đã mở rộng JD Match View với 2 hành động apply rõ ràng cho candidate:
+  - `apps/frontend/components/builder/jd-comparison-view.tsx`
+  - thêm nút:
+    - `Apply Skills Only` (chỉ cập nhật `technicalSkills`),
+    - `Apply Skills + Summary` (cập nhật `technicalSkills` và gợi ý summary).
+- Đã mở rộng callback apply để truyền mode từ JD Match sang Resume Builder:
+  - `apps/frontend/components/builder/resume-builder.tsx`
+  - `handleApplyMissingKeywords` nhận mode và điều khiển luồng áp dụng phù hợp.
+- Đã nâng cấp utility xử lý keyword với option `includeSummaryHint`:
+  - `apps/frontend/lib/utils/jd-match.ts`
+  - cho phép tái sử dụng cùng một hàm cho cả 2 mode mà không nhân đôi logic.
+- Đã cập nhật i18n EN/VI cho nhãn mode mới:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã mở rộng test:
+  - `apps/frontend/tests/jd-comparison-view.test.tsx` thêm case xác nhận callback nhận đúng mode.
+  - `apps/frontend/tests/jd-match-utils.test.ts` thêm case `skills-only` không append summary.
+
+### 71) UC-BASIC-13 nâng cấp tiếp: phân trang rõ ràng cho Recent Status Changes và tách luồng tải khỏi ranking
+- Đã refactor trang Applications để tối ưu recruiter monitoring:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - tách fetch `Recent Status Changes` khỏi `loadRanked` để tránh reload bảng ranking khi chỉ đổi filter status changes,
+  - thêm state phân trang riêng cho status changes (`page`, `total_pages`, `total`) và cơ chế activate độc lập,
+  - thêm điều khiển `Prev/Next` + hiển thị `Page x/y` + tổng số changes,
+  - chuẩn hóa reset page về 1 khi đổi `job_id`, `status`, `changed_by`.
+- Đã cập nhật i18n EN/VI cho thông tin tổng số changes:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Kết quả kỳ vọng sau nâng cấp:
+  - Recruiter theo dõi lịch sử đổi trạng thái theo trang rõ ràng hơn,
+  - Giảm request thừa và giảm nhiễu khi tinh chỉnh bộ lọc timeline status.
+
+### 72) UC-RM-11 nâng cấp: đồng bộ ngôn ngữ nội dung AI cho Cover Letter/Outreach
+- Đã mở rộng frontend API để truyền ngôn ngữ output cho các tác vụ generate nội dung:
+  - `apps/frontend/lib/api/resume.ts`
+  - `generateCoverLetter(resumeId, outputLanguage?)`
+  - `generateOutreachMessage(resumeId, outputLanguage?)`.
+- Đã wiring Resume Builder dùng `contentLanguage` hiện tại (không phụ thuộc `uiLanguage`) khi generate:
+  - `apps/frontend/components/builder/resume-builder.tsx`
+  - gọi generate Cover Letter/Outreach với `contentLanguage` từ `LanguageContext`.
+- Đã cập nhật backend để resolve ngôn ngữ output theo ưu tiên:
+  1. `req.body.output_language` nếu hợp lệ,
+  2. fallback theo `config.language.content_language`,
+  3. mặc định `en` nếu không khả dụng.
+  - `apps/backend/src/controllers/resume.controller.js`
+- Đã mở rộng service generate nội dung theo ngôn ngữ `en|vi`:
+  - `apps/backend/src/services/resume.service.js`
+  - `generateCoverLetterContent(resumeId, outputLanguage)`
+  - `generateOutreachContent(resumeId, outputLanguage)`
+  - thêm template text song ngữ và chuẩn hóa fallback ngôn ngữ.
+- Đã bổ sung test frontend API cho payload ngôn ngữ:
+  - `apps/frontend/tests/resume-api.test.ts`
+  - thêm case xác nhận request body có `output_language` cho cả cover letter và outreach.
+
+### 73) UC-RM-11 nâng cấp tiếp: hiển thị rõ AI Content Language trong luồng generate/regenerate
+- Đã bổ sung hiển thị ngôn ngữ nội dung AI hiện tại ngay tại panel Generate cho Cover Letter/Outreach:
+  - `apps/frontend/components/builder/generate-prompt.tsx`
+  - thêm nhãn `AI Content Language: <language>` để candidate biết chính xác ngôn ngữ output trước khi chạy AI.
+- Đã bổ sung hiển thị ngôn ngữ nội dung AI trong bước nhập instruction của Regenerate Wizard:
+  - `apps/frontend/components/builder/regenerate-instruction-dialog.tsx`
+  - hiển thị cùng khu vực header dialog để tránh nhầm với UI language.
+- Đã wiring dữ liệu ngôn ngữ từ Resume Builder xuống các component liên quan:
+  - `apps/frontend/components/builder/resume-builder.tsx`
+  - `apps/frontend/components/builder/regenerate-wizard.tsx`
+  - tạo `outputLanguageLabel` từ `LanguageContext` (`language name + code`) và truyền xuyên suốt.
+- Đã cập nhật i18n EN/VI cho nhãn mới:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã bổ sung test UI mục tiêu:
+  - `apps/frontend/tests/generate-prompt.test.tsx`
+  - xác nhận render nhãn ngôn ngữ output khi có `outputLanguageLabel`.
+
+### 74) UC-BASIC-13 nâng cấp tiếp: lọc khoảng thời gian cho Recent Status Changes
+- Đã mở rộng backend service `status-changes` để hỗ trợ lọc theo thời gian:
+  - `apps/backend/src/services/application.service.js`
+  - thêm query params: `changed_after`, `changed_before`,
+  - validate giá trị ngày không hợp lệ trả về lỗi `400`,
+  - hỗ trợ date-only boundary cho `changed_before` theo hết ngày (23:59:59.999 UTC).
+- Đã mở rộng frontend API client để truyền bộ lọc thời gian:
+  - `apps/frontend/lib/api/applications.ts`
+  - `fetchRecentStatusChanges` nhận thêm `changedAfter`/`changedBefore`.
+- Đã nâng cấp giao diện Applications page với bộ lọc date range cho status changes:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - thêm 2 input `type=date`:
+    - `From` / `Từ ngày`,
+    - `To` / `Đến ngày`,
+  - reset về trang 1 khi đổi bộ lọc thời gian,
+  - giữ nguyên phân trang độc lập đã tách ở hạng mục trước.
+- Đã bổ sung i18n EN/VI cho nhãn mới:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã cập nhật test API query serialization:
+  - `apps/frontend/tests/applications-api.test.ts`
+  - xác nhận URL có `changed_after` và `changed_before`.
+
+### 75) UC-BASIC-13 nâng cấp tiếp: Clear filters cho Status Changes + test backend date-range
+- Đã bổ sung thao tác xóa nhanh toàn bộ filter của panel Recent Status Changes:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - thêm nút `Clear Filters` / `Xóa bộ lọc` để reset đồng thời:
+    - status,
+    - changed_by,
+    - from date,
+    - to date,
+    - page về 1.
+- Đã bổ sung i18n EN/VI cho nút mới:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã mở rộng integration test backend cho endpoint `status-changes`:
+  - `apps/backend/tests/integration/application-endpoints.test.mjs`
+  - thêm case xác nhận lọc kết hợp:
+    - `status`,
+    - `changed_by`,
+    - `changed_after`,
+    - `changed_before`.
+  - thêm case negative: `changed_after` không hợp lệ trả về `400`.
+
+### 76) UC-BASIC-13 nâng cấp tiếp: quick preset thời gian cho Status Changes (7d/30d/90d)
+- Đã bổ sung bộ lọc nhanh theo khoảng thời gian cho panel Recent Status Changes:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - thêm các preset:
+    - `Last 7d`,
+    - `Last 30d`,
+    - `Last 90d`.
+- Hành vi khi chọn preset:
+  - tự động điền `From` và `To` theo ngày hiện tại,
+  - reset page về 1,
+  - kích hoạt lại truy vấn status changes với bộ lọc mới.
+- Đã bổ sung reset đồng bộ với Clear Filters:
+  - xóa luôn trạng thái preset active khi bấm Clear Filters.
+- Đã bổ sung i18n EN/VI cho quick range:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.

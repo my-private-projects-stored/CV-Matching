@@ -40,4 +40,27 @@ describe('applyMissingKeywordsToResumeData', () => {
     expect(result.addedSkillCount).toBe(0);
     expect(result.resumeData).toBe(source);
   });
+
+  it('supports skills-only mode without adding summary hint', () => {
+    const source: ResumeData = {
+      summary: 'Backend engineer with experience in distributed systems',
+      additional: {
+        technicalSkills: ['Node', 'MongoDB'],
+      },
+    };
+
+    const result = applyMissingKeywordsToResumeData(source, ['Redis', 'TypeScript'], {
+      includeSummaryHint: false,
+      buildSummaryHint: (keywords) => `Keywords aligned with this role: ${keywords.join(', ')}.`,
+    });
+
+    expect(result.addedSkillCount).toBe(2);
+    expect(result.resumeData.additional?.technicalSkills).toEqual([
+      'Node',
+      'MongoDB',
+      'Redis',
+      'TypeScript',
+    ]);
+    expect(result.resumeData.summary).toBe(source.summary);
+  });
 });

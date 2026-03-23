@@ -19,6 +19,25 @@ function normalizePagination(query = {}) {
   return { page, limit, skip };
 }
 
+function parseDateFilter(value, mode = "start") {
+  const text = normalizeText(value);
+  if (!text) {
+    return null;
+  }
+
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) {
+    return { error: `Invalid date value: ${text}` };
+  }
+
+  // Support date-only filters from UI date picker by widening the end boundary.
+  if (mode === "end" && /^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    parsed.setUTCHours(23, 59, 59, 999);
+  }
+
+  return parsed;
+}
+
 function buildCandidateSuggestions(missingKeywords = []) {
   if (!Array.isArray(missingKeywords) || missingKeywords.length === 0) {
     return ["Your profile already matches core requirements for this job."];
@@ -498,6 +517,14 @@ export async function listRecentStatusChangesByJob(jobId, query = {}) {
   const { page, limit, skip } = normalizePagination(query);
   const statusFilter = normalizeText(query.status).toLowerCase();
   const changedByFilter = normalizeText(query.changed_by).toLowerCase();
+  const changedAfter = parseDateFilter(query.changed_after, "start");
+  if (changedAfter?.error) {
+    return { error: changedAfter.error, code: 400 };
+  }
+  const changedBefore = parseDateFilter(query.changed_before, "end");
+  if (changedBefore?.error) {
+    return { error: changedBefore.error, code: 400 };
+  }
 
   const appDocs = await Application.find({ jobId: job._id })
     .populate({
@@ -514,6 +541,11 @@ export async function listRecentStatusChangesByJob(jobId, query = {}) {
   for (const appDoc of appDocs) {
     const historyEntries = Array.isArray(appDoc.statusHistory) ? appDoc.statusHistory : [];
     for (const entry of historyEntries) {
+      const changedAt = new Date(entry.changedAt || appDoc.updatedAt);
+      if (Number.isNaN(changedAt.getTime())) {
+        continue;
+      }
+
       if (statusFilter && APPLICATION_STATUSES.has(statusFilter) && entry.toStatus !== statusFilter) {
         continue;
       }
@@ -522,6 +554,14 @@ export async function listRecentStatusChangesByJob(jobId, query = {}) {
         changedByFilter &&
         String(entry.changedBy || "system").toLowerCase().indexOf(changedByFilter) === -1
       ) {
+        continue;
+      }
+
+      if (changedAfter && changedAt < changedAfter) {
+        continue;
+      }
+
+      if (changedBefore && changedAt > changedBefore) {
         continue;
       }
 

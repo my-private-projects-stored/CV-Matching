@@ -97,6 +97,13 @@ export default function ApplicationsPage() {
   >([]);
   const [statusChangesFilter, setStatusChangesFilter] = useState<ApplicationStatus | ''>('');
   const [statusChangesChangedBy, setStatusChangesChangedBy] = useState('');
+  const [statusChangesChangedAfter, setStatusChangesChangedAfter] = useState('');
+  const [statusChangesChangedBefore, setStatusChangesChangedBefore] = useState('');
+  const [statusChangesPreset, setStatusChangesPreset] = useState<'' | '7d' | '30d' | '90d'>('');
+  const [statusChangesPage, setStatusChangesPage] = useState(1);
+  const [statusChangesTotalPages, setStatusChangesTotalPages] = useState(1);
+  const [statusChangesTotal, setStatusChangesTotal] = useState(0);
+  const [statusChangesActivated, setStatusChangesActivated] = useState(Boolean(defaultJobId));
   const [error, setError] = useState<string | null>(null);
 
   const topHybrid = useMemo(() => {
@@ -108,6 +115,18 @@ export default function ApplicationsPage() {
     (status: ApplicationStatus) => t(`applicationsPage.status.${status}`),
     [t]
   );
+
+  const applyStatusChangesPreset = useCallback((preset: '7d' | '30d' | '90d') => {
+    const days = Number.parseInt(preset.replace('d', ''), 10);
+    const today = new Date();
+    const from = new Date(today);
+    from.setDate(today.getDate() - (days - 1));
+
+    setStatusChangesPreset(preset);
+    setStatusChangesChangedAfter(from.toISOString().slice(0, 10));
+    setStatusChangesChangedBefore(today.toISOString().slice(0, 10));
+    setStatusChangesPage(1);
+  }, []);
 
   const aiStatusLabel = useCallback(
     (status: ApplicationAiStatus) => t(`applicationsPage.aiStatus.${status}`),
@@ -135,21 +154,12 @@ export default function ApplicationsPage() {
 
       const summaryResult = await fetchApplicationStatusSummary(jobId.trim());
       setSummary(summaryResult.data);
-
-      const statusChangesResult = await fetchRecentStatusChanges({
-        jobId: jobId.trim(),
-        page: 1,
-        limit: 20,
-        status: statusChangesFilter,
-        changedBy: statusChangesChangedBy,
-      });
-      setStatusChanges(statusChangesResult.data.changes);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('applicationsPage.errors.loadRankingFailed'));
     } finally {
       setIsLoadingRanked(false);
     }
-  }, [jobId, rankedPage, rankedStatusFilter, statusChangesFilter, statusChangesChangedBy, t]);
+  }, [jobId, rankedPage, rankedStatusFilter, t]);
 
   const loadHistory = useCallback(async () => {
     if (!candidateId.trim()) {
@@ -178,7 +188,9 @@ export default function ApplicationsPage() {
 
   function activateRanked() {
     setRankedPage(1);
+    setStatusChangesPage(1);
     setRankedActivated(true);
+    setStatusChangesActivated(true);
   }
 
   function activateHistory() {
@@ -244,7 +256,7 @@ export default function ApplicationsPage() {
     }
   }
 
-  async function loadRecentStatusChanges() {
+  const loadRecentStatusChanges = useCallback(async () => {
     if (!jobId.trim()) {
       setError(t('applicationsPage.errors.jobIdRequired'));
       return;
@@ -255,18 +267,30 @@ export default function ApplicationsPage() {
     try {
       const result = await fetchRecentStatusChanges({
         jobId: jobId.trim(),
-        page: 1,
+        page: statusChangesPage,
         limit: 20,
         status: statusChangesFilter,
         changedBy: statusChangesChangedBy,
+        changedAfter: statusChangesChangedAfter,
+        changedBefore: statusChangesChangedBefore,
       });
       setStatusChanges(result.data.changes);
+      setStatusChangesTotalPages(result.data.pagination.total_pages);
+      setStatusChangesTotal(result.data.pagination.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('applicationsPage.errors.loadStatusChangesFailed'));
     } finally {
       setIsLoadingStatusChanges(false);
     }
-  }
+  }, [
+    jobId,
+    statusChangesPage,
+    statusChangesFilter,
+    statusChangesChangedBy,
+    statusChangesChangedAfter,
+    statusChangesChangedBefore,
+    t,
+  ]);
 
   async function openStatusHistory(applicationId: string, candidateName: string) {
     setError(null);
@@ -310,6 +334,21 @@ export default function ApplicationsPage() {
     void loadHistory();
   }, [historyActivated, candidateId, historyPage, historyStatusFilter, loadHistory]);
 
+  useEffect(() => {
+    if (!statusChangesActivated) return;
+    if (!jobId.trim()) return;
+    void loadRecentStatusChanges();
+  }, [
+    statusChangesActivated,
+    jobId,
+    statusChangesPage,
+    statusChangesFilter,
+    statusChangesChangedBy,
+    statusChangesChangedAfter,
+    statusChangesChangedBefore,
+    loadRecentStatusChanges,
+  ]);
+
   return (
     <div className="min-h-screen bg-[#F0F0E8] px-4 py-8 md:px-8">
       <div className="mx-auto max-w-6xl space-y-6">
@@ -336,6 +375,7 @@ export default function ApplicationsPage() {
                 onChange={(e) => {
                   setJobId(e.target.value);
                   setRankedPage(1);
+                  setStatusChangesPage(1);
                 }}
               />
               <select
@@ -447,17 +487,44 @@ export default function ApplicationsPage() {
         <Card variant="outline" className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="text-2xl">{t('applicationsPage.statusChanges.title')}</CardTitle>
-            <Button variant="outline" onClick={loadRecentStatusChanges} disabled={isLoadingStatusChanges}>
-              {isLoadingStatusChanges
-                ? t('common.loading')
-                : t('applicationsPage.statusChanges.refreshButton')}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStatusChangesFilter('');
+                  setStatusChangesChangedBy('');
+                  setStatusChangesChangedAfter('');
+                  setStatusChangesChangedBefore('');
+                  setStatusChangesPreset('');
+                  setStatusChangesPage(1);
+                  setStatusChangesActivated(true);
+                }}
+                disabled={isLoadingStatusChanges}
+              >
+                {t('applicationsPage.statusChanges.clearFiltersButton')}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStatusChangesPage(1);
+                  setStatusChangesActivated(true);
+                }}
+                disabled={isLoadingStatusChanges}
+              >
+                {isLoadingStatusChanges
+                  ? t('common.loading')
+                  : t('applicationsPage.statusChanges.refreshButton')}
+              </Button>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <select
               className="h-10 border border-black bg-transparent px-2 text-xs uppercase rounded-none"
               value={statusChangesFilter}
-              onChange={(e) => setStatusChangesFilter(e.target.value as ApplicationStatus | '')}
+              onChange={(e) => {
+                setStatusChangesFilter(e.target.value as ApplicationStatus | '');
+                setStatusChangesPage(1);
+              }}
             >
               <option value="">{t('applicationsPage.allStatus')}</option>
               {STATUS_OPTIONS.map((status) => (
@@ -469,8 +536,84 @@ export default function ApplicationsPage() {
             <Input
               placeholder={t('applicationsPage.statusChanges.changedByPlaceholder')}
               value={statusChangesChangedBy}
-              onChange={(e) => setStatusChangesChangedBy(e.target.value)}
+              onChange={(e) => {
+                setStatusChangesChangedBy(e.target.value);
+                setStatusChangesPage(1);
+              }}
             />
+            <div className="flex items-center gap-2 border border-black bg-white px-2 h-10">
+              <span className="font-mono text-[10px] uppercase text-gray-600">
+                {t('applicationsPage.statusChanges.changedAfterLabel')}
+              </span>
+              <Input
+                type="date"
+                aria-label={t('applicationsPage.statusChanges.changedAfterLabel')}
+                value={statusChangesChangedAfter}
+                onChange={(e) => {
+                  setStatusChangesPreset('');
+                  setStatusChangesChangedAfter(e.target.value);
+                  setStatusChangesPage(1);
+                }}
+                className="h-8 border-0 p-0 text-xs"
+              />
+            </div>
+            <div className="flex items-center gap-2 border border-black bg-white px-2 h-10">
+              <span className="font-mono text-[10px] uppercase text-gray-600">
+                {t('applicationsPage.statusChanges.changedBeforeLabel')}
+              </span>
+              <Input
+                type="date"
+                aria-label={t('applicationsPage.statusChanges.changedBeforeLabel')}
+                value={statusChangesChangedBefore}
+                onChange={(e) => {
+                  setStatusChangesPreset('');
+                  setStatusChangesChangedBefore(e.target.value);
+                  setStatusChangesPage(1);
+                }}
+                className="h-8 border-0 p-0 text-xs"
+              />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-[10px] uppercase text-gray-600">
+              {t('applicationsPage.statusChanges.quickRangeLabel')}
+            </span>
+            {(['7d', '30d', '90d'] as const).map((preset) => (
+              <Button
+                key={preset}
+                variant="outline"
+                className={statusChangesPreset === preset ? 'bg-blue-50 border-blue-700 text-blue-700' : ''}
+                onClick={() => applyStatusChangesPreset(preset)}
+                disabled={isLoadingStatusChanges}
+              >
+                {t(`applicationsPage.statusChanges.preset.${preset}`)}
+              </Button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              disabled={statusChangesPage <= 1 || isLoadingStatusChanges}
+              onClick={() => setStatusChangesPage((value) => Math.max(1, value - 1))}
+            >
+              {t('applicationsPage.prev')}
+            </Button>
+            <span className="font-mono text-xs uppercase">
+              {t('applicationsPage.pageLabel', {
+                page: statusChangesPage,
+                totalPages: statusChangesTotalPages,
+              })}
+            </span>
+            <Button
+              variant="outline"
+              disabled={statusChangesPage >= statusChangesTotalPages || isLoadingStatusChanges}
+              onClick={() => setStatusChangesPage((value) => value + 1)}
+            >
+              {t('applicationsPage.next')}
+            </Button>
+            <span className="font-mono text-xs uppercase text-gray-600">
+              {t('applicationsPage.statusChanges.countChanges', { count: statusChangesTotal })}
+            </span>
           </div>
           <div className="space-y-2">
             {statusChanges.length ? (

@@ -231,6 +231,26 @@ test(
       assert.equal(statusHistory.json?.data?.history?.[0]?.to_status, "interview");
       assert.equal(statusHistory.json?.data?.history?.[0]?.changed_by, "recruiter-ui");
 
+      const recentStatusChanges = await requestJson(
+        baseUrl,
+        "GET",
+        `/applications/status-changes?job_id=${encodeURIComponent(String(job._id))}&status=interview&changed_by=recruiter&changed_after=2000-01-01&changed_before=2100-01-01`
+      );
+
+      assert.equal(recentStatusChanges.status, 200);
+      assert.equal(Array.isArray(recentStatusChanges.json?.data?.changes), true);
+      assert.equal(recentStatusChanges.json?.data?.changes?.length >= 1, true);
+      assert.equal(recentStatusChanges.json?.data?.changes?.[0]?.to_status, "interview");
+      assert.equal(recentStatusChanges.json?.data?.changes?.[0]?.changed_by, "recruiter-ui");
+
+      const recentStatusChangesInvalidDate = await requestJson(
+        baseUrl,
+        "GET",
+        `/applications/status-changes?job_id=${encodeURIComponent(String(job._id))}&changed_after=not-a-date`
+      );
+
+      assert.equal(recentStatusChangesInvalidDate.status, 400);
+
       const rankedAfterStatus = await requestJson(
         baseUrl,
         "GET",

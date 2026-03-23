@@ -141,10 +141,20 @@
     "statusChanges": {
       "title": "Recent Status Changes",
       "refreshButton": "Refresh Changes",
+      "clearFiltersButton": "Clear Filters",
       "changedByPlaceholder": "changed_by contains...",
+      "changedAfterLabel": "From",
+      "changedBeforeLabel": "To",
+      "quickRangeLabel": "Quick range",
+      "preset": {
+        "7d": "Last 7d",
+        "30d": "Last 30d",
+        "90d": "Last 90d"
+      },
       "transitionLine": "Transition {from} -> {to}",
       "changedByLine": "By {by}",
       "changedAtLine": "At {date}",
+      "countChanges": "{count} change(s)",
       "empty": "No recent status changes for selected filters."
     },
     "recruiterView": {
@@ -353,6 +363,7 @@
       "coverLetterDescription": "Generate a tailored cover letter based on your resume and job description.",
       "outreachDescription": "Generate a concise outreach message for LinkedIn or email based on your resume and job description.",
       "generateButton": "Generate {title}",
+      "aiLanguageLabel": "AI Content Language",
       "coverLetterFooter": "Tip: tailor first for best results.",
       "outreachFooter": "Tip: keep it short and personalized."
     },
@@ -379,6 +390,7 @@
       "instructionDialog": {
         "title": "What Would You Like to Improve?",
         "subtitle": "Provide specific feedback to guide the AI",
+        "aiLanguageLabel": "AI Content Language",
         "defaultInstruction": "Improve the content with stronger action verbs and quantifiable impact where available.",
         "selectedItems": "Selected Items",
         "placeholder": "Example: Add more quantifiable metrics, emphasize leadership skills, use more action verbs...",
@@ -433,7 +445,8 @@
       },
       "missingKeywordsTitle": "Missing keywords ({count})",
       "copyAllMissingKeywords": "Copy All",
-      "applyMissingKeywords": "Apply to Resume",
+      "applyMissingKeywordsSkillsOnly": "Apply Skills Only",
+      "applyMissingKeywordsWithSummary": "Apply Skills + Summary",
       "copyKeyword": "copy",
       "missingKeywordsEmpty": "Great alignment. No missing keywords detected.",
       "copiedKeywordMessage": "Copied: {keyword}",

@@ -278,6 +278,8 @@ export async function fetchRecentStatusChanges(params: {
   limit?: number;
   status?: ApplicationStatus | '';
   changedBy?: string;
+  changedAfter?: string;
+  changedBefore?: string;
 }): Promise<RecentStatusChangesResponse> {
   const query = new URLSearchParams({ job_id: params.jobId });
   if (params.page) query.set('page', String(params.page));
@@ -285,6 +287,12 @@ export async function fetchRecentStatusChanges(params: {
   if (params.status) query.set('status', params.status);
   if (params.changedBy && params.changedBy.trim()) {
     query.set('changed_by', params.changedBy.trim());
+  }
+  if (params.changedAfter && params.changedAfter.trim()) {
+    query.set('changed_after', params.changedAfter.trim());
+  }
+  if (params.changedBefore && params.changedBefore.trim()) {
+    query.set('changed_before', params.changedBefore.trim());
   }
 
   const res = await apiFetch(`/applications/status-changes?${query.toString()}`);

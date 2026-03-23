@@ -202,11 +202,13 @@ describe('applications API client', () => {
       limit: 10,
       status: 'screening',
       changedBy: 'recruiter',
+      changedAfter: '2026-03-20',
+      changedBefore: '2026-03-23',
     });
 
     expect(result.data.changes.length).toBe(1);
     expect(mockedApiFetch).toHaveBeenCalledWith(
-      '/applications/status-changes?job_id=job-1&page=1&limit=10&status=screening&changed_by=recruiter'
+      '/applications/status-changes?job_id=job-1&page=1&limit=10&status=screening&changed_by=recruiter&changed_after=2026-03-20&changed_before=2026-03-23'
     );
   });
 });

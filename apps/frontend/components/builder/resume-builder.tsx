@@ -83,7 +83,7 @@ const buildInitialData = (t: Translate): ResumeData => ({
 
 const ResumeBuilderContent = () => {
   const { t } = useTranslations();
-  const { uiLanguage, contentLanguage } = useLanguage();
+  const { uiLanguage, contentLanguage, languageNames } = useLanguage();
   const [notificationDialog, setNotificationDialog] = useState<{
     title: string;
     description: string;
@@ -107,6 +107,10 @@ const ResumeBuilderContent = () => {
   );
 
   const initialData = useMemo(() => buildInitialData(t), [t]);
+  const outputLanguageLabel = useMemo(() => {
+    const languageName = languageNames[contentLanguage] ?? contentLanguage;
+    return `${languageName} (${contentLanguage.toUpperCase()})`;
+  }, [contentLanguage, languageNames]);
   const [resumeData, setResumeData] = useState<ResumeData>(() => initialData);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSavedData, setLastSavedData] = useState<ResumeData>(() => initialData);
@@ -403,8 +407,9 @@ const ResumeBuilderContent = () => {
   }, []);
 
   const handleApplyMissingKeywords = useCallback(
-    (missingKeywords: string[]) => {
+    (missingKeywords: string[], mode: 'skills-only' | 'skills-and-summary') => {
       const result = applyMissingKeywordsToResumeData(resumeData, missingKeywords, {
+        includeSummaryHint: mode === 'skills-and-summary',
         buildSummaryHint: (keywords) =>
           t('builder.jdMatch.summaryKeywordHintTemplate', { keywords: keywords.join(', ') }),
       });
@@ -562,7 +567,7 @@ const ResumeBuilderContent = () => {
     setIsGeneratingCoverLetter(true);
     setShowRegenerateDialog(null);
     try {
-      const content = await generateCoverLetter(resumeId);
+      const content = await generateCoverLetter(resumeId, contentLanguage);
       setCoverLetter(content);
     } catch (error) {
       console.error('Failed to generate cover letter:', error);
@@ -591,7 +596,7 @@ const ResumeBuilderContent = () => {
     setIsGeneratingOutreach(true);
     setShowRegenerateDialog(null);
     try {
-      const content = await generateOutreachMessage(resumeId);
+      const content = await generateOutreachMessage(resumeId, contentLanguage);
       setOutreachMessage(content);
     } catch (error) {
       console.error('Failed to generate outreach message:', error);
@@ -795,6 +800,7 @@ const ResumeBuilderContent = () => {
                     isGenerating={isGeneratingCoverLetter}
                     onGenerate={handleGenerateCoverLetter}
                     isTailoredResume={isTailoredResume}
+                    outputLanguageLabel={outputLanguageLabel}
                   />
                 ))}
 
@@ -813,6 +819,7 @@ const ResumeBuilderContent = () => {
                     isGenerating={isGeneratingOutreach}
                     onGenerate={handleGenerateOutreach}
                     isTailoredResume={isTailoredResume}
+                    outputLanguageLabel={outputLanguageLabel}
                   />
                 ))}
 
@@ -1033,6 +1040,7 @@ const ResumeBuilderContent = () => {
         isGenerating={regenerateWizard.isGenerating}
         isApplying={regenerateWizard.isApplying}
         error={regenerateWizard.error}
+        outputLanguageLabel={outputLanguageLabel}
         onGenerate={regenerateWizard.generate}
         onAccept={regenerateWizard.acceptChanges}
         onReject={regenerateWizard.rejectAndRegenerate}

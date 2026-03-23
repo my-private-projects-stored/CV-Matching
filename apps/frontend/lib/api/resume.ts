@@ -1,6 +1,7 @@
 import { ImprovedResult } from '@/components/common/resume_previewer_context';
 import type { ResumeData } from '@/components/dashboard/resume-component';
 import { type TemplateSettings } from '@/lib/types/template-settings';
+import type { SupportedLanguage } from '@/lib/api/config';
 import { type Locale } from '@/i18n/config';
 import { API_BASE, apiPost, apiPatch, apiDelete, apiFetch } from './client';
 
@@ -382,8 +383,15 @@ export async function downloadCoverLetterPdf(
 }
 
 /** Generates a cover letter on-demand for a tailored resume */
-export async function generateCoverLetter(resumeId: string): Promise<string> {
-  const res = await apiPost(`/resumes/${encodeURIComponent(resumeId)}/generate-cover-letter`, {});
+export async function generateCoverLetter(
+  resumeId: string,
+  outputLanguage?: SupportedLanguage
+): Promise<string> {
+  const payload = outputLanguage ? { output_language: outputLanguage } : {};
+  const res = await apiPost(
+    `/resumes/${encodeURIComponent(resumeId)}/generate-cover-letter`,
+    payload
+  );
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`Failed to generate cover letter (status ${res.status}): ${text}`);
@@ -393,8 +401,12 @@ export async function generateCoverLetter(resumeId: string): Promise<string> {
 }
 
 /** Generates an outreach message on-demand for a tailored resume */
-export async function generateOutreachMessage(resumeId: string): Promise<string> {
-  const res = await apiPost(`/resumes/${encodeURIComponent(resumeId)}/generate-outreach`, {});
+export async function generateOutreachMessage(
+  resumeId: string,
+  outputLanguage?: SupportedLanguage
+): Promise<string> {
+  const payload = outputLanguage ? { output_language: outputLanguage } : {};
+  const res = await apiPost(`/resumes/${encodeURIComponent(resumeId)}/generate-outreach`, payload);
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`Failed to generate outreach message (status ${res.status}): ${text}`);
