@@ -2102,3 +2102,19 @@
   - `docker compose --profile app build gateway-backend frontend` PASS
   - `docker compose --profile app up -d --build` PASS
   - kiểm tra runtime bằng HTTP fetch nội bộ: backend=200, frontend=200.
+
+### 126) Bổ sung onboarding README: Quick Start tách backend/frontend, service profile map, và checklist Docker
+- Đã mở rộng `README.md` với `Quick Start (Daily Dev Flow)`:
+  - luồng backend hằng ngày (chạy infra profile `app` + backend dev mode + health check),
+  - luồng frontend hằng ngày (chạy dev server port `3000` khi backend đang sẵn),
+  - luồng full stack một-lệnh: `docker compose --profile app up -d --build`.
+- Đã thêm sơ đồ `Service Profiles Map` (Mermaid) cho 3 profile:
+  - `app`
+  - `workers`
+  - `upstream`
+  - kèm các quan hệ giao tiếp chính giữa service để onboarding nhanh.
+- Đã thêm `Docker Troubleshooting Checklist` với 3 nhóm lỗi phổ biến:
+  - `Port Conflict`
+  - `Healthcheck Timeout`
+  - `Missing Environment Variables`
+  - mỗi nhóm gồm symptom, lệnh chẩn đoán nhanh, và cách khắc phục thực tiễn.

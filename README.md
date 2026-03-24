@@ -13,6 +13,89 @@ Monorepo for CV matching workflows, including backend APIs, frontend apps, worke
 - Backend app: apps/backend
 - Frontend app: apps/frontend
 
+## Quick Start (Daily Dev Flow)
+
+### Backend
+
+1. Start infrastructure dependencies:
+
+```powershell
+docker compose --profile app up -d mongo redis qdrant worker-embedding-sbert
+```
+
+2. Run backend in watch mode:
+
+```powershell
+cd apps/backend
+npm install
+npm run dev
+```
+
+3. Verify backend health:
+
+```powershell
+node -e "fetch('http://127.0.0.1:3001/api/health').then((r)=>console.log(r.status)).catch((e)=>{console.error(e);process.exit(1);})"
+```
+
+### Frontend
+
+1. Keep backend running on port `3001`.
+2. Run frontend in dev mode:
+
+```powershell
+cd apps/frontend
+npm install
+npm run dev -- --hostname 0.0.0.0 --port 3000
+```
+
+3. Open UI:
+- http://localhost:3000
+
+### Full Stack (One Command)
+
+```powershell
+docker compose --profile app up -d --build
+```
+
+## Service Profiles Map
+
+```mermaid
+flowchart LR
+	subgraph APP[profile: app]
+		MONGO[mongo]
+		REDIS[redis]
+		QDRANT[qdrant]
+		EMBED[worker-embedding-sbert]
+		BE[gateway-backend]
+		FE[frontend]
+	end
+
+	subgraph WORKERS[profile: workers]
+		WP[worker-parsing]
+		WS[worker-scoring]
+		WN[worker-notification]
+		EMBED2[worker-embedding-sbert]
+	end
+
+	subgraph UPSTREAM[profile: upstream]
+		UAC[upstream-ai-core]
+	end
+
+	BE --> MONGO
+	BE --> REDIS
+	BE --> QDRANT
+	BE --> EMBED
+	FE --> BE
+	WP --> REDIS
+	WP --> MONGO
+	WS --> REDIS
+	WS --> MONGO
+	WS --> QDRANT
+	WN --> REDIS
+	WN --> MONGO
+	UAC --> QDRANT
+```
+
 ## Run Locally (Backend Integration)
 
 Prerequisites:
@@ -83,3 +166,48 @@ If backend CI fails in `.github/workflows/backend-integration.yml`:
 2. If failure is in matrix job `isolated-critical`, download `isolated-integration-log-<test_file>` for the exact failing test.
 3. Compare with your latest local log in [scripts/last-backend-integration.txt](scripts/last-backend-integration.txt).
 4. Reproduce with the same test command in `apps/backend/tests/integration` and env values from the workflow.
+
+## Docker Troubleshooting Checklist
+
+### 1) Port Conflict
+
+- Symptom: container fails to start with `port is already allocated`.
+- Check current bindings:
+
+```powershell
+docker compose --profile app ps
+```
+
+- Fix options:
+- Stop old stack: `docker compose --profile app down`
+- Stop external process on the same port (`3000`, `3001`, `27017`, `6379`, `6333`, `8010`)
+- Remap ports in [docker-compose.yml](docker-compose.yml) if needed.
+
+### 2) Healthcheck Timeout
+
+- Symptom: service stays `starting` or becomes `unhealthy`.
+- Quick checks:
+
+```powershell
+docker compose --profile app ps
+docker compose --profile app logs --tail 200 gateway-backend frontend worker-embedding-sbert qdrant mongo redis
+```
+
+- Fix options:
+- Rebuild app images after dependency/code changes: `docker compose --profile app up -d --build`
+- Ensure machine has enough CPU/RAM for first startup
+- Retry from clean state: `docker compose --profile app down` then `docker compose --profile app up -d --build`.
+
+### 3) Missing Environment Variables
+
+- Symptom: app boots but fails DB/vector/API connectivity.
+- Check effective config:
+
+```powershell
+docker compose -f docker-compose.yml config
+```
+
+- Fix options:
+- Create/update root `.env` from `.env.example`
+- Set credentials consistently (for example `MONGO_ROOT_USERNAME`, `MONGO_ROOT_PASSWORD`)
+- Restart stack to apply env updates: `docker compose --profile app up -d --build`.
