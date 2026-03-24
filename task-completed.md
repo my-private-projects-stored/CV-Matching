@@ -2029,3 +2029,15 @@
 - Đã xác minh local tương ứng cho cùng tập test:
   - chạy `node --test tests/integration/auth-endpoints.test.mjs tests/integration/application-authorization.test.mjs`
   - kết quả: PASS (`tests=2`, `pass=2`, `fail=0`).
+
+### 121) Bổ sung artifact log riêng cho từng test trong CI matrix isolated-critical
+- Đã nâng cấp job `isolated-critical` trong:
+  - `.github/workflows/backend-integration.yml`
+- Thay đổi chính:
+  - bước chạy test lẻ giờ ghi log riêng theo từng file test bằng `tee`:
+    - `scripts/isolated-test-logs/<test_file>.log`
+  - thêm bước upload artifact riêng cho từng matrix run (`if: always()`):
+    - tên artifact: `isolated-integration-log-<test_file>`
+    - path artifact: `scripts/isolated-test-logs/<test_file>.log`
+- Kết quả mong đợi:
+  - khi một test lẻ fail trong CI matrix, có thể tải đúng log của test đó để khoanh vùng nhanh mà không cần soi toàn bộ service logs.

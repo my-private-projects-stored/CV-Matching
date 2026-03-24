@@ -159,12 +159,25 @@ jobs:
 
       - name: Run isolated critical integration test
         working-directory: apps/backend
+        shell: bash
         env:
           RUN_INTEGRATION_TESTS: "1"
           MONGO_URI: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
           MONGO_URI_TEST: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
           EMBEDDING_SERVICE_URL: http://127.0.0.1:8010
-        run: node --test tests/integration/${{ matrix.test_file }}
+        run: |
+          set -euo pipefail
+          mkdir -p ../../scripts/isolated-test-logs
+          node --test tests/integration/${{ matrix.test_file }} \
+            2>&1 | tee ../../scripts/isolated-test-logs/${{ matrix.test_file }}.log
+
+      - name: Upload isolated test log artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-integration-log-${{ matrix.test_file }}
+          path: scripts/isolated-test-logs/${{ matrix.test_file }}.log
+          if-no-files-found: warn
 
       - name: Show service logs on failure
         if: failure()
