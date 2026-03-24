@@ -2013,3 +2013,19 @@
 - Kết quả:
   - 5/5 lần PASS,
   - không ghi nhận failure trong vòng stress-run ngắn.
+
+### 120) Bổ sung CI matrix cho test lẻ trọng yếu bên cạnh full integration
+- Đã mở rộng workflow backend integration với job mới chạy matrix test lẻ:
+  - `.github/workflows/backend-integration.yml`
+  - job mới: `isolated-critical`
+  - matrix gồm:
+    - `auth-endpoints.test.mjs`
+    - `application-authorization.test.mjs`
+- Cấu hình job matrix:
+  - cài dependencies backend,
+  - start `mongo` riêng cho từng matrix run,
+  - wait healthy bằng `docker compose ps` + `jq`,
+  - chạy test lẻ với env integration (`RUN_INTEGRATION_TESTS`, `MONGO_URI`, `MONGO_URI_TEST`).
+- Đã xác minh local tương ứng cho cùng tập test:
+  - chạy `node --test tests/integration/auth-endpoints.test.mjs tests/integration/application-authorization.test.mjs`
+  - kết quả: PASS (`tests=2`, `pass=2`, `fail=0`).

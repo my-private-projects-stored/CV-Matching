@@ -108,3 +108,68 @@ jobs:
       - name: Tear down
         if: always()
         run: docker compose down -v
+
+  isolated-critical:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test_file:
+          - auth-endpoints.test.mjs
+          - application-authorization.test.mjs
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: apps/backend
+        run: npm ci
+
+      - name: Ensure jq is available
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Start mongo for isolated test
+        run: docker compose --profile app up -d mongo
+
+      - name: Wait for mongo healthy
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..60}; do
+            out=$(docker compose ps --format json)
+            mongo_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-mongo"))[0].Health // ""')
+            if [[ "$mongo_ok" == "healthy" ]]; then
+              echo "Mongo is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Mongo did not become healthy in time"
+          docker compose ps
+          docker compose logs --tail 100 mongo
+          exit 1
+
+      - name: Run isolated critical integration test
+        working-directory: apps/backend
+        env:
+          RUN_INTEGRATION_TESTS: "1"
+          MONGO_URI: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
+          MONGO_URI_TEST: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
+          EMBEDDING_SERVICE_URL: http://127.0.0.1:8010
+        run: node --test tests/integration/${{ matrix.test_file }}
+
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose logs --tail 200
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
