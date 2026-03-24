@@ -2052,3 +2052,17 @@
   - workflow files,
   - `task-completed.md`,
   - `apps/backend`, `apps/frontend`.
+
+### 123) Mở rộng README: hướng dẫn chạy local, Docker, và CI troubleshooting
+- Đã cập nhật `README.md` với 3 phần vận hành bổ sung:
+  - `Run Locally (Backend Integration)` với lệnh wrapper:
+    - `./scripts/run-backend-integration.ps1`
+  - `Run With Docker` với các lệnh profile `app`:
+    - `docker compose --profile app up -d ...`
+    - `docker compose --profile app ps`
+    - `docker compose --profile app down`
+    - tham chiếu `./scripts/full-verify.ps1`
+  - `CI Troubleshooting` với hướng dẫn lấy artifact:
+    - `backend-integration-log`
+    - `isolated-integration-log-<test_file>`
+- Đã bổ sung ghi chú rõ ràng rằng `gateway-backend` và `frontend` trong compose hiện tại là scaffold placeholder.
