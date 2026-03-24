@@ -36,6 +36,16 @@ What this wrapper does:
 
 The root compose file is [docker-compose.yml](docker-compose.yml).
 
+One-command startup (backend + frontend + dependencies):
+
+```powershell
+docker compose --profile app up -d --build
+```
+
+After startup:
+- Frontend: http://localhost:3000
+- Backend health: http://localhost:3001/api/health
+
 1. Start core app dependencies (Mongo, Redis, Qdrant, embedding worker):
 
 ```powershell
@@ -61,8 +71,8 @@ docker compose --profile app down
 ```
 
 Notes:
-- `gateway-backend` and `frontend` services in [docker-compose.yml](docker-compose.yml) are scaffold placeholders in this repo state.
-- The tested path today is running backend integration from host via [scripts/run-backend-integration.ps1](scripts/run-backend-integration.ps1) while infrastructure runs in Docker.
+- `gateway-backend` and `frontend` now run directly in Docker via Node 20 containers (development mode).
+- On first run, containers install dependencies (`npm install`), so startup can take longer.
 
 ## CI Troubleshooting
 

@@ -2066,3 +2066,22 @@
     - `backend-integration-log`
     - `isolated-integration-log-<test_file>`
 - Đã bổ sung ghi chú rõ ràng rằng `gateway-backend` và `frontend` trong compose hiện tại là scaffold placeholder.
+
+### 124) Hỗ trợ chạy app bằng Docker chỉ với 1 lệnh
+- Đã nâng cấp `docker-compose.yml` để backend/frontend chạy thật thay vì placeholder:
+  - `gateway-backend`:
+    - command: `npm install && npm run bootstrap:qdrant && npm run dev`
+    - thêm healthcheck `/api/health`
+    - thêm named volume `backend_node_modules`
+    - chuẩn hóa `MONGO_URI` với `authSource=admin`
+  - `frontend`:
+    - command: `npm install && npx next dev -H 0.0.0.0 -p 3000`
+    - thêm healthcheck HTTP cổng `3000`
+    - thêm named volume `frontend_node_modules`
+    - phụ thuộc `gateway-backend` theo condition `service_healthy`
+- Đã bổ sung tài liệu one-command trong `README.md`:
+  - `docker compose --profile app up -d --build`
+  - kèm endpoint kiểm tra nhanh:
+    - Frontend: `http://localhost:3000`
+    - Backend health: `http://localhost:3001/api/health`
+- Đã validate lại cấu hình compose bằng `docker compose config` (hợp lệ).

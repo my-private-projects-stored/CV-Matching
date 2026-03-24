@@ -65,15 +65,22 @@ services:
     image: node:20-alpine
     container_name: cvm-gateway-backend
     working_dir: /workspace
-    command: ["sh", "-c", "echo 'apps/backend is scaffolded. Replace with real Dockerfile/command.'; tail -f /dev/null"]
+    command:
+      [
+        "sh",
+        "-c",
+        "npm install && npm run bootstrap:qdrant && npm run dev",
+      ]
     volumes:
       - ./apps/backend:/workspace
+      - backend_node_modules:/workspace/node_modules
     environment:
       NODE_ENV: development
-      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongo:27017
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongo:27017/?authSource=admin
       REDIS_URL: redis://redis:6379
       QDRANT_URL: http://qdrant:6333
       EMBEDDING_SERVICE_URL: http://worker-embedding-sbert:8010
+      PORT: "3001"
     ports:
       - "3001:3001"
     depends_on:
@@ -85,6 +92,16 @@ services:
         condition: service_healthy
       worker-embedding-sbert:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3001/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
     networks:
       - cvm_net
     profiles:
@@ -94,9 +111,10 @@ services:
     image: node:20-alpine
     container_name: cvm-frontend
     working_dir: /workspace
-    command: ["sh", "-c", "echo 'apps/frontend is scaffolded. Replace with real Dockerfile/command.'; tail -f /dev/null"]
+    command: ["sh", "-c", "npm install && npx next dev -H 0.0.0.0 -p 3000"]
     volumes:
       - ./apps/frontend:/workspace
+      - frontend_node_modules:/workspace/node_modules
     environment:
       NODE_ENV: development
       NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
@@ -104,7 +122,18 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - gateway-backend
+      gateway-backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
     networks:
       - cvm_net
     profiles:
@@ -217,6 +246,8 @@ volumes:
   mongo_data:
   redis_data:
   qdrant_data:
+  backend_node_modules:
+  frontend_node_modules:
 
 networks:
   cvm_net:
