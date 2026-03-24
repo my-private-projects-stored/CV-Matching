@@ -1,0 +1,31 @@
+﻿
+> cv-matching-backend@1.0.0 bootstrap:qdrant
+> node scripts/bootstrap-qdrant.mjs
+
+Qdrant bootstrap result: {
+  jobs: { created: false, collectionName: 'jobs_vectors' },
+  resumes: { created: false, collectionName: 'resumes_vectors' }
+}
+
+> cv-matching-backend@1.0.0 test:integration
+> node --test --test-concurrency=1 tests/integration/*.test.mjs
+
+Γ£ö application authorization matrix: role gates + ownership + audit actor (505.9869ms)
+Γ£ö application endpoints: create + ranked + history + status + feedback (482.7256ms)
+Γ£ö async pipeline parsing -> scoring -> ranking (163.1227ms)
+Γ£ö auth endpoints contract: signup/login/me/change-password/forgot-reset (735.5003ms)
+Γ£ö candidate profile endpoints contract: get/update for candidate only (265.6516ms)
+Γ£ö settings endpoints contract: status + language + features + prompts + api-keys + reset (308.5899ms)
+Γ£ö enrichment endpoints contract: analyze -> enhance -> apply -> regenerate -> apply-regenerated (226.1916ms)
+Γ£ö job update endpoints: support benefits/deadline and keep important history (249.3489ms)
+Γ£ö master resume endpoints: set-as-master + get master (301.7377ms)
+Γ£ö pdf endpoints contract: resume pdf + cover-letter pdf (216.6672ms)
+Γ£ö tailor endpoints contract: jobs/upload -> resumes/improve preview+confirm (309.493ms)
+Γä╣ tests 11
+Γä╣ suites 0
+Γä╣ pass 11
+Γä╣ fail 0
+Γä╣ cancelled 0
+Γä╣ skipped 0
+Γä╣ todo 0
+Γä╣ duration_ms 9995.4113

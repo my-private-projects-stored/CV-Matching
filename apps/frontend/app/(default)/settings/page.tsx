@@ -53,6 +53,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/context/language-context';
+import { useAuth } from '@/lib/context/auth-context';
 import { useTranslations } from '@/lib/i18n';
 import type { SupportedLanguage } from '@/lib/api/config';
 import type { Locale } from '@/i18n/config';
@@ -99,6 +100,7 @@ const getHealthCheckMessage = (
 };
 
 export default function SettingsPage() {
+  const { user, isLoading: authLoading } = useAuth();
   const [status, setStatus] = useState<Status>('loading');
   const [error, setError] = useState<string | null>(null);
 
@@ -243,6 +245,30 @@ export default function SettingsPage() {
       healthCheck.warning
     );
   }, [healthCheck, t]);
+
+  const isRecruiterOrAdmin = user?.role === 'recruiter' || user?.role === 'admin';
+
+  if (!authLoading && !isRecruiterOrAdmin) {
+    return (
+      <section className="min-h-screen bg-[#F0F0E8] p-6 md:p-10">
+        <div className="mx-auto max-w-3xl">
+          <div className="border border-red-700 bg-red-50 p-6">
+            <h1 className="font-serif text-3xl uppercase tracking-tight text-red-800">
+              {t('access.recruiterOnlyTitle')}
+            </h1>
+            <p className="mt-2 font-mono text-xs uppercase text-red-700">
+              {t('access.recruiterOnlyDescription')}
+            </p>
+            <div className="mt-4">
+              <Link href="/dashboard" className="text-blue-700 underline font-mono text-xs uppercase">
+                {t('nav.backToDashboard')}
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   // Load LLM config and feature config on mount
   useEffect(() => {

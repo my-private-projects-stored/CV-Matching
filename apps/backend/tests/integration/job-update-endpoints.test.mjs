@@ -14,11 +14,7 @@ import SystemConfig from "../../src/models/SystemConfig.js";
 const RUN_INTEGRATION = process.env.RUN_INTEGRATION_TESTS === "1";
 
 function getTestMongoUri() {
-  if (process.env.MONGO_URI_TEST) {
-    return process.env.MONGO_URI_TEST;
-  }
-
-  const mongoUri = process.env.MONGO_URI;
+  const mongoUri = process.env.MONGO_URI_TEST || process.env.MONGO_URI;
   assert.ok(mongoUri, "MONGO_URI is required for integration test");
 
   const url = new URL(mongoUri);
@@ -27,10 +23,15 @@ function getTestMongoUri() {
   return url.toString();
 }
 
-async function requestJson(baseUrl, method, path, body) {
+async function requestJson(baseUrl, method, path, body, token) {
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${baseUrl}${path}`, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
 
@@ -65,6 +66,16 @@ test(
     const baseUrl = `http://127.0.0.1:${address.port}/api`;
 
     try {
+      const recruiterSignup = await requestJson(baseUrl, "POST", "/auth/signup", {
+        email: "recruiter.job-update@example.com",
+        password: "StrongPass123",
+        full_name: "Recruiter Job Update",
+        role: "recruiter",
+      });
+      assert.equal(recruiterSignup.status, 201);
+      const recruiterToken = recruiterSignup.json?.access_token;
+      assert.ok(recruiterToken);
+
       const created = await Job.create({
         recruiterId: new mongoose.Types.ObjectId(),
         title: "Backend Engineer",
@@ -81,7 +92,7 @@ test(
         benefits: "Remote, yearly bonus",
         applicationDeadline: "2026-12-31T00:00:00.000Z",
         status: "closed",
-      });
+      }, recruiterToken);
 
       assert.equal(firstUpdate.status, 200);
       assert.equal(firstUpdate.json?.status, "closed");
@@ -104,7 +115,7 @@ test(
 
       const secondUpdate = await requestJson(baseUrl, "PATCH", `/jobs/${created._id}`, {
         status: "active",
-      });
+      }, recruiterToken);
 
       assert.equal(secondUpdate.status, 200);
       assert.equal(secondUpdate.json?.status, "active");
@@ -112,7 +123,7 @@ test(
 
       const invalidDeadline = await requestJson(baseUrl, "PATCH", `/jobs/${created._id}`, {
         applicationDeadline: "not-a-date",
-      });
+      }, recruiterToken);
       assert.equal(invalidDeadline.status, 400);
     } finally {
       await new Promise((resolve, reject) => {

@@ -44,6 +44,12 @@ const userSchema = new Schema(
       default: null,
       trim: true,
     },
+
+    // Profile ứng viên dùng cho UC-BASIC-05, tái sử dụng qua nhiều lần ứng tuyển.
+    candidateProfile: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
   },
   {
     timestamps: true,

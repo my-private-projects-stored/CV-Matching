@@ -18,8 +18,12 @@ import {
   updateLlmConfigHandler,
   updatePromptConfigHandler,
 } from "../controllers/config.controller.js";
+import { requireAuth, requireRoles } from "../middleware/auth.middleware.js";
 
 const router = Router();
+const requireRecruiterRole = [requireAuth, requireRoles("recruiter", "admin")];
+
+router.use(...requireRecruiterRole);
 
 router.get("/llm-api-key", getLlmConfigHandler);
 router.put("/llm-api-key", updateLlmConfigHandler);

@@ -31,11 +31,13 @@ import {
   type ResumeListItem,
 } from '@/lib/api/resume';
 import { useStatusCache } from '@/lib/context/status-cache';
+import { useAuth } from '@/lib/context/auth-context';
 
 type ProcessingStatus = 'pending' | 'processing' | 'ready' | 'failed' | 'loading';
 
 export default function DashboardPage() {
   const { t, locale } = useTranslations();
+  const { user } = useAuth();
   const [masterResumeId, setMasterResumeId] = useState<string | null>(null);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>('loading');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -65,6 +67,7 @@ export default function DashboardPage() {
 
   const isTailorEnabled =
     Boolean(masterResumeId) && processingStatus === 'ready' && isLlmConfigured;
+  const isRecruiterOrAdmin = user?.role === 'recruiter' || user?.role === 'admin';
 
   const formatDate = (value: string) => {
     if (!value) return t('common.unknown');
@@ -323,7 +326,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Configuration Warning Banner */}
-      {masterResumeId && !isLlmConfigured && !statusLoading && (
+      {isRecruiterOrAdmin && masterResumeId && !isLlmConfigured && !statusLoading && (
         <div className="border-2 border-warning bg-amber-50 p-4 shadow-sw-default mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-warning" />
@@ -349,7 +352,7 @@ export default function DashboardPage() {
         {/* 1. Master Resume Logic */}
         {!masterResumeId ? (
           // LLM Not Configured or Upload State
-          !isLlmConfigured && !statusLoading ? (
+          !isLlmConfigured && !statusLoading && isRecruiterOrAdmin ? (
             <Link href="/settings" className="block h-full">
               <Card
                 variant="interactive"
@@ -553,12 +556,18 @@ export default function DashboardPage() {
         <Card className="aspect-square h-full" variant="default">
           <div className="flex-1 flex flex-col items-center justify-center text-center h-full">
             <Button
-              onClick={() => router.push('/applications')}
+              onClick={() =>
+                isRecruiterOrAdmin
+                  ? router.push('/applications')
+                  : router.push('/profile')
+              }
               className="w-20 h-20 bg-amber-700 text-white border-2 border-black shadow-sw-default hover:bg-amber-800 hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none transition-all rounded-none"
             >
               <Users className="w-8 h-8" />
             </Button>
-            <p className="text-xs font-mono mt-4 uppercase text-amber-700">Applications</p>
+            <p className="text-xs font-mono mt-4 uppercase text-amber-700">
+              {isRecruiterOrAdmin ? t('applicationsPage.title') : t('nav.profile')}
+            </p>
           </div>
         </Card>
 
@@ -567,16 +576,20 @@ export default function DashboardPage() {
           <div className="flex-1 flex flex-col items-center justify-center text-center h-full">
             <Button
               onClick={() => {
-                const url = candidateId
-                  ? `/applications?candidate_id=${encodeURIComponent(candidateId)}`
-                  : '/applications';
+                const url = isRecruiterOrAdmin
+                  ? '/applications'
+                  : candidateId
+                    ? `/applications?candidate_id=${encodeURIComponent(candidateId)}`
+                    : '/applications';
                 router.push(url);
               }}
               className="w-20 h-20 bg-black text-white border-2 border-black shadow-sw-default hover:bg-gray-900 hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none transition-all rounded-none"
             >
               <History className="w-8 h-8" />
             </Button>
-            <p className="text-xs font-mono mt-4 uppercase text-black">My History</p>
+            <p className="text-xs font-mono mt-4 uppercase text-black">
+              {isRecruiterOrAdmin ? t('applicationsPage.title') : 'My History'}
+            </p>
           </div>
         </Card>
 

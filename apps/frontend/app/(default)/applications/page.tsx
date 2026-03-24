@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from '@/lib/i18n';
+import { useAuth } from '@/lib/context/auth-context';
 
 import {
+  bulkUpdateApplicationStatus,
   fetchApplicationFeedback,
   fetchCandidateApplicationHistory,
+  exportRecentStatusChangesCsv,
   fetchRecentStatusChanges,
   fetchApplicationStatusHistory,
   fetchApplicationStatusSummary,
@@ -20,17 +23,77 @@ import {
   type RankedCandidateItem,
 } from '@/lib/api/applications';
 import { getOriginalResumeDownloadUrl } from '@/lib/api/resume';
+import { downloadBlobAsFile } from '@/lib/utils/download';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
-const STATUS_OPTIONS: ApplicationStatus[] = ['new', 'screening', 'interview', 'hired', 'rejected'];
+const STATUS_OPTIONS: ApplicationStatus[] = ['new', 'screening', 'interview', 'offer', 'hired', 'rejected'];
 const AI_STATUS_OPTIONS: ApplicationAiStatus[] = ['pending', 'parsing', 'scoring', 'completed', 'failed'];
+const STATUS_CHANGES_PRESETS = [
+  'all-time',
+  '7d',
+  '30d',
+  '90d',
+  'this-week',
+  'this-month',
+  'qtd',
+  'ytd',
+] as const;
+type StatusChangesPreset = (typeof STATUS_CHANGES_PRESETS)[number];
+const RANKED_DATE_PRESETS = ['all-time', '7d', 'this-month', 'qtd'] as const;
+type RankedDatePreset = (typeof RANKED_DATE_PRESETS)[number];
+
+function parseStatusFilter(value: string | null): ApplicationStatus | '' {
+  if (!value) return '';
+  return STATUS_OPTIONS.includes(value as ApplicationStatus) ? (value as ApplicationStatus) : '';
+}
+
+function parseStatusChangesPreset(value: string | null): StatusChangesPreset | '' {
+  if (!value) return '';
+  return STATUS_CHANGES_PRESETS.includes(value as StatusChangesPreset)
+    ? (value as StatusChangesPreset)
+    : '';
+}
+
+function parseRankedDatePreset(value: string | null): RankedDatePreset | '' {
+  if (!value) return '';
+  return RANKED_DATE_PRESETS.includes(value as RankedDatePreset) ? (value as RankedDatePreset) : '';
+}
+
+function resolvePresetDateRange(preset: Exclude<RankedDatePreset, 'all-time'>): {
+  changedAfter: string;
+  changedBefore: string;
+} {
+  const today = new Date();
+  const from = new Date(today);
+
+  if (preset === 'this-month') {
+    from.setDate(1);
+  } else if (preset === 'qtd') {
+    const quarterStartMonth = Math.floor(today.getMonth() / 3) * 3;
+    from.setMonth(quarterStartMonth, 1);
+  } else {
+    from.setDate(today.getDate() - 6);
+  }
+
+  return {
+    changedAfter: from.toISOString().slice(0, 10),
+    changedBefore: today.toISOString().slice(0, 10),
+  };
+}
+
+function parsePositiveInteger(value: string | null): number {
+  const parsed = Number.parseInt(String(value || ''), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
 
 function badgeClass(status: ApplicationStatus): string {
   switch (status) {
     case 'hired':
       return 'bg-green-100 text-green-800 border-green-400';
+    case 'offer':
+      return 'bg-purple-100 text-purple-800 border-purple-400';
     case 'rejected':
       return 'bg-red-100 text-red-800 border-red-400';
     case 'interview':
@@ -44,15 +107,61 @@ function badgeClass(status: ApplicationStatus): string {
 
 export default function ApplicationsPage() {
   const { t } = useTranslations();
+  const { user } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const isRecruiterOrAdmin = user?.role === 'recruiter' || user?.role === 'admin';
+  const isCandidateOnly = user?.role === 'candidate';
   const defaultJobId = searchParams.get('job_id') || '';
   const defaultCandidateId = searchParams.get('candidate_id') || '';
+  const defaultStatusChangesFilter = parseStatusFilter(searchParams.get('sc_status'));
+  const defaultStatusChangesChangedBy = searchParams.get('sc_changed_by') || '';
+  const defaultStatusChangesChangedAfter = searchParams.get('sc_after') || '';
+  const defaultStatusChangesChangedBefore = searchParams.get('sc_before') || '';
+  const defaultStatusChangesPreset = parseStatusChangesPreset(searchParams.get('sc_preset'));
+  const defaultStatusChangesPage = parsePositiveInteger(searchParams.get('sc_page'));
+  const defaultRankedChangedByFilter = searchParams.get('rc_changed_by') || '';
+  const defaultRankedChangedAfterRaw = searchParams.get('rc_after') || '';
+  const defaultRankedChangedBeforeRaw = searchParams.get('rc_before') || '';
+  const defaultRankedDatePreset = parseRankedDatePreset(searchParams.get('rc_preset'));
+  const defaultRankedDateRange =
+    !defaultRankedChangedAfterRaw &&
+    !defaultRankedChangedBeforeRaw &&
+    defaultRankedDatePreset &&
+    defaultRankedDatePreset !== 'all-time'
+      ? resolvePresetDateRange(defaultRankedDatePreset)
+      : null;
+  const defaultRankedChangedAfter =
+    defaultRankedChangedAfterRaw || defaultRankedDateRange?.changedAfter || '';
+  const defaultRankedChangedBefore =
+    defaultRankedChangedBeforeRaw || defaultRankedDateRange?.changedBefore || '';
 
   const [jobId, setJobId] = useState(defaultJobId);
   const [candidateId, setCandidateId] = useState(defaultCandidateId);
   const [rankedStatusFilter, setRankedStatusFilter] = useState<ApplicationStatus | ''>('');
+  const [rankedChangedByFilter, setRankedChangedByFilter] = useState(defaultRankedChangedByFilter);
+  const [rankedChangedAfter, setRankedChangedAfter] = useState(defaultRankedChangedAfter);
+  const [rankedChangedBefore, setRankedChangedBefore] = useState(defaultRankedChangedBefore);
+  const [rankedDatePreset, setRankedDatePreset] = useState<RankedDatePreset | ''>(defaultRankedDatePreset);
+  const [isRankedSummaryAnimating, setIsRankedSummaryAnimating] = useState(false);
   const [historyStatusFilter, setHistoryStatusFilter] = useState<ApplicationStatus | ''>('');
   const [rankedItems, setRankedItems] = useState<RankedCandidateItem[]>([]);
+  const [selectedRankedApplicationIds, setSelectedRankedApplicationIds] = useState<string[]>([]);
+  const [bulkRankedStatus, setBulkRankedStatus] = useState<ApplicationStatus | ''>('');
+  const [isApplyingBulkStatus, setIsApplyingBulkStatus] = useState(false);
+  const [isUndoingBulkStatus, setIsUndoingBulkStatus] = useState(false);
+  const [bulkRankedStatusResult, setBulkRankedStatusResult] = useState<{
+    requestedCount: number;
+    matchedCount: number;
+    updatedCount: number;
+    unchangedCount: number;
+    status: ApplicationStatus;
+  } | null>(null);
+  const [bulkRankedUndoPayload, setBulkRankedUndoPayload] = useState<
+    Array<{ applicationId: string; previousStatus: ApplicationStatus }>
+  >([]);
+  const [bulkRankedUndoResult, setBulkRankedUndoResult] = useState<{ revertedCount: number } | null>(null);
   const [historyItems, setHistoryItems] = useState<CandidateHistoryItem[]>([]);
   const [feedback, setFeedback] = useState<ApplicationFeedbackResponse['data'] | null>(null);
   const [selectedStatusHistory, setSelectedStatusHistory] = useState<{
@@ -95,16 +204,33 @@ export default function ApplicationsPage() {
       current_status: ApplicationStatus;
     }>
   >([]);
-  const [statusChangesFilter, setStatusChangesFilter] = useState<ApplicationStatus | ''>('');
-  const [statusChangesChangedBy, setStatusChangesChangedBy] = useState('');
-  const [statusChangesChangedAfter, setStatusChangesChangedAfter] = useState('');
-  const [statusChangesChangedBefore, setStatusChangesChangedBefore] = useState('');
-  const [statusChangesPreset, setStatusChangesPreset] = useState<'' | '7d' | '30d' | '90d'>('');
-  const [statusChangesPage, setStatusChangesPage] = useState(1);
+  const [statusChangesFilter, setStatusChangesFilter] = useState<ApplicationStatus | ''>(
+    defaultStatusChangesFilter
+  );
+  const [statusChangesChangedBy, setStatusChangesChangedBy] = useState(defaultStatusChangesChangedBy);
+  const [statusChangesChangedAfter, setStatusChangesChangedAfter] = useState(
+    defaultStatusChangesChangedAfter
+  );
+  const [statusChangesChangedBefore, setStatusChangesChangedBefore] = useState(
+    defaultStatusChangesChangedBefore
+  );
+  const [statusChangesPreset, setStatusChangesPreset] = useState<StatusChangesPreset | ''>(
+    defaultStatusChangesPreset
+  );
+  const [statusChangesPage, setStatusChangesPage] = useState(defaultStatusChangesPage);
   const [statusChangesTotalPages, setStatusChangesTotalPages] = useState(1);
   const [statusChangesTotal, setStatusChangesTotal] = useState(0);
   const [statusChangesActivated, setStatusChangesActivated] = useState(Boolean(defaultJobId));
+  const [isStatusChangesSummaryAnimating, setIsStatusChangesSummaryAnimating] = useState(false);
+  const [isExportingStatusChanges, setIsExportingStatusChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isCandidateOnly || !user?.id) return;
+    setCandidateId(user.id);
+    setHistoryActivated(true);
+    setHistoryPage(1);
+  }, [isCandidateOnly, user?.id]);
 
   const topHybrid = useMemo(() => {
     if (!rankedItems.length) return null;
@@ -116,22 +242,315 @@ export default function ApplicationsPage() {
     [t]
   );
 
-  const applyStatusChangesPreset = useCallback((preset: '7d' | '30d' | '90d') => {
-    const days = Number.parseInt(preset.replace('d', ''), 10);
+  const applyStatusChangesPreset = useCallback(
+    (preset: StatusChangesPreset) => {
     const today = new Date();
     const from = new Date(today);
-    from.setDate(today.getDate() - (days - 1));
+
+    if (preset === 'all-time') {
+      setStatusChangesPreset(preset);
+      setStatusChangesChangedAfter('');
+      setStatusChangesChangedBefore('');
+      setStatusChangesPage(1);
+      return;
+    }
+
+    if (preset === 'this-week') {
+      // Monday-start week to align with recruiter reporting conventions.
+      const day = (today.getDay() + 6) % 7;
+      from.setDate(today.getDate() - day);
+    } else if (preset === 'this-month') {
+      from.setDate(1);
+    } else if (preset === 'qtd') {
+      const quarterStartMonth = Math.floor(today.getMonth() / 3) * 3;
+      from.setMonth(quarterStartMonth, 1);
+    } else if (preset === 'ytd') {
+      from.setMonth(0, 1);
+    } else {
+      const days = Number.parseInt(preset.replace('d', ''), 10);
+      from.setDate(today.getDate() - (days - 1));
+    }
 
     setStatusChangesPreset(preset);
     setStatusChangesChangedAfter(from.toISOString().slice(0, 10));
     setStatusChangesChangedBefore(today.toISOString().slice(0, 10));
     setStatusChangesPage(1);
-  }, []);
+    },
+    []
+  );
 
   const aiStatusLabel = useCallback(
     (status: ApplicationAiStatus) => t(`applicationsPage.aiStatus.${status}`),
     [t]
   );
+
+  const applyRankedDatePreset = useCallback((preset: RankedDatePreset) => {
+    if (preset === 'all-time') {
+      setRankedDatePreset(preset);
+      setRankedChangedAfter('');
+      setRankedChangedBefore('');
+      setRankedPage(1);
+      return;
+    }
+
+    const today = new Date();
+    const from = new Date(today);
+
+    if (preset === 'this-month') {
+      from.setDate(1);
+    } else if (preset === 'qtd') {
+      const quarterStartMonth = Math.floor(today.getMonth() / 3) * 3;
+      from.setMonth(quarterStartMonth, 1);
+    } else {
+      from.setDate(today.getDate() - 6);
+    }
+
+    setRankedDatePreset(preset);
+    setRankedChangedAfter(from.toISOString().slice(0, 10));
+    setRankedChangedBefore(today.toISOString().slice(0, 10));
+    setRankedPage(1);
+  }, []);
+
+  const rankedFilterSummary = useMemo(() => {
+    const tokens: Array<{
+      id: 'preset' | 'status' | 'changedBy' | 'from' | 'to';
+      label: string;
+    }> = [];
+
+    if (rankedDatePreset) {
+      tokens.push({
+        id: 'preset',
+        label: t(`applicationsPage.recruiterView.preset.${rankedDatePreset}`),
+      });
+    }
+    if (rankedStatusFilter) {
+      tokens.push({
+        id: 'status',
+        label: t('applicationsPage.recruiterView.summaryStatus', {
+          status: statusLabel(rankedStatusFilter),
+        }),
+      });
+    }
+    if (rankedChangedByFilter.trim()) {
+      tokens.push({
+        id: 'changedBy',
+        label: t('applicationsPage.recruiterView.summaryChangedBy', {
+          changedBy: rankedChangedByFilter.trim(),
+        }),
+      });
+    }
+    if (rankedChangedAfter) {
+      tokens.push({
+        id: 'from',
+        label: t('applicationsPage.recruiterView.summaryFrom', { date: rankedChangedAfter }),
+      });
+    }
+    if (rankedChangedBefore) {
+      tokens.push({
+        id: 'to',
+        label: t('applicationsPage.recruiterView.summaryTo', { date: rankedChangedBefore }),
+      });
+    }
+
+    return tokens;
+  }, [rankedDatePreset, rankedStatusFilter, rankedChangedByFilter, rankedChangedAfter, rankedChangedBefore, statusLabel, t]);
+
+  const removeRankedFilterChip = useCallback((chipId: 'preset' | 'status' | 'changedBy' | 'from' | 'to') => {
+    switch (chipId) {
+      case 'preset':
+        setRankedDatePreset('');
+        setRankedChangedAfter('');
+        setRankedChangedBefore('');
+        break;
+      case 'status':
+        setRankedStatusFilter('');
+        break;
+      case 'changedBy':
+        setRankedChangedByFilter('');
+        break;
+      case 'from':
+        setRankedDatePreset('');
+        setRankedChangedAfter('');
+        break;
+      case 'to':
+        setRankedDatePreset('');
+        setRankedChangedBefore('');
+        break;
+    }
+    setRankedPage(1);
+    setIsRankedSummaryAnimating(true);
+  }, []);
+
+  const clearRankedSummaryFilters = useCallback(() => {
+    setRankedDatePreset('');
+    setRankedStatusFilter('');
+    setRankedChangedByFilter('');
+    setRankedChangedAfter('');
+    setRankedChangedBefore('');
+    setRankedPage(1);
+    setRankedActivated(true);
+    setIsRankedSummaryAnimating(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isRankedSummaryAnimating) return;
+    const timer = window.setTimeout(() => {
+      setIsRankedSummaryAnimating(false);
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [isRankedSummaryAnimating]);
+
+  const statusChangesFilterSummary = useMemo(() => {
+    const tokens: Array<{
+      id: 'preset' | 'status' | 'changedBy' | 'from' | 'to';
+      label: string;
+    }> = [];
+
+    if (statusChangesPreset) {
+      tokens.push({
+        id: 'preset',
+        label: t(`applicationsPage.statusChanges.preset.${statusChangesPreset}`),
+      });
+    }
+    if (statusChangesFilter) {
+      tokens.push({
+        id: 'status',
+        label: t('applicationsPage.statusChanges.summaryStatus', {
+          status: statusLabel(statusChangesFilter),
+        }),
+      });
+    }
+    if (statusChangesChangedBy.trim()) {
+      tokens.push({
+        id: 'changedBy',
+        label: t('applicationsPage.statusChanges.summaryChangedBy', {
+          changedBy: statusChangesChangedBy.trim(),
+        }),
+      });
+    }
+    if (statusChangesChangedAfter) {
+      tokens.push({
+        id: 'from',
+        label: t('applicationsPage.statusChanges.summaryFrom', { date: statusChangesChangedAfter }),
+      });
+    }
+    if (statusChangesChangedBefore) {
+      tokens.push({
+        id: 'to',
+        label: t('applicationsPage.statusChanges.summaryTo', { date: statusChangesChangedBefore }),
+      });
+    }
+
+    return tokens;
+  }, [
+    statusChangesPreset,
+    statusChangesFilter,
+    statusChangesChangedBy,
+    statusChangesChangedAfter,
+    statusChangesChangedBefore,
+    statusLabel,
+    t,
+  ]);
+
+  const removeStatusChangesFilterChip = useCallback(
+    (chipId: 'preset' | 'status' | 'changedBy' | 'from' | 'to') => {
+      switch (chipId) {
+        case 'preset':
+          setStatusChangesPreset('');
+          setStatusChangesChangedAfter('');
+          setStatusChangesChangedBefore('');
+          break;
+        case 'status':
+          setStatusChangesFilter('');
+          break;
+        case 'changedBy':
+          setStatusChangesChangedBy('');
+          break;
+        case 'from':
+          setStatusChangesPreset('');
+          setStatusChangesChangedAfter('');
+          break;
+        case 'to':
+          setStatusChangesPreset('');
+          setStatusChangesChangedBefore('');
+          break;
+      }
+      setStatusChangesPage(1);
+      setIsStatusChangesSummaryAnimating(true);
+    },
+    []
+  );
+
+  const clearStatusChangesSummaryFilters = useCallback(() => {
+    setStatusChangesPreset('');
+    setStatusChangesFilter('');
+    setStatusChangesChangedBy('');
+    setStatusChangesChangedAfter('');
+    setStatusChangesChangedBefore('');
+    setStatusChangesPage(1);
+    setStatusChangesActivated(true);
+    setIsStatusChangesSummaryAnimating(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isStatusChangesSummaryAnimating) return;
+    const timer = window.setTimeout(() => {
+      setIsStatusChangesSummaryAnimating(false);
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [isStatusChangesSummaryAnimating]);
+
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams.toString());
+    const setOrDelete = (key: string, value: string) => {
+      if (value) {
+        next.set(key, value);
+      } else {
+        next.delete(key);
+      }
+    };
+
+    setOrDelete('job_id', jobId.trim());
+    setOrDelete('candidate_id', candidateId.trim());
+    setOrDelete('rc_changed_by', rankedChangedByFilter.trim());
+    setOrDelete('rc_after', rankedChangedAfter);
+    setOrDelete('rc_before', rankedChangedBefore);
+    setOrDelete('rc_preset', rankedDatePreset);
+    setOrDelete('sc_status', statusChangesFilter);
+    setOrDelete('sc_changed_by', statusChangesChangedBy.trim());
+    setOrDelete('sc_after', statusChangesChangedAfter);
+    setOrDelete('sc_before', statusChangesChangedBefore);
+    setOrDelete('sc_preset', statusChangesPreset);
+    if (statusChangesPage > 1) {
+      next.set('sc_page', String(statusChangesPage));
+    } else {
+      next.delete('sc_page');
+    }
+
+    const currentQuery = searchParams.toString();
+    const nextQuery = next.toString();
+    if (nextQuery === currentQuery) {
+      return;
+    }
+
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+  }, [
+    router,
+    pathname,
+    searchParams,
+    jobId,
+    candidateId,
+    rankedChangedByFilter,
+    rankedChangedAfter,
+    rankedChangedBefore,
+    rankedDatePreset,
+    statusChangesFilter,
+    statusChangesChangedBy,
+    statusChangesChangedAfter,
+    statusChangesChangedBefore,
+    statusChangesPreset,
+    statusChangesPage,
+  ]);
 
   const loadRanked = useCallback(async () => {
     if (!jobId.trim()) {
@@ -148,6 +567,9 @@ export default function ApplicationsPage() {
         limit: 20,
         page: rankedPage,
         status: rankedStatusFilter,
+        changedBy: rankedChangedByFilter,
+        changedAfter: rankedChangedAfter,
+        changedBefore: rankedChangedBefore,
       });
       setRankedItems(result.data.candidates);
       setRankedTotalPages(result.data.pagination.total_pages);
@@ -159,7 +581,7 @@ export default function ApplicationsPage() {
     } finally {
       setIsLoadingRanked(false);
     }
-  }, [jobId, rankedPage, rankedStatusFilter, t]);
+  }, [jobId, rankedPage, rankedStatusFilter, rankedChangedByFilter, rankedChangedAfter, rankedChangedBefore, t]);
 
   const loadHistory = useCallback(async () => {
     if (!candidateId.trim()) {
@@ -233,7 +655,7 @@ export default function ApplicationsPage() {
     setError(null);
 
     try {
-      await updateApplicationStatus(applicationId, status, 'recruiter-ui');
+      await updateApplicationStatus(applicationId, status);
       setRankedItems((prev) =>
         prev.map((item) => (item.application_id === applicationId ? { ...item, status } : item))
       );
@@ -245,6 +667,143 @@ export default function ApplicationsPage() {
     }
   }
 
+  async function handleBulkRankedStatusApply() {
+    if (!selectedRankedApplicationIds.length || !bulkRankedStatus) {
+      return;
+    }
+
+    const previousStatuses = new Map(
+      rankedItems
+        .filter((item) => selectedRankedApplicationIds.includes(item.application_id))
+        .map((item) => [item.application_id, item.status] as const)
+    );
+
+    setError(null);
+    setBulkRankedStatusResult(null);
+    setBulkRankedUndoResult(null);
+    setBulkRankedUndoPayload([]);
+    setIsApplyingBulkStatus(true);
+    try {
+      const result = await bulkUpdateApplicationStatus({
+        applicationIds: selectedRankedApplicationIds,
+        status: bulkRankedStatus,
+      });
+
+      const updatedIdSet = new Set(result.data.updated_ids);
+      if (updatedIdSet.size) {
+        setRankedItems((prev) =>
+          prev.map((item) =>
+            updatedIdSet.has(item.application_id) ? { ...item, status: bulkRankedStatus } : item
+          )
+        );
+        setHistoryItems((prev) =>
+          prev.map((item) =>
+            updatedIdSet.has(item.application_id) ? { ...item, status: bulkRankedStatus } : item
+          )
+        );
+      }
+
+      setBulkRankedUndoPayload(
+        result.data.updated_ids
+          .map((applicationId) => {
+            const previousStatus = previousStatuses.get(applicationId);
+            if (!previousStatus) return null;
+            return { applicationId, previousStatus };
+          })
+          .filter((item): item is { applicationId: string; previousStatus: ApplicationStatus } =>
+            Boolean(item)
+          )
+      );
+
+      setBulkRankedStatusResult({
+        requestedCount: result.data.requested_count,
+        matchedCount: result.data.matched_count,
+        updatedCount: result.data.updated_count,
+        unchangedCount: result.data.unchanged_count,
+        status: result.data.status,
+      });
+
+      setSelectedRankedApplicationIds([]);
+      setBulkRankedStatus('');
+      setStatusChangesPage(1);
+      setStatusChangesActivated(true);
+      void loadRecentStatusChanges();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('applicationsPage.errors.bulkUpdateStatusFailed'));
+    } finally {
+      setIsApplyingBulkStatus(false);
+    }
+  }
+
+  async function handleUndoBulkRankedStatusApply() {
+    if (!bulkRankedUndoPayload.length) {
+      return;
+    }
+
+    setError(null);
+    setBulkRankedUndoResult(null);
+    setIsUndoingBulkStatus(true);
+    try {
+      const grouped = bulkRankedUndoPayload.reduce(
+        (acc, entry) => {
+          if (!acc[entry.previousStatus]) {
+            acc[entry.previousStatus] = [];
+          }
+          acc[entry.previousStatus].push(entry.applicationId);
+          return acc;
+        },
+        {} as Record<ApplicationStatus, string[]>
+      );
+
+      for (const status of STATUS_OPTIONS) {
+        const applicationIds = grouped[status];
+        if (!applicationIds?.length) {
+          continue;
+        }
+        await bulkUpdateApplicationStatus({
+          applicationIds,
+          status,
+        });
+      }
+
+      const previousStatusMap = new Map(
+        bulkRankedUndoPayload.map((entry) => [entry.applicationId, entry.previousStatus] as const)
+      );
+
+      setRankedItems((prev) =>
+        prev.map((item) => {
+          const previousStatus = previousStatusMap.get(item.application_id);
+          if (!previousStatus) return item;
+          return { ...item, status: previousStatus };
+        })
+      );
+      setHistoryItems((prev) =>
+        prev.map((item) => {
+          const previousStatus = previousStatusMap.get(item.application_id);
+          if (!previousStatus) return item;
+          return { ...item, status: previousStatus };
+        })
+      );
+
+      setBulkRankedUndoResult({ revertedCount: bulkRankedUndoPayload.length });
+      setBulkRankedUndoPayload([]);
+      setSelectedRankedApplicationIds([]);
+      setBulkRankedStatus('');
+      setStatusChangesPage(1);
+      setStatusChangesActivated(true);
+      void loadRecentStatusChanges();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('applicationsPage.errors.undoBulkUpdateStatusFailed'));
+    } finally {
+      setIsUndoingBulkStatus(false);
+    }
+  }
+
+  useEffect(() => {
+    const visibleIds = new Set(rankedItems.map((item) => item.application_id));
+    setSelectedRankedApplicationIds((prev) => prev.filter((id) => visibleIds.has(id)));
+  }, [rankedItems]);
+
   async function openFeedback(applicationId: string) {
     setError(null);
 
@@ -255,6 +814,39 @@ export default function ApplicationsPage() {
       setError(err instanceof Error ? err.message : t('applicationsPage.errors.loadFeedbackFailed'));
     }
   }
+
+  const handleExportStatusChanges = useCallback(async () => {
+    if (!jobId.trim()) {
+      setError(t('applicationsPage.errors.jobIdRequired'));
+      return;
+    }
+
+    setError(null);
+    setIsExportingStatusChanges(true);
+    try {
+      const blob = await exportRecentStatusChangesCsv({
+        jobId: jobId.trim(),
+        status: statusChangesFilter,
+        changedBy: statusChangesChangedBy,
+        changedAfter: statusChangesChangedAfter,
+        changedBefore: statusChangesChangedBefore,
+      });
+      const datePart = new Date().toISOString().slice(0, 10);
+      const safeJobId = jobId.trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+      downloadBlobAsFile(blob, `status_changes_${safeJobId || 'job'}_${datePart}.csv`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('applicationsPage.errors.exportStatusChangesFailed'));
+    } finally {
+      setIsExportingStatusChanges(false);
+    }
+  }, [
+    jobId,
+    statusChangesFilter,
+    statusChangesChangedBy,
+    statusChangesChangedAfter,
+    statusChangesChangedBefore,
+    t,
+  ]);
 
   const loadRecentStatusChanges = useCallback(async () => {
     if (!jobId.trim()) {
@@ -363,7 +955,8 @@ export default function ApplicationsPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card variant="outline" className="space-y-3">
+          {isRecruiterOrAdmin ? (
+            <Card variant="outline" className="space-y-3">
             <CardTitle className="text-xl">{t('applicationsPage.recruiterView.title')}</CardTitle>
             <CardDescription className="text-xs uppercase">
               {t('applicationsPage.recruiterView.description')}
@@ -393,9 +986,101 @@ export default function ApplicationsPage() {
                   </option>
                 ))}
               </select>
+              <Input
+                placeholder={t('applicationsPage.recruiterView.changedByFilterPlaceholder')}
+                value={rankedChangedByFilter}
+                onChange={(e) => {
+                  setRankedChangedByFilter(e.target.value);
+                  setRankedPage(1);
+                }}
+                className="w-[220px]"
+              />
+              <div className="flex items-center gap-2 border border-black bg-white px-2 h-10">
+                <span className="font-mono text-[10px] uppercase text-gray-600">
+                  {t('applicationsPage.recruiterView.changedAfterLabel')}
+                </span>
+                <Input
+                  type="date"
+                  aria-label={t('applicationsPage.recruiterView.changedAfterLabel')}
+                  value={rankedChangedAfter}
+                  onChange={(e) => {
+                    setRankedDatePreset('');
+                    setRankedChangedAfter(e.target.value);
+                    setRankedPage(1);
+                  }}
+                  className="h-8 border-0 px-1 text-xs"
+                />
+              </div>
+              <div className="flex items-center gap-2 border border-black bg-white px-2 h-10">
+                <span className="font-mono text-[10px] uppercase text-gray-600">
+                  {t('applicationsPage.recruiterView.changedBeforeLabel')}
+                </span>
+                <Input
+                  type="date"
+                  aria-label={t('applicationsPage.recruiterView.changedBeforeLabel')}
+                  value={rankedChangedBefore}
+                  onChange={(e) => {
+                    setRankedDatePreset('');
+                    setRankedChangedBefore(e.target.value);
+                    setRankedPage(1);
+                  }}
+                  className="h-8 border-0 px-1 text-xs"
+                />
+              </div>
+              <div className="flex items-center gap-2 border border-black bg-white px-2 h-10">
+                <span className="font-mono text-[10px] uppercase text-gray-600">
+                  {t('applicationsPage.recruiterView.quickRangeLabel')}
+                </span>
+                {RANKED_DATE_PRESETS.map((preset) => (
+                  <Button
+                    key={preset}
+                    variant="outline"
+                    className={`h-8 px-2 text-[10px] ${rankedDatePreset === preset ? 'bg-blue-50 border-blue-700 text-blue-900' : ''}`}
+                    onClick={() => applyRankedDatePreset(preset)}
+                    disabled={isLoadingRanked}
+                  >
+                    {t(`applicationsPage.recruiterView.preset.${preset}`)}
+                  </Button>
+                ))}
+              </div>
               <Button onClick={activateRanked} disabled={isLoadingRanked}>
                 {isLoadingRanked ? t('common.loading') : t('applicationsPage.load')}
               </Button>
+            </div>
+            <div
+              className={`flex flex-wrap items-center gap-2 transition-colors duration-300 ${
+                isRankedSummaryAnimating ? 'bg-blue-50' : ''
+              }`}
+            >
+              <span className="font-mono text-[10px] uppercase text-gray-600">
+                {t('applicationsPage.recruiterView.activeFiltersLabel')}
+              </span>
+              <Button
+                variant="outline"
+                onClick={clearRankedSummaryFilters}
+                disabled={isLoadingRanked}
+              >
+                {t('applicationsPage.recruiterView.clearSummaryButton')}
+              </Button>
+              {rankedFilterSummary.length ? (
+                rankedFilterSummary.map((item) => (
+                  <button
+                    type="button"
+                    key={item.id}
+                    onClick={() => removeRankedFilterChip(item.id)}
+                    className="font-mono text-[10px] uppercase border border-black bg-white px-2 py-1 hover:bg-[#E5E5E0]"
+                    aria-label={t('applicationsPage.recruiterView.removeFilterLabel', {
+                      filter: item.label,
+                    })}
+                  >
+                    {item.label}
+                  </button>
+                ))
+              ) : (
+                <span className="font-mono text-[10px] uppercase text-gray-500">
+                  {t('applicationsPage.recruiterView.activeFiltersNone')}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -422,9 +1107,11 @@ export default function ApplicationsPage() {
                 ? t('applicationsPage.recruiterView.topHybrid', { score: topHybrid.toFixed(2) })
                 : ''}
             </p>
-          </Card>
+            </Card>
+          ) : null}
 
-          <Card variant="outline" className="space-y-3">
+          {isCandidateOnly ? (
+            <Card variant="outline" className="space-y-3">
             <CardTitle className="text-xl">{t('applicationsPage.candidateView.title')}</CardTitle>
             <CardDescription className="text-xs uppercase">
               {t('applicationsPage.candidateView.description')}
@@ -433,10 +1120,7 @@ export default function ApplicationsPage() {
               <Input
                 placeholder={t('applicationsPage.candidateView.candidateIdPlaceholder')}
                 value={candidateId}
-                onChange={(e) => {
-                  setCandidateId(e.target.value);
-                  setHistoryPage(1);
-                }}
+                readOnly
               />
               <select
                 className="h-10 border border-black bg-transparent px-2 text-xs uppercase rounded-none"
@@ -479,25 +1163,21 @@ export default function ApplicationsPage() {
             <p className="font-mono text-xs uppercase text-gray-600">
               {t('applicationsPage.candidateView.countApplications', { count: historyItems.length })}
             </p>
-          </Card>
+            </Card>
+          ) : null}
         </div>
 
-        {renderSummary()}
+        {isRecruiterOrAdmin ? renderSummary() : null}
 
-        <Card variant="outline" className="space-y-4">
+        {isRecruiterOrAdmin ? (
+          <Card variant="outline" className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="text-2xl">{t('applicationsPage.statusChanges.title')}</CardTitle>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 onClick={() => {
-                  setStatusChangesFilter('');
-                  setStatusChangesChangedBy('');
-                  setStatusChangesChangedAfter('');
-                  setStatusChangesChangedBefore('');
-                  setStatusChangesPreset('');
-                  setStatusChangesPage(1);
-                  setStatusChangesActivated(true);
+                  clearStatusChangesSummaryFilters();
                 }}
                 disabled={isLoadingStatusChanges}
               >
@@ -514,6 +1194,15 @@ export default function ApplicationsPage() {
                 {isLoadingStatusChanges
                   ? t('common.loading')
                   : t('applicationsPage.statusChanges.refreshButton')}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleExportStatusChanges}
+                disabled={isLoadingStatusChanges || isExportingStatusChanges}
+              >
+                {isExportingStatusChanges
+                  ? t('common.loading')
+                  : t('applicationsPage.statusChanges.exportButton')}
               </Button>
             </div>
           </div>
@@ -578,7 +1267,7 @@ export default function ApplicationsPage() {
             <span className="font-mono text-[10px] uppercase text-gray-600">
               {t('applicationsPage.statusChanges.quickRangeLabel')}
             </span>
-            {(['7d', '30d', '90d'] as const).map((preset) => (
+            {STATUS_CHANGES_PRESETS.map((preset) => (
               <Button
                 key={preset}
                 variant="outline"
@@ -589,6 +1278,41 @@ export default function ApplicationsPage() {
                 {t(`applicationsPage.statusChanges.preset.${preset}`)}
               </Button>
             ))}
+          </div>
+          <div
+            className={`flex flex-wrap items-center gap-2 transition-colors duration-300 ${
+              isStatusChangesSummaryAnimating ? 'bg-blue-50' : ''
+            }`}
+          >
+            <span className="font-mono text-[10px] uppercase text-gray-600">
+              {t('applicationsPage.statusChanges.activeFiltersLabel')}
+            </span>
+            <Button
+              variant="outline"
+              onClick={clearStatusChangesSummaryFilters}
+              disabled={isLoadingStatusChanges}
+            >
+              {t('applicationsPage.statusChanges.clearSummaryButton')}
+            </Button>
+            {statusChangesFilterSummary.length ? (
+              statusChangesFilterSummary.map((item) => (
+                <button
+                  type="button"
+                  key={item.id}
+                  onClick={() => removeStatusChangesFilterChip(item.id)}
+                  className="font-mono text-[10px] uppercase border border-black bg-white px-2 py-1 hover:bg-[#E5E5E0]"
+                  aria-label={t('applicationsPage.statusChanges.removeFilterLabel', {
+                    filter: item.label,
+                  })}
+                >
+                  {item.label}
+                </button>
+              ))
+            ) : (
+              <span className="font-mono text-[10px] uppercase text-gray-500">
+                {t('applicationsPage.statusChanges.activeFiltersNone')}
+              </span>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -647,7 +1371,8 @@ export default function ApplicationsPage() {
               </p>
             )}
           </div>
-        </Card>
+          </Card>
+        ) : null}
 
         {error ? (
           <Card variant="outline" className="border-red-700 bg-red-50">
@@ -656,8 +1381,85 @@ export default function ApplicationsPage() {
           </Card>
         ) : null}
 
-        <Card variant="outline" className="space-y-4">
+        {isRecruiterOrAdmin ? (
+          <Card variant="outline" className="space-y-4">
           <CardTitle className="text-2xl">{t('applicationsPage.rankedCandidates.title')}</CardTitle>
+          <div className="flex flex-wrap items-center gap-2 border border-black bg-[#E7EEF9] p-2">
+            <label className="inline-flex items-center gap-2 font-mono text-[11px] uppercase">
+              <input
+                type="checkbox"
+                checked={Boolean(rankedItems.length) && selectedRankedApplicationIds.length === rankedItems.length}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedRankedApplicationIds(rankedItems.map((item) => item.application_id));
+                  } else {
+                    setSelectedRankedApplicationIds([]);
+                  }
+                }}
+                disabled={!rankedItems.length || isLoadingRanked || isApplyingBulkStatus || isUndoingBulkStatus}
+              />
+              {t('applicationsPage.rankedCandidates.selectAllCurrentPage')}
+            </label>
+            <span className="font-mono text-[11px] uppercase text-blue-900">
+              {t('applicationsPage.rankedCandidates.selectedCount', {
+                count: selectedRankedApplicationIds.length,
+              })}
+            </span>
+            <select
+              className="h-10 border border-black bg-white px-2 text-xs uppercase rounded-none"
+              value={bulkRankedStatus}
+              onChange={(e) => setBulkRankedStatus(e.target.value as ApplicationStatus | '')}
+              disabled={isApplyingBulkStatus || isUndoingBulkStatus}
+            >
+              <option value="">{t('applicationsPage.rankedCandidates.bulkStatusPlaceholder')}</option>
+              {STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {statusLabel(status)}
+                </option>
+              ))}
+            </select>
+            <Button
+              variant="outline"
+              onClick={handleBulkRankedStatusApply}
+              disabled={
+                !selectedRankedApplicationIds.length ||
+                !bulkRankedStatus ||
+                isApplyingBulkStatus ||
+                isUndoingBulkStatus
+              }
+            >
+              {isApplyingBulkStatus
+                ? t('common.loading')
+                : t('applicationsPage.rankedCandidates.applyBulkStatusButton')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleUndoBulkRankedStatusApply}
+              disabled={!bulkRankedUndoPayload.length || isApplyingBulkStatus || isUndoingBulkStatus}
+            >
+              {isUndoingBulkStatus
+                ? t('common.loading')
+                : t('applicationsPage.rankedCandidates.undoBulkStatusButton')}
+            </Button>
+            {bulkRankedStatusResult ? (
+              <span className="font-mono text-[11px] uppercase text-blue-900">
+                {t('applicationsPage.rankedCandidates.bulkResultLine', {
+                  requested: bulkRankedStatusResult.requestedCount,
+                  matched: bulkRankedStatusResult.matchedCount,
+                  updated: bulkRankedStatusResult.updatedCount,
+                  unchanged: bulkRankedStatusResult.unchangedCount,
+                  status: statusLabel(bulkRankedStatusResult.status),
+                })}
+              </span>
+            ) : null}
+            {bulkRankedUndoResult ? (
+              <span className="font-mono text-[11px] uppercase text-green-700">
+                {t('applicationsPage.rankedCandidates.bulkUndoResultLine', {
+                  reverted: bulkRankedUndoResult.revertedCount,
+                })}
+              </span>
+            ) : null}
+          </div>
           <div className="space-y-2">
             {rankedItems.map((item) => (
               <div
@@ -665,6 +1467,23 @@ export default function ApplicationsPage() {
                 className="border border-black bg-white p-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
               >
                 <div>
+                  <label className="inline-flex items-center gap-2 font-mono text-[11px] uppercase text-gray-600 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedRankedApplicationIds.includes(item.application_id)}
+                      onChange={(e) => {
+                        setSelectedRankedApplicationIds((prev) => {
+                          if (e.target.checked) {
+                            if (prev.includes(item.application_id)) return prev;
+                            return [...prev, item.application_id];
+                          }
+                          return prev.filter((id) => id !== item.application_id);
+                        });
+                      }}
+                      disabled={isApplyingBulkStatus || isUndoingBulkStatus}
+                    />
+                    {t('applicationsPage.rankedCandidates.selectForBulk')}
+                  </label>
                   <p className="font-bold">{item.candidate.full_name}</p>
                   <p className="text-xs uppercase text-gray-600">
                     {item.candidate.email || t('applicationsPage.rankedCandidates.notAvailable')}
@@ -730,9 +1549,11 @@ export default function ApplicationsPage() {
               </p>
             ) : null}
           </div>
-        </Card>
+          </Card>
+        ) : null}
 
-        <Card variant="outline" className="space-y-4">
+        {isCandidateOnly ? (
+          <Card variant="outline" className="space-y-4">
           <CardTitle className="text-2xl">{t('applicationsPage.candidateHistory.title')}</CardTitle>
           <div className="space-y-2">
             {historyItems.map((item) => (
@@ -757,7 +1578,8 @@ export default function ApplicationsPage() {
               </p>
             ) : null}
           </div>
-        </Card>
+          </Card>
+        ) : null}
 
         {feedback ? (
           <Card variant="outline" className="space-y-3">

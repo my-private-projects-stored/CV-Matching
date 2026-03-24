@@ -7,8 +7,11 @@ import {
   searchJobsByResumeVectorHandler,
   searchResumesByJobVectorHandler,
 } from "../controllers/vector.controller.js";
+import { requireAuth, requireRoles } from "../middleware/auth.middleware.js";
 
 const router = Router();
+
+router.use(requireAuth, requireRoles("admin"));
 
 router.post("/jobs/:jobId/index", indexJobVectorHandler);
 router.post("/resumes/:resumeId/index", indexResumeVectorHandler);

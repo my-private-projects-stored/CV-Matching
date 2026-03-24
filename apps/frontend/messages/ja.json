@@ -46,6 +46,10 @@
     "backToDashboard": "ダッシュボードに戻る",
     "goToSettings": "設定へ"
   },
+  "access": {
+    "recruiterOnlyTitle": "採用担当者のみアクセス可能",
+    "recruiterOnlyDescription": "このページは採用担当者または管理者アカウントのみ利用できます。"
+  },
   "jobsPage": {
     "title": "Job Board",
     "subtitle": "Browse and filter active job descriptions",

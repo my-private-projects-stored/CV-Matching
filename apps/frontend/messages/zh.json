@@ -46,6 +46,10 @@
     "backToDashboard": "返回仪表板",
     "goToSettings": "前往设置"
   },
+  "access": {
+    "recruiterOnlyTitle": "仅招聘方可访问",
+    "recruiterOnlyDescription": "此页面仅对招聘方和管理员账号开放。"
+  },
   "jobsPage": {
     "title": "Job Board",
     "subtitle": "Browse and filter active job descriptions",

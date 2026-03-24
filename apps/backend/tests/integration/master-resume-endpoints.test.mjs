@@ -14,11 +14,7 @@ import SystemConfig from "../../src/models/SystemConfig.js";
 const RUN_INTEGRATION = process.env.RUN_INTEGRATION_TESTS === "1";
 
 function getTestMongoUri() {
-  if (process.env.MONGO_URI_TEST) {
-    return process.env.MONGO_URI_TEST;
-  }
-
-  const mongoUri = process.env.MONGO_URI;
+  const mongoUri = process.env.MONGO_URI_TEST || process.env.MONGO_URI;
   assert.ok(mongoUri, "MONGO_URI is required for integration test");
 
   const url = new URL(mongoUri);
@@ -27,10 +23,15 @@ function getTestMongoUri() {
   return url.toString();
 }
 
-async function requestJson(baseUrl, method, path, body) {
+async function requestJson(baseUrl, method, path, body, token) {
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${baseUrl}${path}`, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
 
@@ -65,7 +66,28 @@ test(
     const baseUrl = `http://127.0.0.1:${address.port}/api`;
 
     try {
-      const candidateId = new mongoose.Types.ObjectId();
+      const candidateSignup = await requestJson(baseUrl, "POST", "/auth/signup", {
+        email: "candidate.master@example.com",
+        password: "StrongPass123",
+        full_name: "Candidate Master",
+        role: "candidate",
+      });
+      assert.equal(candidateSignup.status, 201);
+      const candidateToken = candidateSignup.json?.access_token;
+      const candidateId = candidateSignup.json?.user?.id;
+      assert.ok(candidateToken);
+      assert.ok(candidateId);
+
+      const recruiterSignup = await requestJson(baseUrl, "POST", "/auth/signup", {
+        email: "recruiter.master@example.com",
+        password: "StrongPass123",
+        full_name: "Recruiter Master",
+        role: "recruiter",
+      });
+      assert.equal(recruiterSignup.status, 201);
+      const recruiterToken = recruiterSignup.json?.access_token;
+      assert.ok(recruiterToken);
+
       const first = await Resume.create({
         candidateId,
         fileUrl: "upload://master-1",
@@ -84,7 +106,9 @@ test(
       const setMaster = await requestJson(
         baseUrl,
         "POST",
-        `/resumes/${encodeURIComponent(String(second._id))}/set-as-master`
+        `/resumes/${encodeURIComponent(String(second._id))}/set-as-master`,
+        undefined,
+        candidateToken
       );
 
       assert.equal(setMaster.status, 200);
@@ -102,14 +126,16 @@ test(
       const getMaster = await requestJson(
         baseUrl,
         "GET",
-        `/resumes/master?candidate_id=${encodeURIComponent(String(candidateId))}`
+        `/resumes/master?candidate_id=${encodeURIComponent(String(candidateId))}`,
+        undefined,
+        candidateToken
       );
 
       assert.equal(getMaster.status, 200);
       assert.equal(getMaster.json?.data?.resume_id, String(second._id));
       assert.equal(getMaster.json?.data?.is_master, true);
 
-      const invalidCandidate = await requestJson(baseUrl, "GET", "/resumes/master?candidate_id=abc");
+      const invalidCandidate = await requestJson(baseUrl, "GET", "/resumes/master?candidate_id=abc", undefined, recruiterToken);
       assert.equal(invalidCandidate.status, 400);
     } finally {
       await new Promise((resolve, reject) => {

@@ -42,6 +42,22 @@ function requestId() {
   return `req_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function getAuthRole(req) {
+  return String(req.auth?.role || "").trim().toLowerCase();
+}
+
+function getAuthUserId(req) {
+  return String(req.auth?.userId || "").trim();
+}
+
+function isCandidateRole(req) {
+  return getAuthRole(req) === "candidate";
+}
+
+function isOwnedByActor(resume, req) {
+  return String(resume?.candidateId || "") === getAuthUserId(req);
+}
+
 function getResumePayloadFromPatchBody(body = {}) {
   const modelKeys = new Set([
     "candidateId",
@@ -74,7 +90,7 @@ function getResumePayloadFromPatchBody(body = {}) {
 
 export async function uploadResumeHandler(req, res, next) {
   try {
-    const result = await createResumeFromUpload(req.file);
+    const result = await createResumeFromUpload(req.file, getAuthUserId(req));
     return res.status(201).json({
       ...result,
       request_id: requestId(),
@@ -96,6 +112,10 @@ export async function getResumeHandler(req, res, next) {
       return res.status(404).json({ message: "Resume not found" });
     }
 
+    if (isCandidateRole(req) && !isOwnedByActor(resume, req)) {
+      return res.status(403).json({ message: "You can only access your own resume" });
+    }
+
     return res.status(200).json({
       request_id: requestId(),
       data: toResumeFetchData(resume),
@@ -108,7 +128,8 @@ export async function getResumeHandler(req, res, next) {
 export async function listResumesHandler(req, res, next) {
   try {
     const includeMaster = String(req.query.include_master || "false").toLowerCase() === "true";
-    const data = await listResumeSummaries(includeMaster);
+    const candidateId = isCandidateRole(req) ? getAuthUserId(req) : undefined;
+    const data = await listResumeSummaries(includeMaster, candidateId);
 
     return res.status(200).json({
       request_id: requestId(),
@@ -121,7 +142,8 @@ export async function listResumesHandler(req, res, next) {
 
 export async function getMasterResumeHandler(req, res, next) {
   try {
-    const candidateId = String(req.query.candidate_id || "").trim();
+    const requestedCandidateId = String(req.query.candidate_id || "").trim();
+    const candidateId = isCandidateRole(req) ? getAuthUserId(req) : requestedCandidateId;
     if (candidateId && !/^[a-fA-F0-9]{24}$/.test(candidateId)) {
       return res.status(400).json({ message: "candidate_id must be a valid ObjectId" });
     }
@@ -142,6 +164,17 @@ export async function getMasterResumeHandler(req, res, next) {
 
 export async function setMasterResumeHandler(req, res, next) {
   try {
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(req.params.id);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only update your own resume" });
+      }
+    }
+
     const updated = await setResumeAsMaster(req.params.id);
     if (!updated) {
       return res.status(404).json({ message: "Resume not found" });
@@ -159,7 +192,12 @@ export async function setMasterResumeHandler(req, res, next) {
 
 export async function createResumeHandler(req, res, next) {
   try {
-    const created = await createResume(req.body);
+    const payload = { ...(req.body || {}) };
+    if (isCandidateRole(req)) {
+      payload.candidateId = getAuthUserId(req);
+    }
+
+    const created = await createResume(payload);
     return res.status(201).json({
       request_id: requestId(),
       data: toResumeFetchData(created),
@@ -171,6 +209,17 @@ export async function createResumeHandler(req, res, next) {
 
 export async function updateResumeHandler(req, res, next) {
   try {
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(req.params.id);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only update your own resume" });
+      }
+    }
+
     const payload = getResumePayloadFromPatchBody(req.body);
     const updated = await updateResumeById(req.params.id, payload);
 
@@ -189,6 +238,17 @@ export async function updateResumeHandler(req, res, next) {
 
 export async function retryResumeProcessingHandler(req, res, next) {
   try {
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(req.params.id);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only update your own resume" });
+      }
+    }
+
     const retried = await retryResumeProcessing(req.params.id);
     if (!retried) {
       return res.status(404).json({ message: "Resume not found" });
@@ -212,6 +272,17 @@ export async function previewImproveResumeHandler(req, res, next) {
       return res.status(400).json({ message: "resume_id and job_id are required" });
     }
 
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(resumeId);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only use your own resume" });
+      }
+    }
+
     const result = await previewResumeImprovement(resumeId, jobId);
     if (!result) {
       return res.status(404).json({ message: "Resume or job description not found" });
@@ -232,6 +303,17 @@ export async function confirmImproveResumeHandler(req, res, next) {
 
     if (!resumeId || !jobId || !improvedData || typeof improvedData !== "object") {
       return res.status(400).json({ message: "resume_id, job_id and improved_data are required" });
+    }
+
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(resumeId);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only use your own resume" });
+      }
     }
 
     const result = await confirmResumeImprovement({
@@ -260,6 +342,17 @@ export async function improveResumeHandler(req, res, next) {
       return res.status(400).json({ message: "resume_id and job_id are required" });
     }
 
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(resumeId);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only use your own resume" });
+      }
+    }
+
     const result = await improveResume(resumeId, jobId);
     if (!result) {
       return res.status(404).json({ message: "Resume or job description not found" });
@@ -273,6 +366,17 @@ export async function improveResumeHandler(req, res, next) {
 
 export async function updateCoverLetterHandler(req, res, next) {
   try {
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(req.params.id);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only update your own resume" });
+      }
+    }
+
     const content = typeof req.body?.content === "string" ? req.body.content : "";
     const updated = await updateResumeFields(req.params.id, { coverLetter: content });
     if (!updated) {
@@ -287,6 +391,17 @@ export async function updateCoverLetterHandler(req, res, next) {
 
 export async function updateOutreachMessageHandler(req, res, next) {
   try {
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(req.params.id);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only update your own resume" });
+      }
+    }
+
     const content = typeof req.body?.content === "string" ? req.body.content : "";
     const updated = await updateResumeFields(req.params.id, { outreachMessage: content });
     if (!updated) {
@@ -301,6 +416,17 @@ export async function updateOutreachMessageHandler(req, res, next) {
 
 export async function updateResumeTitleHandler(req, res, next) {
   try {
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(req.params.id);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only update your own resume" });
+      }
+    }
+
     const title = typeof req.body?.title === "string" ? req.body.title.trim() : "";
     if (!title) {
       return res.status(400).json({ message: "title is required" });
@@ -324,6 +450,10 @@ export async function getResumeJobDescriptionHandler(req, res, next) {
       return res.status(404).json({ message: "Resume not found" });
     }
 
+    if (isCandidateRole(req) && !isOwnedByActor(resume, req)) {
+      return res.status(403).json({ message: "You can only access your own resume" });
+    }
+
     if (!resume.parentResumeId) {
       return res.status(400).json({ message: "Job description is only available for tailored resumes." });
     }
@@ -343,6 +473,17 @@ export async function getResumeJobDescriptionHandler(req, res, next) {
 
 export async function generateCoverLetterHandler(req, res, next) {
   try {
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(req.params.id);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only use your own resume" });
+      }
+    }
+
     const configuredLanguage = await getLanguageConfig().catch(() => null);
     const outputLanguage = resolveOutputLanguage(
       req.body?.output_language,
@@ -364,6 +505,17 @@ export async function generateCoverLetterHandler(req, res, next) {
 
 export async function downloadResumePdfHandler(req, res, next) {
   try {
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(req.params.id);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only access your own resume" });
+      }
+    }
+
     const result = await generateResumePdf(req.params.id);
     if (!result) {
       return res.status(404).json({ message: "Resume not found" });
@@ -379,6 +531,17 @@ export async function downloadResumePdfHandler(req, res, next) {
 
 export async function downloadCoverLetterPdfHandler(req, res, next) {
   try {
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(req.params.id);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only access your own resume" });
+      }
+    }
+
     const result = await generateCoverLetterPdf(req.params.id);
     if (!result) {
       return res.status(404).json({ message: "Resume not found" });
@@ -398,6 +561,17 @@ export async function downloadCoverLetterPdfHandler(req, res, next) {
 
 export async function downloadOriginalResumeHandler(req, res, next) {
   try {
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(req.params.id);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only access your own resume" });
+      }
+    }
+
     const result = await downloadOriginalResumeFile(req.params.id);
     if (!result) {
       return res.status(404).json({ message: "Resume not found" });
@@ -417,6 +591,17 @@ export async function downloadOriginalResumeHandler(req, res, next) {
 
 export async function generateOutreachHandler(req, res, next) {
   try {
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(req.params.id);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only use your own resume" });
+      }
+    }
+
     const configuredLanguage = await getLanguageConfig().catch(() => null);
     const outputLanguage = resolveOutputLanguage(
       req.body?.output_language,
@@ -438,6 +623,17 @@ export async function generateOutreachHandler(req, res, next) {
 
 export async function deleteResumeHandler(req, res, next) {
   try {
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(req.params.id);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only delete your own resume" });
+      }
+    }
+
     const deleted = await deleteResumeById(req.params.id);
 
     if (!deleted) {

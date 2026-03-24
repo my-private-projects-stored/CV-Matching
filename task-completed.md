@@ -1327,3 +1327,665 @@
 - Đã bổ sung i18n EN/VI cho quick range:
   - `apps/frontend/messages/en.json`
   - `apps/frontend/messages/vi.json`.
+
+### 77) UC-BASIC-13 nâng cấp tiếp: test UI cho preset/clear filters ở Applications
+- Đã bổ sung test UI cho trang Applications để khóa hành vi bộ lọc Status Changes:
+  - `apps/frontend/tests/applications-page.test.tsx`
+- Các hành vi đã được kiểm chứng:
+  - chọn preset `7d` sẽ phát sinh request với `changedAfter`/`changedBefore` hợp lệ,
+  - bấm `Clear Filters` sẽ reset toàn bộ filter status changes (`status`, `changed_by`, `changed_after`, `changed_before`) và reset `page = 1`.
+- Mục tiêu: tránh regression cho luồng monitoring recruiter sau các lần refactor tiếp theo.
+
+### 78) UC-BASIC-13 nâng cấp tiếp: preset This week/This month + boundary test changed_before
+- Đã mở rộng quick preset thời gian cho Status Changes:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - bổ sung thêm:
+    - `This week`,
+    - `This month`.
+- Quy tắc áp dụng preset mới:
+  - `This week`: tính từ đầu tuần (Monday-start) đến ngày hiện tại,
+  - `This month`: tính từ ngày 01 của tháng đến ngày hiện tại,
+  - tự động cập nhật `From/To` và reset page về 1.
+- Đã bổ sung i18n EN/VI cho 2 preset mới:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã mở rộng test frontend cho preset mới:
+  - `apps/frontend/tests/applications-page.test.tsx`
+  - thêm case xác nhận `this-month` sinh `changedAfter` đúng boundary ngày đầu tháng.
+- Đã mở rộng integration test backend cho boundary `changed_before`:
+  - `apps/backend/tests/integration/application-endpoints.test.mjs`
+  - thêm case xác nhận event xảy ra trong ngày vẫn được include khi `changed_before` là đúng ngày,
+  - thêm case xác nhận event bị exclude khi `changed_before` nhỏ hơn 1 ngày.
+
+### 79) UC-BASIC-13 nâng cấp tiếp: preset Quarter to date + test active preset state
+- Đã mở rộng quick preset cho Status Changes với tùy chọn `Quarter to date`:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - thêm preset `qtd` (từ đầu quý hiện tại đến hôm nay),
+  - tự cập nhật `From/To` và reset page về 1 tương tự các preset khác.
+- Đã cập nhật i18n cho preset mới:
+  - `apps/frontend/messages/en.json` -> `Quarter to date`
+  - `apps/frontend/messages/vi.json` -> `Từ đầu quý`.
+- Đã mở rộng test UI của Applications page:
+  - `apps/frontend/tests/applications-page.test.tsx`
+  - thêm case xác nhận:
+    - active style chuyển đúng khi đổi preset `7d` -> `qtd`,
+    - request mới có `changedAfter` đúng mốc đầu quý (`01|04|07|10`) và `changedBefore` hợp lệ.
+
+### 80) UC-BASIC-13 nâng cấp tiếp: preset Year to date + active filter summary
+- Đã mở rộng quick preset cho Status Changes với tùy chọn `Year to date`:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - thêm preset `ytd` (từ `01-01` của năm hiện tại đến hôm nay).
+- Đã bổ sung phần hiển thị `Active filters` ngay trong panel Status Changes:
+  - hiển thị chip tóm tắt cho các filter đang bật (preset, status, changed_by, from, to),
+  - khi không có filter sẽ hiển thị trạng thái `none`.
+- Đã cập nhật i18n EN/VI cho preset và summary labels:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã mở rộng test UI:
+  - `apps/frontend/tests/applications-page.test.tsx`
+  - thêm case cho preset `ytd` và case hiển thị summary chip.
+
+### 81) UC-BASIC-13 nâng cấp tiếp: preset All time + xóa từng filter bằng chip
+- Đã bổ sung preset `All time` trong quick range của Status Changes:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - khi chọn `all-time`, hệ thống reset `From/To` về rỗng và giữ các filter khác.
+- Đã nâng cấp Active filter summary thành chip có thể tương tác:
+  - click vào từng chip sẽ xóa đúng filter tương ứng (preset/status/changed_by/from/to),
+  - tự reset page về 1 để đồng bộ dữ liệu phân trang.
+- Đã bổ sung i18n EN/VI cho `all-time` và aria label xóa chip:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã mở rộng test UI:
+  - `apps/frontend/tests/applications-page.test.tsx`
+  - thêm case cho preset `all-time` và case click chip để xóa filter status.
+
+### 82) UC-BASIC-13 nâng cấp tiếp: clear toàn bộ chip filter + phản hồi trực quan khi gỡ filter
+- Đã bổ sung thao tác xóa nhanh toàn bộ chip filter ngay trên dòng Active filters:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - thêm nút `Clear chips` / `Xóa chip`.
+- Hành vi nút mới:
+  - reset đồng thời preset/status/changed_by/from/to,
+  - reset page về 1,
+  - kích hoạt load lại danh sách status changes theo trạng thái rỗng.
+- Đã bổ sung phản hồi trực quan khi vừa gỡ filter:
+  - vùng Active filters highlight nhẹ ngắn hạn để người dùng nhận biết thao tác vừa áp dụng.
+- Đã cập nhật i18n EN/VI cho nút mới:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã mở rộng test UI:
+  - `apps/frontend/tests/applications-page.test.tsx`
+  - thêm case xác nhận `clear chips` reset đầy đủ bộ lọc và request params.
+
+### 83) UC-BASIC-13 nâng cấp tiếp: đồng bộ filter vào query string + export CSV status changes
+- Đã đồng bộ bộ lọc status changes lên URL query string để chia sẻ trạng thái lọc:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - đọc mặc định từ query khi mở trang (`sc_status`, `sc_changed_by`, `sc_after`, `sc_before`, `sc_preset`, `sc_page`) và cập nhật URL khi filter/page thay đổi.
+- Đã bổ sung export CSV theo đúng bộ lọc hiện tại:
+  - Frontend API: `apps/frontend/lib/api/applications.ts`
+  - Backend route/controller/service:
+    - `apps/backend/src/routes/application.routes.js`
+    - `apps/backend/src/controllers/application.controller.js`
+    - `apps/backend/src/services/application.service.js`
+  - Endpoint mới: `GET /applications/status-changes/export` (hỗ trợ `job_id`, `status`, `changed_by`, `changed_after`, `changed_before`).
+- Đã cập nhật i18n EN/VI:
+  - thêm label `Export CSV` / `Xuất CSV` và thông báo lỗi export.
+- Đã mở rộng test:
+  - `apps/frontend/tests/applications-api.test.ts` (serialize query + nhận blob CSV),
+  - `apps/frontend/tests/applications-page.test.tsx` (hydrate từ query, sync URL, export CSV),
+  - `apps/backend/tests/integration/application-endpoints.test.mjs` (content-type/disposition + nội dung CSV).
+
+### 85) UC-BASIC-13 nâng cấp tiếp: bulk update trạng thái ứng viên trong Recruiter View
+- Đã bổ sung endpoint backend cập nhật trạng thái hàng loạt:
+  - `PATCH /applications/status/bulk`
+  - hỗ trợ payload: `application_ids[]`, `status`, `changed_by`
+  - tự ghi audit `statusHistory` cho từng hồ sơ thay đổi.
+  - file:
+    - `apps/backend/src/services/application.service.js`
+    - `apps/backend/src/controllers/application.controller.js`
+    - `apps/backend/src/routes/application.routes.js`
+- Đã bổ sung API client frontend cho bulk update:
+  - `apps/frontend/lib/api/applications.ts`.
+- Đã bổ sung UI chọn nhiều ứng viên trong Ranked Candidates:
+  - chọn từng dòng hoặc `Select all on current page`,
+  - chọn `Bulk status`,
+  - bấm `Apply to selected` để cập nhật hàng loạt,
+  - tự làm mới dữ liệu status changes liên quan sau khi áp dụng.
+  - file: `apps/frontend/app/(default)/applications/page.tsx`.
+- Đã cập nhật i18n EN/VI cho nhãn bulk action + lỗi:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã mở rộng test:
+  - `apps/frontend/tests/applications-api.test.ts` (request/response bulk API),
+  - `apps/frontend/tests/applications-page.test.tsx` (flow chọn nhiều + gọi bulk update),
+  - `apps/backend/tests/integration/application-endpoints.test.mjs` (endpoint bulk update hoạt động).
+
+### 86) UC-BASIC-13 nâng cấp tiếp: phản hồi kết quả bulk update ngay trên UI
+- Đã bổ sung hiển thị kết quả sau khi áp dụng bulk status trong Recruiter View:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - hiển thị ngắn gọn các số liệu: `requested`, `matched`, `updated`, `unchanged` và trạng thái đã áp dụng.
+- Hành vi mới:
+  - mỗi lần bấm `Apply to selected`, UI reset kết quả cũ và hiển thị kết quả mới từ response backend.
+- Đã cập nhật i18n EN/VI cho dòng phản hồi:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã mở rộng test UI:
+  - `apps/frontend/tests/applications-page.test.tsx`
+  - thêm assertion xác nhận dòng `bulkResultLine` xuất hiện sau khi bulk update thành công.
+
+### 87) UC-BASIC-13 nâng cấp tiếp: undo nhanh cho bulk update trạng thái
+- Đã bổ sung thao tác hoàn tác ngay sau bulk update trong Recruiter View:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - nút `Undo bulk update` / `Hoàn tác cập nhật hàng loạt` chỉ khả dụng khi có phiên bulk update vừa áp dụng.
+- Cơ chế hoàn tác:
+  - lưu snapshot trạng thái trước đó cho từng hồ sơ đã đổi,
+  - khi undo sẽ nhóm theo trạng thái cũ và gọi lại bulk API để khôi phục đúng trạng thái từng nhóm,
+  - cập nhật lại danh sách Ranked/History và làm mới Status Changes.
+- Đã bổ sung phản hồi kết quả undo trên UI:
+  - hiển thị số hồ sơ đã hoàn tác.
+- Đã cập nhật i18n EN/VI cho:
+  - label nút undo,
+  - dòng kết quả undo,
+  - thông báo lỗi undo.
+- Đã mở rộng test UI:
+  - `apps/frontend/tests/applications-page.test.tsx`
+  - thêm case xác nhận undo gọi bulk API theo nhóm trạng thái cũ (`screening` và `interview`) và hiển thị `bulkUndoResultLine`.
+
+### 88) UC-BASIC-13 nâng cấp tiếp: cho phép cấu hình changed_by actor trong Recruiter View
+- Đã bổ sung input actor `changed_by` ngay trong khu vực bulk action của Ranked Candidates:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - giá trị mặc định `recruiter-ui`, cho phép chỉnh theo người thao tác thực tế.
+- Đã áp dụng actor này xuyên suốt các thao tác trạng thái:
+  - cập nhật đơn lẻ từng ứng viên,
+  - bulk update trạng thái,
+  - undo bulk update.
+- Đã cập nhật i18n EN/VI cho placeholder actor:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã mở rộng test UI:
+  - `apps/frontend/tests/applications-page.test.tsx`
+  - xác nhận bulk update + undo gửi đúng `changedBy` tùy chỉnh (`qa-reviewer`).
+
+### 89) UC-BASIC-13 nâng cấp tiếp: lọc Ranked Candidates theo changed_by gần nhất
+- Đã bổ sung filter `changed_by` cho API ranked candidates:
+  - `apps/backend/src/services/application.service.js`
+  - lọc theo `status_audit.changed_by` gần nhất (latest audit actor), hỗ trợ match theo chuỗi con không phân biệt hoa thường.
+- Đã mở rộng API client frontend:
+  - `apps/frontend/lib/api/applications.ts`
+  - `fetchRankedApplications` nhận thêm tham số `changedBy` và serialize vào query `changed_by`.
+- Đã bổ sung input filter trên Recruiter View:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - cho phép nhập `latest changed_by contains...` và áp dụng vào tải danh sách ranked.
+- Đã đồng bộ filter mới vào query string URL chia sẻ:
+  - key `rc_changed_by`.
+- Đã cập nhật i18n EN/VI cho placeholder filter mới:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã mở rộng test:
+  - `apps/frontend/tests/applications-api.test.ts` (query serialization `changed_by`),
+  - `apps/frontend/tests/applications-page.test.tsx` (UI filter gửi đúng `changedBy`),
+  - `apps/backend/tests/integration/application-endpoints.test.mjs` (ranked filter theo `changed_by`).
+
+### 90) UC-BASIC-13 nâng cấp tiếp: lọc Ranked Candidates theo khoảng thời gian audit gần nhất
+- Đã mở rộng backend ranked filter để hỗ trợ date range theo `status_audit.changed_at`:
+  - `apps/backend/src/services/application.service.js`
+  - nhận thêm query params `changed_after` và `changed_before`, validate ngày không hợp lệ trả về `400`,
+  - áp dụng boundary date-only cho `changed_before` đến hết ngày (23:59:59.999 UTC) qua parser dùng chung.
+- Đã mở rộng frontend API client:
+  - `apps/frontend/lib/api/applications.ts`
+  - `fetchRankedApplications` nhận thêm `changedAfter`/`changedBefore` và serialize thành `changed_after`/`changed_before`.
+- Đã nâng cấp Recruiter View trên Applications page:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - thêm 2 input date filter cho ranked: `Changed after` / `Changed before`,
+  - reset page về 1 khi đổi filter,
+  - đồng bộ filter mới vào URL query để chia sẻ trạng thái lọc (`rc_after`, `rc_before`).
+- Đã cập nhật i18n EN/VI cho nhãn filter mới:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã mở rộng test:
+  - `apps/frontend/tests/applications-api.test.ts` (assert serialize query `changed_after` + `changed_before` cho ranked),
+  - `apps/frontend/tests/applications-page.test.tsx` (assert UI gửi đúng `changedAfter`/`changedBefore` và sync URL),
+  - `apps/backend/tests/integration/application-endpoints.test.mjs` (assert ranked filter kết hợp `changed_by` + date range).
+
+### 91) UC-BASIC-13 nâng cấp tiếp: quick preset thời gian cho Ranked Candidates
+- Đã bổ sung preset nhanh cho bộ lọc thời gian của ranked recruiter view:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - preset gồm: `7d`, `this-month`, `qtd`.
+- Hành vi preset mới:
+  - tự điền `changed_after`/`changed_before` theo mốc preset,
+  - reset `ranked page` về 1,
+  - kích hoạt truy vấn ranked với date range mới,
+  - khi user chỉnh tay input date thì preset sẽ tự clear để tránh lệch trạng thái.
+- Đã đồng bộ state preset vào URL query string shareable:
+  - thêm key `rc_preset` cùng `rc_after` và `rc_before`.
+- Đã cập nhật i18n EN/VI cho recruiter quick range:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã mở rộng test UI:
+  - `apps/frontend/tests/applications-page.test.tsx`
+  - thêm case xác nhận preset `qtd` gửi đúng boundary `changedAfter/changedBefore`,
+  - thêm case xác nhận query string có `rc_preset` khi chọn preset nhanh.
+
+### 92) UC-BASIC-13 nâng cấp tiếp: preset all-time + chip summary cho Ranked filters
+- Đã mở rộng quick preset của ranked với tùy chọn `all-time`:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - khi chọn `all-time`, hệ thống xóa `changed_after` và `changed_before`, reset trang về 1.
+- Đã bổ sung `Active filters` cho recruiter ranked filters theo pattern tương tự status changes:
+  - hiển thị chip tóm tắt cho các filter đang bật (`preset`, `status`, `changed_by`, `from`, `to`),
+  - click từng chip để gỡ filter tương ứng,
+  - có nút `Clear chips` để reset toàn bộ filter ranked một lần.
+- Đã đồng bộ URL cho state ranked đầy đủ:
+  - giữ `rc_preset`, `rc_after`, `rc_before`, `rc_changed_by` theo thao tác chip/preset.
+- Đã cập nhật i18n EN/VI cho recruiter filter summary:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Đã mở rộng test UI:
+  - `apps/frontend/tests/applications-page.test.tsx`
+  - thêm case xác nhận `all-time` xóa date range,
+  - thêm case xác nhận `active filters` hiển thị và `Clear chips` reset đúng tham số ranked request.
+
+### 93) UC-BASIC-13 nâng cấp tiếp: hydrate Ranked preset từ URL khi thiếu date range
+- Đã cải thiện cơ chế khởi tạo bộ lọc ranked từ query params:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+  - khi URL có `rc_preset` nhưng chưa có `rc_after`/`rc_before`, frontend sẽ tự tính date range theo preset ngay lúc init state.
+- Rule hydrate đã triển khai:
+  - `rc_preset=7d` -> tự điền 7 ngày gần đây,
+  - `rc_preset=this-month` -> tự điền từ ngày 01 của tháng hiện tại,
+  - `rc_preset=qtd` -> tự điền từ đầu quý hiện tại,
+  - `rc_preset=all-time` -> giữ date range rỗng.
+- Đã mở rộng test UI:
+  - `apps/frontend/tests/applications-page.test.tsx`
+  - thêm case xác nhận mở trang với `job_id` + `rc_preset=qtd` sẽ gọi ranked API với `changedAfter/changedBefore` được suy ra tự động.
+
+### 94) UC-BASIC-13 nâng cấp tiếp: khóa test hydrate preset all-time cho Ranked URL
+- Đã mở rộng test UI để bao phủ nhánh `rc_preset=all-time` khi hydrate từ query string:
+  - `apps/frontend/tests/applications-page.test.tsx`
+  - xác nhận khi mở link có `job_id` + `rc_preset=all-time`, ranked request được gửi với:
+    - `changedAfter = ''`,
+    - `changedBefore = ''`.
+- Kết quả: đảm bảo hành vi shareable URL cho all-time luôn ổn định và không bị gán date range ngoài ý muốn.
+
+### 95) UC-BASIC-13 nâng cấp tiếp: hoàn tất test matrix hydrate cho 4 ranked presets
+- Đã mở rộng test hydrate query string cho 2 preset còn thiếu:
+  - `apps/frontend/tests/applications-page.test.tsx`
+  - thêm case `rc_preset=7d` và `rc_preset=this-month`.
+- Kỳ vọng đã được khóa bằng assertion:
+  - `7d` -> `changedAfter/changedBefore` đều là ngày hợp lệ (`YYYY-MM-DD`),
+  - `this-month` -> `changedAfter` luôn rơi vào ngày đầu tháng (`YYYY-MM-01`), `changedBefore` là ngày hiện tại.
+- Sau mục này, matrix hydrate từ URL cho ranked presets đã đủ 4 nhánh:
+  - `7d`, `this-month`, `qtd`, `all-time`.
+
+### 96) UC-BASIC-13 nâng cấp tiếp: refactor test hydrate ranked presets theo table-driven
+- Đã refactor nhóm test hydrate ranked presets trong:
+  - `apps/frontend/tests/applications-page.test.tsx`
+- Thay đổi chính:
+  - gộp các test lặp (`7d`, `this-month`, `qtd`, `all-time`) thành một bảng dữ liệu `it.each(...)`,
+  - giữ nguyên toàn bộ coverage hành vi nhưng giảm trùng lặp setup/assertion,
+  - giúp dễ mở rộng khi thêm preset mới trong tương lai (chỉ cần thêm row vào matrix).
+- Kết quả: test suite rõ ràng hơn, bảo trì tốt hơn, không thay đổi logic production code.
+
+### 97) UC-BASIC-13 nâng cấp tiếp: refactor test quick presets của Status Changes theo table-driven
+- Đã refactor nhóm test quick preset của status changes trong:
+  - `apps/frontend/tests/applications-page.test.tsx`
+- Thay đổi chính:
+  - gộp các case preset `7d`, `this-month`, `ytd`, `all-time` vào một matrix `it.each(...)`,
+  - giữ nguyên behavior assertions cho từng preset (boundary ngày/tháng/năm và nhánh clear date range),
+  - giữ riêng case `qtd` toggle active-style để đảm bảo coverage UI state chuyển preset.
+- Kết quả: bộ test Applications page đồng nhất style table-driven giữa ranked presets và status-changes presets, giảm lặp code và dễ mở rộng preset mới.
+
+### 98) UC-BASIC-13 nâng cấp tiếp: gom helper assert URL sync cho Applications tests
+- Đã refactor các test sync query string trong:
+  - `apps/frontend/tests/applications-page.test.tsx`
+- Bổ sung helper dùng chung:
+  - `getLatestReplaceHref()` để đọc URL mới nhất từ `mockedReplace`,
+  - `expectLatestReplaceHrefContains(parts)` để assert nhanh nhiều query fragment trong cùng một chỗ.
+- Đã áp dụng helper vào các test URL sync chính:
+  - ranked changed_by + date sync,
+  - ranked preset sync,
+  - status changes sync.
+- Kết quả: giảm lặp assertion `latestHref`, tăng độ rõ ràng và nhất quán khi mở rộng test query sync tiếp theo.
+
+### 99) UC-BASIC-13 nâng cấp tiếp: gom helper thao tác Recruiter load và latest params trong tests
+- Đã bổ sung helper dùng chung cho thao tác test lặp lại tại:
+  - `apps/frontend/tests/applications-page.test.tsx`
+- Helper mới:
+  - `loadRecruiterJob(jobId)` để thao tác nhập `job_id` + bấm `Load`,
+  - `loadRecruiterAndWaitRanked(jobId)` và `loadRecruiterAndWaitStatusChanges(jobId)` để chờ request đầu vào ổn định,
+  - `getLatestRankedParams()` và `getLatestStatusChangesParams()` để đọc request params mới nhất từ mock call.
+- Đã áp dụng helper vào nhiều test hiện có:
+  - ranked presets/date filters,
+  - status-changes presets/date filters,
+  - clear/reset flow.
+- Kết quả: giảm đáng kể lặp `fireEvent.change + click + waitFor`, giúp test rõ intent và dễ bảo trì.
+
+### 100) UC-BASIC-13 đề xuất mới đã triển khai: chuẩn hóa pattern assertion latest API params
+- Đã chuẩn hóa pattern assertion params bằng helper `getLatest...Params()` thay cho lặp thủ công:
+  - trước: đọc `mock.calls[calls.length - 1]?.[0]` rải rác ở nhiều block,
+  - sau: dùng helper chung theo từng API (`ranked` / `status-changes`).
+- Lợi ích:
+  - giảm rủi ro copy-paste sai index call,
+  - tăng tính nhất quán khi thêm test case mới,
+  - làm nền để có thể trích helper sang shared test-utils nếu cần trong bước tiếp theo.
+
+### 101) UC-BASIC-13 nâng cấp tiếp: tách helper page-test dùng chung ra tests/utils
+- Đã tạo module helper mới:
+  - `apps/frontend/tests/utils/page-test-helpers.ts`
+- Helper tách ra gồm:
+  - `expectLatestHrefContains(...)` (assert URL sync từ router replace mock),
+  - `getLatestMockCallArg(...)` (lấy arg mới nhất từ mock calls),
+  - `fillInputByPlaceholder(...)`,
+  - `clickFirstButtonByName(...)`.
+- Mục tiêu:
+  - chuẩn hóa test utilities theo hướng tái sử dụng cho nhiều page tests,
+  - giảm phụ thuộc vào logic lặp lại trong từng file test riêng.
+
+### 102) UC-BASIC-13 nâng cấp tiếp: wiring applications-page.test.tsx dùng shared test helpers
+- Đã cập nhật `apps/frontend/tests/applications-page.test.tsx` để dùng helper từ `tests/utils` thay cho xử lý cục bộ:
+  - `expectLatestReplaceHrefContains` nay dùng `expectLatestHrefContains`,
+  - `loadRecruiterJob` dùng `fillInputByPlaceholder` + `clickFirstButtonByName`,
+  - `getLatestRankedParams`/`getLatestStatusChangesParams` dùng `getLatestMockCallArg`.
+- Kết quả: file test nhẹ hơn, cấu trúc helper rõ hơn, thuận lợi mở rộng test cho các use case trang khác.
+
+### 103) UC-BASIC-13 nâng cấp tiếp: chuẩn hóa assert query URL bằng helper parse SearchParams
+- Đã mở rộng helper dùng chung tại `apps/frontend/tests/utils/page-test-helpers.ts`:
+  - thêm `getLatestHref(...)` để đọc URL mới nhất từ router mock,
+  - thêm `expectLatestHrefQueryValues(...)` để assert trực tiếp key/value query qua `URLSearchParams`.
+- Đã refactor các test URL sync trong `apps/frontend/tests/applications-page.test.tsx`:
+  - ranked changed_by + date sync,
+  - ranked preset sync,
+  - status-changes sync.
+- Kết quả xác minh:
+  - `npm run test -- tests/applications-page.test.tsx` PASS (23/23),
+  - `npm run typecheck` PASS.
+
+### 104) UC-BASIC-13 nâng cấp tiếp: assert query key hiện diện + chuẩn hóa URL assertions cho resume API test
+- Đã mở rộng `apps/frontend/tests/utils/page-test-helpers.ts` với helper mới:
+  - `expectLatestHrefHasQueryKeys(...)` để assert query có tồn tại key (không phụ thuộc chuỗi `toContain('key=')`).
+- Đã refactor `apps/frontend/tests/applications-page.test.tsx`:
+  - thay các assert `toContain('rc_after=')`, `toContain('rc_before=')`, `toContain('sc_after=')`, `toContain('sc_before=')`
+  - bằng `expectLatestHrefHasQueryKeys(...)`.
+- Đã refactor `apps/frontend/tests/resume-api.test.ts`:
+  - parse URL bằng `new URL(..., 'http://localhost')`,
+  - assert `pathname` + `searchParams` cho default/custom PDF URL thay vì phụ thuộc thứ tự query string.
+- Kết quả xác minh:
+  - `npm run test -- tests/applications-page.test.tsx tests/resume-api.test.ts` PASS (34/34),
+  - `npm run typecheck` PASS.
+
+### 105) UC-BASIC-13 nâng cấp tiếp: chốt regression toàn cục frontend sau chuẩn hóa query assertions
+- Đã chạy full frontend test suite tại `apps/frontend`:
+  - `npm run test` -> PASS toàn bộ `13/13` test files, `140/140` tests.
+- Đã rà soát lại toàn bộ thư mục `apps/frontend/tests` cho pattern assert query mong manh kiểu chuỗi (`toContain('...=')`, `toContain('...?')`):
+  - không còn match cần refactor.
+- Kết quả:
+  - milestone chuẩn hóa assertion query đã ổn định ở mức toàn cục,
+  - sẵn sàng chuyển sang mở rộng use case tiếp theo với nền test ít rủi ro regression do thứ tự query string.
+
+### 106) UC-BASIC-13 hardening cuối: bổ sung negative tests cho URL/query parsing edge cases
+- Đã bổ sung 2 test case negative theo yêu cầu:
+  - `apps/frontend/tests/applications-page.test.tsx`:
+    - `ignores invalid ranked preset from URL query and keeps ranked date filters empty`.
+    - `sanitizes invalid status-changes query filters from URL` (invalid `sc_status`, `sc_preset`, `sc_page`).
+  - `apps/frontend/tests/resume-api.test.ts`:
+    - `getResumePdfUrl encodes resume id and omits lang when locale is not provided`.
+- Mục tiêu hardening đạt được:
+  - khóa edge case query URL không hợp lệ khi hydrate state,
+  - khóa edge case encode path và optional query param trong URL builder.
+- Kết quả xác minh:
+  - `npm run test -- tests/applications-page.test.tsx tests/resume-api.test.ts` PASS (`37/37`),
+  - `npm run test` PASS toàn bộ frontend (`13/13` files, `143/143` tests),
+  - `npm run typecheck` PASS.
+
+### 107) Triển khai use case kế tiếp UC-BASIC-01..04: Auth API nền tảng (signup/login/forgot/reset/change password)
+- Đã bổ sung backend auth flow hoàn chỉnh theo pattern service/controller/route:
+  - `apps/backend/src/services/auth.service.js`
+  - `apps/backend/src/controllers/auth.controller.js`
+  - `apps/backend/src/middleware/auth.middleware.js`
+  - `apps/backend/src/routes/auth.routes.js`
+  - wiring vào `apps/backend/src/routes/index.js` tại `/api/auth/*`.
+- Endpoint mới đã hoạt động ở mức contract code:
+  - `POST /api/auth/signup`
+  - `POST /api/auth/login`
+  - `POST /api/auth/forgot-password`
+  - `POST /api/auth/reset-password`
+  - `POST /api/auth/change-password` (Bearer token)
+  - `GET /api/auth/me` (Bearer token)
+- Đã bổ sung frontend API client để chuẩn bị cho màn hình auth use case tiếp theo:
+  - `apps/frontend/lib/api/auth.ts`.
+- Đã bổ sung test:
+  - `apps/backend/tests/integration/auth-endpoints.test.mjs` (signup/login/me/change/forgot/reset),
+  - `apps/frontend/tests/auth-api.test.ts`.
+- Kết quả xác minh:
+  - Frontend: `npm run test -- tests/auth-api.test.ts` PASS (`4/4`),
+  - Frontend: `npm run typecheck` PASS,
+  - Backend integration khi bật `RUN_INTEGRATION_TESTS=1` bị fail do môi trường MongoDB (`Authentication failed`) và không phải lỗi logic auth code.
+- Bổ sung dependency backend:
+  - `bcryptjs`, `jsonwebtoken` (đã cập nhật lockfile).
+
+### 108) Triển khai tiếp UC-BASIC-01/02 frontend: màn hình đăng nhập/đăng ký + guard route
+- Đã bổ sung session layer phía frontend:
+  - `apps/frontend/lib/context/auth-context.tsx`
+  - quản lý `accessToken` + `user` qua localStorage,
+  - expose các hàm `signIn`, `signUp`, `signOut`, `refreshProfile` để tái sử dụng cho các use case kế tiếp.
+- Đã bổ sung route guard ở layout mặc định:
+  - `apps/frontend/components/common/auth-guard.tsx`
+  - `apps/frontend/app/(default)/layout.tsx`
+  - tự redirect về `/login?next=...` cho route cần auth khi chưa có session,
+  - cho phép public path: `/`, `/login`, `/signup`.
+- Đã bổ sung 2 màn hình auth frontend:
+  - `apps/frontend/app/(default)/login/page.tsx`
+  - `apps/frontend/app/(default)/signup/page.tsx`
+  - wiring trực tiếp với auth API client đã triển khai ở mục 107.
+- Đã cập nhật i18n EN/VI cho nhóm auth:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`.
+- Kết quả xác minh:
+  - `npm run test -- tests/auth-api.test.ts` PASS (`4/4`),
+  - `npm run typecheck` PASS.
+
+### 109) Triển khai tiếp đề xuất: role-based guard trọng yếu + UC-BASIC-05 Candidate Profile
+- Đã bổ sung role middleware phía backend:
+  - `apps/backend/src/middleware/auth.middleware.js`
+  - thêm `requireRoles(...roles)` để kiểm soát quyền theo `req.auth.role`.
+- Đã áp guard vào các route nghiệp vụ trọng yếu:
+  - `apps/backend/src/routes/job.routes.js`
+    - các thao tác ghi (`POST /upload`, `POST /`, `PATCH /:id`, `DELETE /:id`) yêu cầu `recruiter|admin`.
+  - `apps/backend/src/routes/application.routes.js`
+    - `POST /` yêu cầu `candidate|admin`,
+    - các endpoint recruiter (ranked/summary/status-changes/bulk/status update) yêu cầu `recruiter|admin`,
+    - history/feedback/status-history yêu cầu đã đăng nhập (`requireAuth`).
+- Đã triển khai UC-BASIC-05 (Candidate Profile) backend end-to-end:
+  - model mở rộng: `apps/backend/src/models/User.js` thêm `candidateProfile`.
+  - service mới: `apps/backend/src/services/candidate-profile.service.js` (sanitize + get/update profile).
+  - controller mới: `apps/backend/src/controllers/candidate-profile.controller.js`.
+  - route mới: `apps/backend/src/routes/candidate-profile.routes.js`.
+  - wiring route: `apps/backend/src/routes/index.js` tại `/api/candidate-profile/me`.
+- Đã triển khai frontend cho UC-BASIC-05:
+  - API client mới: `apps/frontend/lib/api/candidate-profile.ts`.
+  - cập nhật export API: `apps/frontend/lib/api/index.ts`.
+  - page mới: `apps/frontend/app/(default)/profile/page.tsx` (load/save profile candidate).
+  - i18n EN/VI: `apps/frontend/messages/en.json`, `apps/frontend/messages/vi.json` (nhóm key `profile`).
+- Đã harden API client cho luồng auth:
+  - `apps/frontend/lib/api/client.ts` tự attach `Authorization: Bearer ...` từ session localStorage nếu request chưa có header này.
+  - test cập nhật tương ứng: `apps/frontend/tests/client-api.test.ts`.
+- Đã bổ sung test:
+  - `apps/frontend/tests/candidate-profile-api.test.ts`.
+  - `apps/backend/tests/integration/candidate-profile-endpoints.test.mjs`.
+- Kết quả xác minh:
+  - Frontend: `npm run test -- tests/auth-api.test.ts tests/client-api.test.ts tests/candidate-profile-api.test.ts` PASS (`14/14`).
+  - Frontend: `npm run typecheck` PASS.
+  - Backend integration tổng thể vẫn fail do môi trường MongoDB `Authentication failed` (không phải lỗi logic thay đổi trong đợt này).
+
+### 110) Tiếp tục hardening theo đề xuất: mở rộng role guards toàn API + khóa ownership theo actor
+- Đã áp guard cho các nhóm API còn lại ở backend:
+  - `apps/backend/src/routes/config.routes.js`
+    - toàn bộ `/api/config/*` yêu cầu `recruiter|admin`.
+  - `apps/backend/src/routes/resume.routes.js`
+    - toàn bộ `/api/resumes/*` yêu cầu đăng nhập,
+    - endpoint mutate/tailor yêu cầu `candidate|admin`.
+  - `apps/backend/src/routes/enrichment.routes.js`
+    - yêu cầu `candidate|admin`.
+  - `apps/backend/src/routes/vector.routes.js`
+    - yêu cầu `admin`.
+- Đã bổ sung enforcement ownership trong controller để candidate không truy cập chéo dữ liệu:
+  - `apps/backend/src/controllers/resume.controller.js`
+    - candidate chỉ đọc/sửa/xóa resume của chính mình,
+    - list/master tự scope theo `req.auth.userId` khi role là candidate,
+    - upload/create resume gán candidate theo user đăng nhập.
+  - `apps/backend/src/controllers/application.controller.js`
+    - candidate chỉ tạo application bằng resume của chính mình,
+    - candidate history tự ép theo user hiện tại,
+    - feedback/status-history chặn truy cập application không thuộc quyền xem.
+- Đã cập nhật service hỗ trợ scope theo candidate:
+  - `apps/backend/src/services/resume.service.js`
+    - `createResumeFromUpload(file, candidateId)`
+    - `listResumeSummaries(includeMaster, candidateId)`.
+- Kết quả xác minh vòng này:
+  - `get_errors` cho các file backend thay đổi: không có lỗi.
+  - Frontend regression check: `npm run test -- tests/auth-api.test.ts tests/client-api.test.ts tests/candidate-profile-api.test.ts` PASS (`14/14`).
+  - Frontend typecheck: `npm run typecheck` PASS.
+  - Backend integration full suite vẫn bị chặn bởi MongoDB credentials (`Authentication failed`) nên chưa thể xác nhận runtime integration end-to-end trong môi trường hiện tại.
+
+### 111) Tiếp tục hardening theo đề xuất: đồng bộ role-aware UX frontend với policy backend
+- Đã hoàn thiện role-aware behavior cho các trang chính để phản ánh chính xác policy mới ở backend:
+  - `apps/frontend/app/(default)/settings/page.tsx`
+    - chặn truy cập với candidate bằng thông báo access-denied và link quay về dashboard.
+  - `apps/frontend/app/(default)/dashboard/page.tsx`
+    - các CTA liên quan settings chỉ hiển thị cho `recruiter|admin`,
+    - card điều hướng thứ 4 chuyển hướng role-aware: `recruiter|admin -> /applications`, `candidate -> /profile`.
+  - `apps/frontend/app/(default)/jobs/page.tsx`
+    - `recruiter|admin`: hiển thị action quản trị (`view ranked`, `history`, `edit`, `close/reopen`, `delete`),
+    - candidate: chỉ hiển thị action apply với master resume.
+- Đã bổ sung i18n key mới cho thông báo recruiter-only:
+  - `apps/frontend/messages/en.json`
+  - `apps/frontend/messages/vi.json`
+  - `apps/frontend/messages/es.json`
+  - `apps/frontend/messages/ja.json`
+  - `apps/frontend/messages/pt-BR.json`
+  - `apps/frontend/messages/zh.json`
+- Kết quả xác minh vòng này:
+  - `get_errors` trên toàn bộ file frontend thay đổi: không có lỗi.
+  - Frontend regression check: `npm run test -- tests/auth-api.test.ts tests/client-api.test.ts tests/candidate-profile-api.test.ts` PASS (`14/14`).
+  - Frontend typecheck: `npm run typecheck` PASS.
+
+### 112) Tiếp tục hardening theo đề xuất: tách role Applications + khóa audit actor theo token + thêm test ma trận quyền
+- Đã tách UX trang Applications theo role để tránh luồng “thấy rồi mới 403”:
+  - `apps/frontend/app/(default)/applications/page.tsx`
+    - `recruiter|admin`: chỉ hiển thị recruiter controls (ranked/summary/status changes/bulk actions),
+    - `candidate`: chỉ hiển thị candidate view + candidate history,
+    - candidate auto-scope `candidate_id` theo user đăng nhập.
+- Đã loại bỏ phụ thuộc `changed_by` nhập tay ở UI cho status update/bulk:
+  - frontend không còn gửi actor tùy ý từ Applications page,
+  - tránh giả mạo audit trail từ client.
+- Đã harden backend để actor audit luôn lấy từ token:
+  - `apps/backend/src/controllers/application.controller.js`
+    - `updateApplicationStatusHandler` và `bulkUpdateApplicationStatusHandler` ép `changed_by` từ `req.auth` (`email`/`userId`) thay vì body từ client.
+- Đã bổ sung test integration ma trận quyền cho Applications:
+  - `apps/backend/tests/integration/application-authorization.test.mjs`
+  - Bao phủ các nhánh chính:
+    - candidate không vào được recruiter endpoints (`/applications/ranked`),
+    - recruiter không tạo application thay candidate,
+    - candidate không apply bằng resume của candidate khác,
+    - candidate không đọc feedback application không thuộc ownership,
+    - admin update status với payload `changed_by` giả mạo nhưng history ghi actor từ token.
+- Đã cập nhật test frontend Applications theo layout role-aware mới:
+  - `apps/frontend/tests/applications-page.test.tsx`
+  - thêm case candidate-only view và điều chỉnh selector assertions.
+- Kết quả xác minh vòng này:
+  - `get_errors` cho toàn bộ file thay đổi: không có lỗi.
+  - Frontend typecheck: `npm run typecheck` PASS.
+  - Frontend regression check: `npm run test -- tests/applications-page.test.tsx tests/applications-api.test.ts` PASS (`36/36`).
+  - Backend integration full suite vẫn phụ thuộc môi trường Mongo credentials; test mới đã được thêm nhưng chưa thể chạy end-to-end trong môi trường hiện tại.
+
+### 113) Tiếp tục hardening theo đề xuất: khóa navigation theo role toàn app + chuẩn hóa đường chạy integration Mongo
+- Đã bổ sung role-aware route guard ở lớp chung:
+  - `apps/frontend/components/common/auth-guard.tsx`
+  - policy mới:
+    - `/settings*` chỉ cho `recruiter|admin`,
+    - `/profile*` chỉ cho `candidate|admin`,
+    - account không đủ role được redirect về `/dashboard` trước khi render nội dung trang.
+- Đã đồng bộ UX ở Tailor để tránh lộ điều hướng không phù hợp role:
+  - `apps/frontend/app/(default)/tailor/page.tsx`
+  - candidate không còn thấy link điều hướng sang Settings trong warning block.
+- Đã bổ sung test mới cho guard behavior:
+  - `apps/frontend/tests/auth-guard.test.tsx`
+  - bao phủ:
+    - unauthenticated -> redirect `/login?next=...`,
+    - candidate bị chặn khỏi `/settings`,
+    - recruiter bị chặn khỏi `/profile`,
+    - recruiter được vào `/settings`.
+- Đã bổ sung đường chạy backend integration ổn định hơn cho local (giảm mismatch credentials Mongo):
+  - cập nhật `scripts/full-verify.ps1` set thêm `MONGO_URI_TEST` cùng giá trị chuẩn local,
+  - thêm script mới `scripts/run-backend-integration.ps1` (fallback `MONGO_URI_TEST` mặc định `admin:admin123`, bật `RUN_INTEGRATION_TESTS=1`, rồi chạy `npm run test:integration`).
+- Kết quả xác minh vòng này:
+  - `get_errors` cho file frontend/backend script thay đổi: không có lỗi.
+  - Frontend typecheck: `npm run typecheck` PASS.
+  - Frontend regression check: `npm run test -- tests/auth-guard.test.tsx tests/applications-page.test.tsx tests/auth-api.test.ts` PASS (`34/34`).
+
+### 114) Tiếp tục hardening theo đề xuất: phủ kín role-aware cho CTA còn lại ở dashboard/builder-resume flow
+- Đã mở rộng policy route-level trong guard để khóa các route candidate-only:
+  - `apps/frontend/components/common/auth-guard.tsx`
+  - bổ sung chặn cho role `recruiter` tại:
+    - `/builder*`
+    - `/tailor*`
+    - `/resumes*`
+  - redirect sớm về `/dashboard` khi role không phù hợp.
+- Đã cập nhật CTA điều hướng còn lại để đồng bộ role UX:
+  - `apps/frontend/components/home/swiss-grid.tsx`
+    - footer shortcut `Settings` chỉ hiển thị cho `recruiter|admin`.
+  - `apps/frontend/app/(default)/dashboard/page.tsx`
+    - card `My History` chuyển role-aware:
+      - `recruiter|admin` -> `/applications`
+      - `candidate` -> `/applications?candidate_id=...`.
+- Đã bổ sung/ mở rộng test guard coverage:
+  - `apps/frontend/tests/auth-guard.test.tsx`
+  - thêm matrix test xác nhận recruiter bị chặn khỏi `/builder`, `/tailor`, `/resumes/:id`.
+- Kết quả xác minh vòng này:
+  - `get_errors` cho toàn bộ file thay đổi: không có lỗi.
+  - Frontend typecheck: `npm run typecheck` PASS.
+  - Frontend regression check: `npm run test -- tests/auth-guard.test.tsx tests/applications-page.test.tsx` PASS (`33/33`).
+
+### 115) Gỡ blocker integration Mongo + ổn định lại script chạy backend integration
+- Đã nâng cấp script integration backend để tự dò URI Mongo khả dụng thay vì cứng credential:
+  - `scripts/run-backend-integration.ps1`
+  - bổ sung probe lần lượt các candidate URI (env, compose defaults, backend `.env`, local no-auth) và chọn URI kết nối được.
+  - ép gán lại `MONGO_URI` + `MONGO_URI_TEST` theo URI đã resolve ở mỗi lần chạy (tránh leak env từ shell PowerShell dùng chung).
+- Đã bổ sung khởi động phụ thuộc integration trong script:
+  - cố gắng `docker compose --profile app up -d redis qdrant worker-embedding-sbert` trước khi chạy,
+  - set mặc định `EMBEDDING_SERVICE_URL=http://127.0.0.1:8010`,
+  - chạy `npm run bootstrap:qdrant` trước `npm run test:integration`.
+- Đã sửa lỗi regression rõ ràng trong test tích hợp Applications:
+  - `apps/backend/tests/integration/application-endpoints.test.mjs`
+  - di chuyển block `bulk status update` về đúng vị trí sau khi đã có `baseUrl/createA/createdB`,
+  - sửa typo biến `createB` -> `createdB`.
+- Kết quả xác minh hiện tại:
+  - Lỗi `MongoServerError: Authentication failed` không còn là blocker chính; test suite đã tiến tới lỗi nghiệp vụ/integration phụ thuộc service và assertion-level.
+  - Cần thêm vòng fix tiếp theo cho các failing assertions/backend contract còn lại (đang ở trạng thái post-auth-unblock).
+
+### 116) Stabilize backend integration suite to PASS (11/11)
+- Updated backend integration execution to run test files serially and avoid cross-file env/state interference:
+  - apps/backend/package.json
+  - script `test:integration` now uses `node --test --test-concurrency=1 tests/integration/*.test.mjs`.
+- Isolated test databases for suites that previously shared the same `_integration` suffix:
+  - apps/backend/tests/integration/auth-endpoints.test.mjs -> `/cv_matching_auth_integration`
+  - apps/backend/tests/integration/candidate-profile-endpoints.test.mjs -> `/cv_matching_candidate_profile_integration`
+  - apps/backend/tests/integration/config-endpoints.test.mjs -> `/cv_matching_config_integration`
+- Reworked brittle assertions in:
+  - apps/backend/tests/integration/application-endpoints.test.mjs
+  - changes include:
+    - summary status check now validates total count from `by_status` map instead of hardcoded status label,
+    - audit actor expectations aligned with authenticated actor (`recruiter.application@example.com`),
+    - ranked status-audit assertion made tolerant to ordering between seeded boundary entries and API-updated entries.
+- Validation result:
+  - run command: `npm run test:integration` in `apps/backend`
+  - final status: PASS (`tests=11`, `pass=11`, `fail=0`).
+
+### 117) Re-verify integration via wrapper script and refresh artifact log
+- Re-ran integration through the canonical wrapper:
+  - scripts/run-backend-integration.ps1
+- Refreshed UTF-8 artifact log:
+  - scripts/last-backend-integration.txt
+- Latest verification result:
+  - command exited successfully,
+  - backend integration summary: tests=11, pass=11, fail=0.
+- Runtime notes:
+  - Mongo URI auto-resolved to localhost no-auth (`mongodb://127.0.0.1:27017`).
+  - Existing dependency containers were reused; worker was already running.

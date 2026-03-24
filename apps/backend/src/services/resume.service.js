@@ -376,7 +376,7 @@ export async function createResume(payload) {
   return saved;
 }
 
-export async function createResumeFromUpload(file) {
+export async function createResumeFromUpload(file, candidateId = DEFAULT_CANDIDATE_ID) {
   if (!file) {
     const error = new Error("Missing uploaded file");
     error.statusCode = 400;
@@ -412,7 +412,7 @@ export async function createResumeFromUpload(file) {
 
   const hasMaster = await Resume.exists({ isMaster: true });
   const created = await createResume({
-    candidateId: DEFAULT_CANDIDATE_ID,
+    candidateId,
     fileUrl: `upload://${Date.now()}-${file.originalname || "resume"}`,
     rawText,
     parsedData: null,
@@ -490,8 +490,11 @@ export async function getJobByPublicId(jobId) {
   return Job.findById(jobId);
 }
 
-export async function listResumeSummaries(includeMaster = false) {
+export async function listResumeSummaries(includeMaster = false, candidateId) {
   const filter = includeMaster ? {} : { isMaster: { $ne: true } };
+  if (candidateId) {
+    filter.candidateId = candidateId;
+  }
   const resumes = await Resume.find(filter).sort({ updatedAt: -1 });
   return resumes.map(toResumeSummary);
 }

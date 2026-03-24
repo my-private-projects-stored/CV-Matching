@@ -1,6 +1,6 @@
 import { apiFetch, apiPatch, apiPost } from './client';
 
-export type ApplicationStatus = 'new' | 'screening' | 'interview' | 'hired' | 'rejected';
+export type ApplicationStatus = 'new' | 'screening' | 'interview' | 'offer' | 'hired' | 'rejected';
 export type ApplicationAiStatus = 'pending' | 'parsing' | 'scoring' | 'completed' | 'failed';
 
 export interface RankedCandidateItem {
@@ -195,11 +195,19 @@ export async function fetchRankedApplications(params: {
   page?: number;
   limit?: number;
   status?: ApplicationStatus | '';
+  changedBy?: string;
+  changedAfter?: string;
+  changedBefore?: string;
 }): Promise<RankedApplicationsResponse> {
   const query = new URLSearchParams({ job_id: params.jobId });
   if (params.page) query.set('page', String(params.page));
   if (params.limit) query.set('limit', String(params.limit));
   if (params.status) query.set('status', params.status);
+  if (params.changedBy && params.changedBy.trim()) {
+    query.set('changed_by', params.changedBy.trim());
+  }
+  if (params.changedAfter) query.set('changed_after', params.changedAfter);
+  if (params.changedBefore) query.set('changed_before', params.changedBefore);
 
   const res = await apiFetch(`/applications/ranked?${query.toString()}`);
   if (!res.ok) {
@@ -244,6 +252,35 @@ export async function updateApplicationStatus(
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new Error(`Failed to update application status (status ${res.status}): ${body}`);
+  }
+
+  return res.json();
+}
+
+export async function bulkUpdateApplicationStatus(payload: {
+  applicationIds: string[];
+  status: ApplicationStatus;
+  changedBy?: string;
+}): Promise<{
+  request_id: string;
+  data: {
+    requested_count: number;
+    matched_count: number;
+    updated_count: number;
+    unchanged_count: number;
+    updated_ids: string[];
+    status: ApplicationStatus;
+  };
+}> {
+  const res = await apiPatch('/applications/status/bulk', {
+    application_ids: payload.applicationIds,
+    status: payload.status,
+    changed_by: payload.changedBy?.trim() || undefined,
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Failed to bulk update application status (status ${res.status}): ${body}`);
   }
 
   return res.json();
@@ -302,6 +339,34 @@ export async function fetchRecentStatusChanges(params: {
   }
 
   return res.json();
+}
+
+export async function exportRecentStatusChangesCsv(params: {
+  jobId: string;
+  status?: ApplicationStatus | '';
+  changedBy?: string;
+  changedAfter?: string;
+  changedBefore?: string;
+}): Promise<Blob> {
+  const query = new URLSearchParams({ job_id: params.jobId });
+  if (params.status) query.set('status', params.status);
+  if (params.changedBy && params.changedBy.trim()) {
+    query.set('changed_by', params.changedBy.trim());
+  }
+  if (params.changedAfter && params.changedAfter.trim()) {
+    query.set('changed_after', params.changedAfter.trim());
+  }
+  if (params.changedBefore && params.changedBefore.trim()) {
+    query.set('changed_before', params.changedBefore.trim());
+  }
+
+  const res = await apiFetch(`/applications/status-changes/export?${query.toString()}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Failed to export recent status changes CSV (status ${res.status}): ${body}`);
+  }
+
+  return res.blob();
 }
 
 export async function fetchApplicationStatusHistory(

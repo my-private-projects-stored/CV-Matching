@@ -35,6 +35,7 @@ if (-not $healthy) {
 Set-Location "apps/backend"
 
 $env:MONGO_URI = "mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin"
+$env:MONGO_URI_TEST = "mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin"
 $env:EMBEDDING_SERVICE_URL = "http://127.0.0.1:8010"
 $env:RUN_INTEGRATION_TESTS = "1"
 

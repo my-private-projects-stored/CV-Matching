@@ -7,7 +7,9 @@ vi.mock('@/lib/api/client', () => ({
 }));
 
 import {
+  bulkUpdateApplicationStatus,
   createApplication,
+  exportRecentStatusChangesCsv,
   fetchApplicationFeedback,
   fetchCandidateApplicationHistory,
   fetchRecentStatusChanges,
@@ -77,9 +79,19 @@ describe('applications API client', () => {
       })
     );
 
-    const result = await fetchRankedApplications({ jobId: 'job-1', page: 2, limit: 10, status: 'screening' });
+    const result = await fetchRankedApplications({
+      jobId: 'job-1',
+      page: 2,
+      limit: 10,
+      status: 'screening',
+      changedBy: 'recruiter-ui',
+      changedAfter: '2026-03-10',
+      changedBefore: '2026-03-20',
+    });
 
-    expect(mockedApiFetch).toHaveBeenCalledWith('/applications/ranked?job_id=job-1&page=2&limit=10&status=screening');
+    expect(mockedApiFetch).toHaveBeenCalledWith(
+      '/applications/ranked?job_id=job-1&page=2&limit=10&status=screening&changed_by=recruiter-ui&changed_after=2026-03-10&changed_before=2026-03-20'
+    );
     expect(result.data.candidates[0].status_audit?.changed_by).toBe('recruiter-ui');
   });
 
@@ -99,6 +111,35 @@ describe('applications API client', () => {
     expect(result.data.status).toBe('interview');
     expect(mockedApiPatch).toHaveBeenCalledWith('/applications/app-1/status', {
       status: 'interview',
+      changed_by: 'recruiter-ui',
+    });
+  });
+
+  it('bulk updates application statuses', async () => {
+    mockedApiPatch.mockResolvedValueOnce(
+      jsonResponse({
+        request_id: 'req-1',
+        data: {
+          requested_count: 2,
+          matched_count: 2,
+          updated_count: 2,
+          unchanged_count: 0,
+          updated_ids: ['app-1', 'app-2'],
+          status: 'offer',
+        },
+      })
+    );
+
+    const result = await bulkUpdateApplicationStatus({
+      applicationIds: ['app-1', 'app-2'],
+      status: 'offer',
+      changedBy: 'recruiter-ui',
+    });
+
+    expect(result.data.updated_count).toBe(2);
+    expect(mockedApiPatch).toHaveBeenCalledWith('/applications/status/bulk', {
+      application_ids: ['app-1', 'app-2'],
+      status: 'offer',
       changed_by: 'recruiter-ui',
     });
   });
@@ -210,5 +251,27 @@ describe('applications API client', () => {
     expect(mockedApiFetch).toHaveBeenCalledWith(
       '/applications/status-changes?job_id=job-1&page=1&limit=10&status=screening&changed_by=recruiter&changed_after=2026-03-20&changed_before=2026-03-23'
     );
+  });
+
+  it('exports recent status changes CSV with filters', async () => {
+    mockedApiFetch.mockResolvedValueOnce(
+      new Response('application_id,changed_by\napp-1,recruiter-ui\n', {
+        status: 200,
+        headers: { 'Content-Type': 'text/csv; charset=utf-8' },
+      })
+    );
+
+    const blob = await exportRecentStatusChangesCsv({
+      jobId: 'job-1',
+      status: 'screening',
+      changedBy: 'recruiter-ui',
+      changedAfter: '2026-03-01',
+      changedBefore: '2026-03-31',
+    });
+
+    expect(mockedApiFetch).toHaveBeenCalledWith(
+      '/applications/status-changes/export?job_id=job-1&status=screening&changed_by=recruiter-ui&changed_after=2026-03-01&changed_before=2026-03-31'
+    );
+    await expect(blob.text()).resolves.toContain('application_id,changed_by');
   });
 });

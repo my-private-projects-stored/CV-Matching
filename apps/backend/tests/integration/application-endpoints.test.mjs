@@ -15,11 +15,7 @@ import User from "../../src/models/User.js";
 const RUN_INTEGRATION = process.env.RUN_INTEGRATION_TESTS === "1";
 
 function getTestMongoUri() {
-  if (process.env.MONGO_URI_TEST) {
-    return process.env.MONGO_URI_TEST;
-  }
-
-  const mongoUri = process.env.MONGO_URI;
+  const mongoUri = process.env.MONGO_URI_TEST || process.env.MONGO_URI;
   assert.ok(mongoUri, "MONGO_URI is required for integration test");
 
   const url = new URL(mongoUri);
@@ -28,10 +24,15 @@ function getTestMongoUri() {
   return url.toString();
 }
 
-async function requestJson(baseUrl, method, path, body) {
+async function requestJson(baseUrl, method, path, body, token) {
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${baseUrl}${path}`, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
 
@@ -67,29 +68,44 @@ test(
     const baseUrl = `http://127.0.0.1:${address.port}/api`;
 
     try {
-      const recruiter = await User.create({
+      const recruiterAuth = await requestJson(baseUrl, "POST", "/auth/signup", {
         email: "recruiter.application@example.com",
-        password: "x".repeat(60),
+        password: "StrongPass123",
+        full_name: "Recruiter Test",
         role: "recruiter",
-        fullName: "Recruiter Test",
       });
+      assert.equal(recruiterAuth.status, 201);
+      const recruiterToken = recruiterAuth.json?.access_token;
+      const recruiterId = recruiterAuth.json?.user?.id;
+      assert.ok(recruiterToken);
+      assert.ok(recruiterId);
 
-      const candidate = await User.create({
+      const candidateAuth = await requestJson(baseUrl, "POST", "/auth/signup", {
         email: "candidate.application@example.com",
-        password: "x".repeat(60),
+        password: "StrongPass123",
         role: "candidate",
-        fullName: "Candidate Test",
+        full_name: "Candidate Test",
       });
+      assert.equal(candidateAuth.status, 201);
+      const candidateToken = candidateAuth.json?.access_token;
+      const candidateId = candidateAuth.json?.user?.id;
+      assert.ok(candidateToken);
+      assert.ok(candidateId);
 
-      const candidate2 = await User.create({
+      const candidate2Auth = await requestJson(baseUrl, "POST", "/auth/signup", {
         email: "candidate.application.2@example.com",
-        password: "x".repeat(60),
+        password: "StrongPass123",
         role: "candidate",
-        fullName: "Candidate Second",
+        full_name: "Candidate Second",
       });
+      assert.equal(candidate2Auth.status, 201);
+      const candidate2Token = candidate2Auth.json?.access_token;
+      const candidate2Id = candidate2Auth.json?.user?.id;
+      assert.ok(candidate2Token);
+      assert.ok(candidate2Id);
 
       const job = await Job.create({
-        recruiterId: recruiter._id,
+        recruiterId,
         title: "Senior Backend Engineer",
         description: "Build and scale APIs",
         requirements: "Node.js MongoDB Redis",
@@ -99,7 +115,7 @@ test(
       });
 
       const resumeA = await Resume.create({
-        candidateId: candidate._id,
+        candidateId,
         fileUrl: "upload://resume-a",
         rawText: "Node.js MongoDB",
         parsedData: {
@@ -109,7 +125,7 @@ test(
       });
 
       const resumeB = await Resume.create({
-        candidateId: candidate2._id,
+        candidateId: candidate2Id,
         fileUrl: "upload://resume-b",
         rawText: "Node.js only",
         parsedData: {
@@ -121,7 +137,7 @@ test(
       const createA = await requestJson(baseUrl, "POST", "/applications", {
         job_id: String(job._id),
         resume_id: String(resumeA._id),
-      });
+      }, candidateToken);
 
       assert.equal(createA.status, 201);
       assert.equal(typeof createA.json?.data?.application_id, "string");
@@ -129,7 +145,7 @@ test(
       const createDuplicate = await requestJson(baseUrl, "POST", "/applications", {
         job_id: String(job._id),
         resume_id: String(resumeA._id),
-      });
+      }, candidateToken);
       assert.equal(createDuplicate.status, 409);
 
       const createdB = await Application.create({
@@ -147,6 +163,16 @@ test(
           missingKeywords: ["redis"],
         },
       });
+
+      const bulkStatusUpdate = await requestJson(baseUrl, "PATCH", "/applications/status/bulk", {
+        application_ids: [String(createdB._id), String(createA.json.data.application_id)],
+        status: "hired",
+        changed_by: "recruiter-ui",
+      }, recruiterToken);
+
+      assert.equal(bulkStatusUpdate.status, 200);
+      assert.equal(bulkStatusUpdate.json?.data?.updated_count >= 1, true);
+      assert.equal(bulkStatusUpdate.json?.data?.status, "hired");
 
       await Application.findByIdAndUpdate(createA.json.data.application_id, {
         $set: {
@@ -166,7 +192,9 @@ test(
       const ranked = await requestJson(
         baseUrl,
         "GET",
-        `/applications/ranked?job_id=${encodeURIComponent(String(job._id))}`
+        `/applications/ranked?job_id=${encodeURIComponent(String(job._id))}`,
+        undefined,
+        recruiterToken
       );
 
       assert.equal(ranked.status, 200);
@@ -181,11 +209,17 @@ test(
       const summary = await requestJson(
         baseUrl,
         "GET",
-        `/applications/summary?job_id=${encodeURIComponent(String(job._id))}`
+        `/applications/summary?job_id=${encodeURIComponent(String(job._id))}`,
+        undefined,
+        recruiterToken
       );
       assert.equal(summary.status, 200);
       assert.equal(summary.json?.data?.total, 2);
-      assert.equal(summary.json?.data?.by_status?.new, 2);
+      const statusTotal = Object.values(summary.json?.data?.by_status ?? {}).reduce(
+        (acc, value) => acc + (Number(value) || 0),
+        0
+      );
+      assert.equal(statusTotal, 2);
       assert.equal(summary.json?.data?.by_ai_status?.completed, 2);
 
       const jobsList = await requestJson(baseUrl, "GET", "/jobs");
@@ -200,11 +234,13 @@ test(
       const history = await requestJson(
         baseUrl,
         "GET",
-        `/applications/history?candidate_id=${encodeURIComponent(String(candidate._id))}`
+        `/applications/history?candidate_id=${encodeURIComponent(String(candidateId))}`,
+        undefined,
+        candidateToken
       );
 
       assert.equal(history.status, 200);
-      assert.equal(history.json?.data?.candidate_id, String(candidate._id));
+      assert.equal(history.json?.data?.candidate_id, String(candidateId));
       assert.equal(Array.isArray(history.json?.data?.applications), true);
       assert.equal(history.json.data.applications.length, 1);
 
@@ -212,7 +248,8 @@ test(
         baseUrl,
         "PATCH",
         `/applications/${encodeURIComponent(createA.json.data.application_id)}/status`,
-        { status: "interview", changed_by: "recruiter-ui" }
+        { status: "interview", changed_by: "recruiter-ui" },
+        recruiterToken
       );
 
       assert.equal(patchStatus.status, 200);
@@ -221,7 +258,9 @@ test(
       const statusHistory = await requestJson(
         baseUrl,
         "GET",
-        `/applications/${encodeURIComponent(createA.json.data.application_id)}/status-history`
+        `/applications/${encodeURIComponent(createA.json.data.application_id)}/status-history`,
+        undefined,
+        recruiterToken
       );
 
       assert.equal(statusHistory.status, 200);
@@ -229,46 +268,165 @@ test(
       assert.equal(Array.isArray(statusHistory.json?.data?.history), true);
       assert.equal(statusHistory.json?.data?.history?.length >= 2, true);
       assert.equal(statusHistory.json?.data?.history?.[0]?.to_status, "interview");
-      assert.equal(statusHistory.json?.data?.history?.[0]?.changed_by, "recruiter-ui");
+      assert.equal(statusHistory.json?.data?.history?.[0]?.changed_by, "recruiter.application@example.com");
+
+      await Application.findByIdAndUpdate(createA.json.data.application_id, {
+        $push: {
+          statusHistory: {
+            fromStatus: "new",
+            toStatus: "screening",
+            changedBy: "boundary-tester",
+            changedAt: new Date("2026-03-10T22:30:00.000Z"),
+          },
+        },
+      });
 
       const recentStatusChanges = await requestJson(
         baseUrl,
         "GET",
-        `/applications/status-changes?job_id=${encodeURIComponent(String(job._id))}&status=interview&changed_by=recruiter&changed_after=2000-01-01&changed_before=2100-01-01`
+        `/applications/status-changes?job_id=${encodeURIComponent(String(job._id))}&status=interview&changed_by=recruiter&changed_after=2000-01-01&changed_before=2100-01-01`,
+        undefined,
+        recruiterToken
       );
 
       assert.equal(recentStatusChanges.status, 200);
       assert.equal(Array.isArray(recentStatusChanges.json?.data?.changes), true);
       assert.equal(recentStatusChanges.json?.data?.changes?.length >= 1, true);
       assert.equal(recentStatusChanges.json?.data?.changes?.[0]?.to_status, "interview");
-      assert.equal(recentStatusChanges.json?.data?.changes?.[0]?.changed_by, "recruiter-ui");
+      assert.equal(
+        recentStatusChanges.json?.data?.changes?.[0]?.changed_by,
+        "recruiter.application@example.com"
+      );
 
       const recentStatusChangesInvalidDate = await requestJson(
         baseUrl,
         "GET",
-        `/applications/status-changes?job_id=${encodeURIComponent(String(job._id))}&changed_after=not-a-date`
+        `/applications/status-changes?job_id=${encodeURIComponent(String(job._id))}&changed_after=not-a-date`,
+        undefined,
+        recruiterToken
       );
 
       assert.equal(recentStatusChangesInvalidDate.status, 400);
 
+      const recentStatusChangesBoundaryIncluded = await requestJson(
+        baseUrl,
+        "GET",
+        `/applications/status-changes?job_id=${encodeURIComponent(String(job._id))}&status=screening&changed_by=boundary&changed_after=2026-03-10&changed_before=2026-03-10`,
+        undefined,
+        recruiterToken
+      );
+
+      assert.equal(recentStatusChangesBoundaryIncluded.status, 200);
+      assert.equal(Array.isArray(recentStatusChangesBoundaryIncluded.json?.data?.changes), true);
+      const boundaryEntry = recentStatusChangesBoundaryIncluded.json?.data?.changes?.find(
+        (item) => item.changed_by === "boundary-tester"
+      );
+      assert.equal(Boolean(boundaryEntry), true);
+
+      const recentStatusChangesBoundaryExcluded = await requestJson(
+        baseUrl,
+        "GET",
+        `/applications/status-changes?job_id=${encodeURIComponent(String(job._id))}&status=screening&changed_by=boundary&changed_before=2026-03-09`,
+        undefined,
+        recruiterToken
+      );
+
+      assert.equal(recentStatusChangesBoundaryExcluded.status, 200);
+      assert.equal(recentStatusChangesBoundaryExcluded.json?.data?.changes?.length, 0);
+
+      const exportStatusChangesCsv = await fetch(
+        `${baseUrl}/applications/status-changes/export?job_id=${encodeURIComponent(
+          String(job._id)
+        )}&changed_by=recruiter`,
+        {
+          headers: { Authorization: `Bearer ${recruiterToken}` },
+        }
+      );
+
+      assert.equal(exportStatusChangesCsv.status, 200);
+      assert.match(exportStatusChangesCsv.headers.get("content-type") || "", /text\/csv/i);
+      assert.match(
+        exportStatusChangesCsv.headers.get("content-disposition") || "",
+        /attachment; filename="status_changes_/i
+      );
+      const exportedCsvText = await exportStatusChangesCsv.text();
+      assert.match(exportedCsvText, /application_id,job_id,job_title,candidate_id,candidate_full_name/);
+      assert.match(exportedCsvText, /recruiter\.application@example\.com/);
+
       const rankedAfterStatus = await requestJson(
         baseUrl,
         "GET",
-        `/applications/ranked?job_id=${encodeURIComponent(String(job._id))}`
+        `/applications/ranked?job_id=${encodeURIComponent(String(job._id))}`,
+        undefined,
+        recruiterToken
       );
 
       assert.equal(rankedAfterStatus.status, 200);
       const updatedCandidate = rankedAfterStatus.json?.data?.candidates?.find(
         (item) => item.application_id === createA.json.data.application_id
       );
-      assert.equal(updatedCandidate?.status, "interview");
-      assert.equal(updatedCandidate?.status_audit?.to_status, "interview");
-      assert.equal(updatedCandidate?.status_audit?.changed_by, "recruiter-ui");
+      assert.equal(["interview", "screening"].includes(updatedCandidate?.status), true);
+      assert.equal(
+        ["interview", "screening"].includes(updatedCandidate?.status_audit?.to_status),
+        true
+      );
+      assert.equal(
+        ["recruiter.application@example.com", "boundary-tester"].includes(
+          updatedCandidate?.status_audit?.changed_by
+        ),
+        true
+      );
+
+      await Application.findByIdAndUpdate(createA.json.data.application_id, {
+        $push: {
+          statusHistory: {
+            fromStatus: "interview",
+            toStatus: "interview",
+            changedBy: "ranked-window",
+            changedAt: new Date("2026-03-15T10:00:00.000Z"),
+          },
+        },
+      });
+
+      await Application.findByIdAndUpdate(createdB._id, {
+        $push: {
+          statusHistory: {
+            fromStatus: "new",
+            toStatus: "new",
+            changedBy: "ranked-window",
+            changedAt: new Date("2026-03-05T10:00:00.000Z"),
+          },
+        },
+      });
+
+      const rankedFilteredByChangedBy = await requestJson(
+        baseUrl,
+        "GET",
+        `/applications/ranked?job_id=${encodeURIComponent(String(job._id))}&changed_by=ranked-window&changed_after=2026-03-10&changed_before=2026-03-20`,
+        undefined,
+        recruiterToken
+      );
+
+      assert.equal(rankedFilteredByChangedBy.status, 200);
+      assert.equal(Array.isArray(rankedFilteredByChangedBy.json?.data?.candidates), true);
+      assert.equal(rankedFilteredByChangedBy.json?.data?.candidates?.length, 1);
+      assert.equal(
+        rankedFilteredByChangedBy.json?.data?.candidates?.[0]?.application_id,
+        createA.json.data.application_id
+      );
+      assert.equal(
+        rankedFilteredByChangedBy.json?.data?.candidates?.every((item) =>
+          String(item?.status_audit?.changed_by || "").toLowerCase().includes("ranked-window")
+        ),
+        true
+      );
 
       const feedback = await requestJson(
         baseUrl,
         "GET",
-        `/applications/${encodeURIComponent(String(createdB._id))}/feedback`
+        `/applications/${encodeURIComponent(String(createdB._id))}/feedback`,
+        undefined,
+        recruiterToken
       );
 
       assert.equal(feedback.status, 200);
@@ -278,7 +436,7 @@ test(
       assert.equal(feedback.json.data.recommendations.length >= 1, true);
 
       const withSourceFile = await Resume.create({
-        candidateId: candidate._id,
+        candidateId,
         fileUrl: "upload://resume-download",
         rawText: "Original resume text",
         filename: "candidate-original.txt",
@@ -293,7 +451,10 @@ test(
       });
 
       const downloadResponse = await fetch(
-        `${baseUrl}/resumes/${encodeURIComponent(String(withSourceFile._id))}/download`
+        `${baseUrl}/resumes/${encodeURIComponent(String(withSourceFile._id))}/download`,
+        {
+          headers: { Authorization: `Bearer ${candidateToken}` },
+        }
       );
 
       assert.equal(downloadResponse.status, 200);

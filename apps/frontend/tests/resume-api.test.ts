@@ -108,9 +108,10 @@ describe('resume API client', () => {
 
   it('getResumePdfUrl builds default and custom query parameters', () => {
     const defaultUrl = getResumePdfUrl('resume-1');
-    expect(defaultUrl).toContain('/api/resumes/resume-1/pdf?');
-    expect(defaultUrl).toContain('template=swiss-single');
-    expect(defaultUrl).toContain('pageSize=A4');
+    const defaultParsedUrl = new URL(defaultUrl, 'http://localhost');
+    expect(defaultParsedUrl.pathname).toBe('/api/resumes/resume-1/pdf');
+    expect(defaultParsedUrl.searchParams.get('template')).toBe('swiss-single');
+    expect(defaultParsedUrl.searchParams.get('pageSize')).toBe('A4');
 
     const customUrl = getResumePdfUrl(
       'resume-1',
@@ -132,10 +133,19 @@ describe('resume API client', () => {
       'vi'
     );
 
-    expect(customUrl).toContain('pageSize=LETTER');
-    expect(customUrl).toContain('fontSize=4');
-    expect(customUrl).toContain('compactMode=true');
-    expect(customUrl).toContain('lang=vi');
+    const customParsedUrl = new URL(customUrl, 'http://localhost');
+    expect(customParsedUrl.searchParams.get('pageSize')).toBe('LETTER');
+    expect(customParsedUrl.searchParams.get('fontSize')).toBe('4');
+    expect(customParsedUrl.searchParams.get('compactMode')).toBe('true');
+    expect(customParsedUrl.searchParams.get('lang')).toBe('vi');
+  });
+
+  it('getResumePdfUrl encodes resume id and omits lang when locale is not provided', () => {
+    const url = getResumePdfUrl('resume/a b');
+    const parsedUrl = new URL(url, 'http://localhost');
+
+    expect(parsedUrl.pathname).toBe('/api/resumes/resume%2Fa%20b/pdf');
+    expect(parsedUrl.searchParams.has('lang')).toBe(false);
   });
 
   it('builds and downloads original resume file endpoint', async () => {

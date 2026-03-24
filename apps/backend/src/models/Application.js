@@ -23,7 +23,7 @@ const applicationSchema = new Schema(
     // Trạng thái xử lý hồ sơ theo pipeline tuyển dụng của HR.
     status: {
       type: String,
-      enum: ["new", "screening", "interview", "hired", "rejected"],
+      enum: ["new", "screening", "interview", "offer", "hired", "rejected"],
       default: "new",
       required: [true, "Application status is required"],
     },
@@ -78,12 +78,12 @@ const applicationSchema = new Schema(
         {
           fromStatus: {
             type: String,
-            enum: ["new", "screening", "interview", "hired", "rejected"],
+            enum: ["new", "screening", "interview", "offer", "hired", "rejected"],
             default: null,
           },
           toStatus: {
             type: String,
-            enum: ["new", "screening", "interview", "hired", "rejected"],
+            enum: ["new", "screening", "interview", "offer", "hired", "rejected"],
             required: true,
           },
           changedAt: {

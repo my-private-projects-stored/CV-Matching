@@ -65,3 +65,11 @@ export {
   type PromptConfig,
   type PromptConfigUpdate,
 } from './config';
+
+// Candidate profile operations
+export {
+  fetchMyCandidateProfile,
+  updateMyCandidateProfile,
+  type CandidateProfilePayload,
+  type CandidateProfileResponse,
+} from './candidate-profile';

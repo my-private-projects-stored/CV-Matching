@@ -3,8 +3,8 @@ import Job from "../models/Job.js";
 import Resume from "../models/Resume.js";
 import User from "../models/User.js";
 
-const APPLICATION_STATUSES = new Set(["new", "screening", "interview", "hired", "rejected"]);
-const APPLICATION_STATUS_ORDER = ["new", "screening", "interview", "hired", "rejected"];
+const APPLICATION_STATUSES = new Set(["new", "screening", "interview", "offer", "hired", "rejected"]);
+const APPLICATION_STATUS_ORDER = ["new", "screening", "interview", "offer", "hired", "rejected"];
 const AI_STATUS_ORDER = ["pending", "parsing", "scoring", "completed", "failed"];
 
 function normalizeText(value) {
@@ -163,6 +163,128 @@ function toRecentStatusChangeDto(appDoc, entry = {}) {
   };
 }
 
+function escapeCsvValue(value) {
+  const normalized = String(value ?? "");
+  if (/[",\n\r]/.test(normalized)) {
+    return `"${normalized.replace(/"/g, '""')}"`;
+  }
+  return normalized;
+}
+
+function buildRecentStatusChangesCsv(changes = []) {
+  const headers = [
+    "application_id",
+    "job_id",
+    "job_title",
+    "candidate_id",
+    "candidate_full_name",
+    "candidate_email",
+    "from_status",
+    "to_status",
+    "current_status",
+    "changed_by",
+    "changed_at",
+  ];
+
+  const rows = changes.map((item) =>
+    [
+      item.application_id,
+      item.job?.id || "",
+      item.job?.title || "",
+      item.candidate?.id || "",
+      item.candidate?.full_name || "",
+      item.candidate?.email || "",
+      item.from_status || "",
+      item.to_status || "",
+      item.current_status || "",
+      item.changed_by || "",
+      item.changed_at || "",
+    ]
+      .map((value) => escapeCsvValue(value))
+      .join(",")
+  );
+
+  return [headers.join(","), ...rows].join("\n");
+}
+
+async function collectRecentStatusChangesByJob(jobId, query = {}) {
+  const normalizedJobId = normalizeText(jobId);
+  if (!normalizedJobId) {
+    return { error: "job_id is required", code: 400 };
+  }
+
+  const job = await Job.findById(normalizedJobId);
+  if (!job) {
+    return { error: "Job not found", code: 404 };
+  }
+
+  const statusFilter = normalizeText(query.status).toLowerCase();
+  const changedByFilter = normalizeText(query.changed_by).toLowerCase();
+  const changedAfter = parseDateFilter(query.changed_after, "start");
+  if (changedAfter?.error) {
+    return { error: changedAfter.error, code: 400 };
+  }
+  const changedBefore = parseDateFilter(query.changed_before, "end");
+  if (changedBefore?.error) {
+    return { error: changedBefore.error, code: 400 };
+  }
+
+  const appDocs = await Application.find({ jobId: job._id })
+    .populate({
+      path: "resumeId",
+      populate: {
+        path: "candidateId",
+        model: User,
+      },
+    })
+    .populate("jobId")
+    .lean();
+
+  const allChanges = [];
+  for (const appDoc of appDocs) {
+    const historyEntries = Array.isArray(appDoc.statusHistory) ? appDoc.statusHistory : [];
+    for (const entry of historyEntries) {
+      const changedAt = new Date(entry.changedAt || appDoc.updatedAt);
+      if (Number.isNaN(changedAt.getTime())) {
+        continue;
+      }
+
+      if (statusFilter && APPLICATION_STATUSES.has(statusFilter) && entry.toStatus !== statusFilter) {
+        continue;
+      }
+
+      if (
+        changedByFilter &&
+        String(entry.changedBy || "system").toLowerCase().indexOf(changedByFilter) === -1
+      ) {
+        continue;
+      }
+
+      if (changedAfter && changedAt < changedAfter) {
+        continue;
+      }
+
+      if (changedBefore && changedAt > changedBefore) {
+        continue;
+      }
+
+      allChanges.push(toRecentStatusChangeDto(appDoc, entry));
+    }
+  }
+
+  allChanges.sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime());
+
+  return {
+    data: {
+      job: {
+        id: String(job._id),
+        title: job.title,
+      },
+      changes: allChanges,
+    },
+  };
+}
+
 export async function createApplication(payload = {}) {
   const jobId = normalizeText(payload.job_id);
   const resumeId = normalizeText(payload.resume_id);
@@ -250,21 +372,62 @@ export async function listRankedApplicationsByJob(jobId, query = {}) {
     filter.status = status;
   }
 
-  const [items, total] = await Promise.all([
-    Application.find(filter)
-      .sort({ "aiScores.hybridScore": -1, updatedAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate({
-        path: "resumeId",
-        populate: {
-          path: "candidateId",
-          model: User,
-        },
-      })
-      .lean(),
-    Application.countDocuments(filter),
-  ]);
+  const changedByFilter = normalizeText(query.changed_by).toLowerCase();
+  const changedAfter = parseDateFilter(query.changed_after, "start");
+  if (changedAfter?.error) {
+    return { error: changedAfter.error, code: 400 };
+  }
+  const changedBefore = parseDateFilter(query.changed_before, "end");
+  if (changedBefore?.error) {
+    return { error: changedBefore.error, code: 400 };
+  }
+
+  const items = await Application.find(filter)
+    .sort({ "aiScores.hybridScore": -1, updatedAt: -1 })
+    .populate({
+      path: "resumeId",
+      populate: {
+        path: "candidateId",
+        model: User,
+      },
+    })
+    .lean();
+
+  let candidates = items.map(toRankedApplicationDto);
+  if (changedByFilter) {
+    candidates = candidates.filter((item) =>
+      String(item.status_audit?.changed_by || "system")
+        .toLowerCase()
+        .includes(changedByFilter)
+    );
+  }
+
+  if (changedAfter || changedBefore) {
+    candidates = candidates.filter((item) => {
+      const changedAt = item.status_audit?.changed_at;
+      if (!changedAt) {
+        return false;
+      }
+
+      const parsed = new Date(changedAt);
+      if (Number.isNaN(parsed.getTime())) {
+        return false;
+      }
+
+      if (changedAfter && parsed < changedAfter) {
+        return false;
+      }
+
+      if (changedBefore && parsed > changedBefore) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  const total = candidates.length;
+  candidates = candidates.slice(skip, skip + limit);
 
   return {
     data: {
@@ -273,7 +436,7 @@ export async function listRankedApplicationsByJob(jobId, query = {}) {
         title: job.title,
         status: job.status,
       },
-      candidates: items.map(toRankedApplicationDto),
+      candidates,
       pagination: {
         page,
         limit,
@@ -368,6 +531,55 @@ export async function updateApplicationStatus(applicationId, status, changedByIn
       status: updated.status,
       ai_status: updated.aiStatus,
       updated_at: updated.updatedAt,
+    },
+  };
+}
+
+export async function bulkUpdateApplicationStatus(payload = {}) {
+  const applicationIds = Array.isArray(payload.application_ids)
+    ? payload.application_ids.map((value) => normalizeText(value)).filter(Boolean)
+    : [];
+  if (!applicationIds.length) {
+    return { error: "application_ids is required", code: 400 };
+  }
+
+  const normalizedStatus = normalizeText(payload.status).toLowerCase();
+  if (!APPLICATION_STATUSES.has(normalizedStatus)) {
+    return { error: "Invalid status", code: 400 };
+  }
+
+  const changedBy = normalizeText(payload.changed_by).slice(0, 120) || "system";
+  const applications = await Application.find({ _id: { $in: applicationIds } });
+  if (!applications.length) {
+    return { error: "Applications not found", code: 404 };
+  }
+
+  const updatedIds = [];
+  for (const application of applications) {
+    const currentStatus = application.status;
+    if (currentStatus === normalizedStatus) {
+      continue;
+    }
+
+    application.status = normalizedStatus;
+    application.statusHistory.push({
+      fromStatus: currentStatus,
+      toStatus: normalizedStatus,
+      changedBy,
+      changedAt: new Date(),
+    });
+    await application.save();
+    updatedIds.push(String(application._id));
+  }
+
+  return {
+    data: {
+      requested_count: applicationIds.length,
+      matched_count: applications.length,
+      updated_count: updatedIds.length,
+      unchanged_count: applications.length - updatedIds.length,
+      updated_ids: updatedIds,
+      status: normalizedStatus,
     },
   };
 }
@@ -504,80 +716,20 @@ export async function getApplicationStatusSummaryByJob(jobId) {
 }
 
 export async function listRecentStatusChangesByJob(jobId, query = {}) {
-  const normalizedJobId = normalizeText(jobId);
-  if (!normalizedJobId) {
-    return { error: "job_id is required", code: 400 };
+  const baseResult = await collectRecentStatusChangesByJob(jobId, query);
+  if (baseResult.error) {
+    return baseResult;
   }
 
-  const job = await Job.findById(normalizedJobId);
-  if (!job) {
-    return { error: "Job not found", code: 404 };
-  }
-
+  const { job, changes } = baseResult.data;
   const { page, limit, skip } = normalizePagination(query);
-  const statusFilter = normalizeText(query.status).toLowerCase();
-  const changedByFilter = normalizeText(query.changed_by).toLowerCase();
-  const changedAfter = parseDateFilter(query.changed_after, "start");
-  if (changedAfter?.error) {
-    return { error: changedAfter.error, code: 400 };
-  }
-  const changedBefore = parseDateFilter(query.changed_before, "end");
-  if (changedBefore?.error) {
-    return { error: changedBefore.error, code: 400 };
-  }
-
-  const appDocs = await Application.find({ jobId: job._id })
-    .populate({
-      path: "resumeId",
-      populate: {
-        path: "candidateId",
-        model: User,
-      },
-    })
-    .populate("jobId")
-    .lean();
-
-  const allChanges = [];
-  for (const appDoc of appDocs) {
-    const historyEntries = Array.isArray(appDoc.statusHistory) ? appDoc.statusHistory : [];
-    for (const entry of historyEntries) {
-      const changedAt = new Date(entry.changedAt || appDoc.updatedAt);
-      if (Number.isNaN(changedAt.getTime())) {
-        continue;
-      }
-
-      if (statusFilter && APPLICATION_STATUSES.has(statusFilter) && entry.toStatus !== statusFilter) {
-        continue;
-      }
-
-      if (
-        changedByFilter &&
-        String(entry.changedBy || "system").toLowerCase().indexOf(changedByFilter) === -1
-      ) {
-        continue;
-      }
-
-      if (changedAfter && changedAt < changedAfter) {
-        continue;
-      }
-
-      if (changedBefore && changedAt > changedBefore) {
-        continue;
-      }
-
-      allChanges.push(toRecentStatusChangeDto(appDoc, entry));
-    }
-  }
-
-  allChanges.sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime());
-
-  const total = allChanges.length;
-  const items = allChanges.slice(skip, skip + limit);
+  const total = changes.length;
+  const items = changes.slice(skip, skip + limit);
 
   return {
     data: {
       job: {
-        id: String(job._id),
+        id: job.id,
         title: job.title,
       },
       changes: items,
@@ -587,6 +739,21 @@ export async function listRecentStatusChangesByJob(jobId, query = {}) {
         total,
         total_pages: Math.max(1, Math.ceil(total / limit)),
       },
+    },
+  };
+}
+
+export async function exportRecentStatusChangesCsvByJob(jobId, query = {}) {
+  const baseResult = await collectRecentStatusChangesByJob(jobId, query);
+  if (baseResult.error) {
+    return baseResult;
+  }
+
+  const { job, changes } = baseResult.data;
+  return {
+    data: {
+      job,
+      csv: buildRecentStatusChangesCsv(changes),
     },
   };
 }

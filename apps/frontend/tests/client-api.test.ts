@@ -115,41 +115,54 @@ describe('api client module', () => {
     await apiPut('/z', { c: 3 });
     await apiDelete('/w');
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      1,
-      '/api/x',
-      expect.objectContaining({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ a: 1 }),
-      })
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+
+    const firstCall = fetchMock.mock.calls[0];
+    expect(firstCall[0]).toBe('/api/x');
+    expect((firstCall[1] as RequestInit).method).toBe('POST');
+    expect((firstCall[1] as RequestInit).body).toBe(JSON.stringify({ a: 1 }));
+    expect(new Headers((firstCall[1] as RequestInit).headers).get('Content-Type')).toBe(
+      'application/json'
     );
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      '/api/y',
-      expect.objectContaining({
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ b: 2 }),
-      })
+    const secondCall = fetchMock.mock.calls[1];
+    expect(secondCall[0]).toBe('/api/y');
+    expect((secondCall[1] as RequestInit).method).toBe('PATCH');
+    expect((secondCall[1] as RequestInit).body).toBe(JSON.stringify({ b: 2 }));
+    expect(new Headers((secondCall[1] as RequestInit).headers).get('Content-Type')).toBe(
+      'application/json'
     );
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      3,
-      '/api/z',
-      expect.objectContaining({
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ c: 3 }),
-      })
+    const thirdCall = fetchMock.mock.calls[2];
+    expect(thirdCall[0]).toBe('/api/z');
+    expect((thirdCall[1] as RequestInit).method).toBe('PUT');
+    expect((thirdCall[1] as RequestInit).body).toBe(JSON.stringify({ c: 3 }));
+    expect(new Headers((thirdCall[1] as RequestInit).headers).get('Content-Type')).toBe(
+      'application/json'
     );
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      4,
-      '/api/w',
-      expect.objectContaining({ method: 'DELETE' })
-    );
+    const fourthCall = fetchMock.mock.calls[3];
+    expect(fourthCall[0]).toBe('/api/w');
+    expect((fourthCall[1] as RequestInit).method).toBe('DELETE');
+  });
+
+  it('apiFetch auto-attaches bearer token from localStorage when no Authorization header is provided', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('window', {
+      localStorage: {
+        getItem: vi.fn(() => JSON.stringify({ accessToken: 'token-from-storage' })),
+      },
+    });
+
+    const { apiFetch } = await loadClientModule();
+
+    await apiFetch('/secured', { method: 'GET' });
+
+    const call = fetchMock.mock.calls[0];
+    expect(call[0]).toBe('/api/secured');
+    const headers = new Headers((call[1] as RequestInit).headers);
+    expect(headers.get('Authorization')).toBe('Bearer token-from-storage');
   });
 
   it('apiFetch aborts when request exceeds timeout', async () => {

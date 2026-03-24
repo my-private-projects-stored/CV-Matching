@@ -24,33 +24,37 @@ import {
   updateResumeTitleHandler,
   uploadResumeHandler,
 } from "../controllers/resume.controller.js";
+import { requireAuth, requireRoles } from "../middleware/auth.middleware.js";
 
 const router = Router();
+const requireCandidateRole = [requireRoles("candidate", "admin")];
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 4 * 1024 * 1024 },
 });
 
-router.post("/upload", upload.single("file"), uploadResumeHandler);
+router.use(requireAuth);
+
+router.post("/upload", ...requireCandidateRole, upload.single("file"), uploadResumeHandler);
 router.get("/list", listResumesHandler);
 router.get("/master", getMasterResumeHandler);
 router.get("/", getResumeHandler);
-router.post("/", createResumeHandler);
-router.post("/:id/set-as-master", setMasterResumeHandler);
-router.post("/improve", improveResumeHandler);
-router.post("/improve/preview", previewImproveResumeHandler);
-router.post("/improve/confirm", confirmImproveResumeHandler);
-router.post("/:id/retry-processing", retryResumeProcessingHandler);
-router.post("/:id/generate-cover-letter", generateCoverLetterHandler);
-router.post("/:id/generate-outreach", generateOutreachHandler);
+router.post("/", ...requireCandidateRole, createResumeHandler);
+router.post("/:id/set-as-master", ...requireCandidateRole, setMasterResumeHandler);
+router.post("/improve", ...requireCandidateRole, improveResumeHandler);
+router.post("/improve/preview", ...requireCandidateRole, previewImproveResumeHandler);
+router.post("/improve/confirm", ...requireCandidateRole, confirmImproveResumeHandler);
+router.post("/:id/retry-processing", ...requireCandidateRole, retryResumeProcessingHandler);
+router.post("/:id/generate-cover-letter", ...requireCandidateRole, generateCoverLetterHandler);
+router.post("/:id/generate-outreach", ...requireCandidateRole, generateOutreachHandler);
 router.get("/:id/pdf", downloadResumePdfHandler);
 router.get("/:id/cover-letter/pdf", downloadCoverLetterPdfHandler);
 router.get("/:id/download", downloadOriginalResumeHandler);
 router.get("/:id/job-description", getResumeJobDescriptionHandler);
-router.patch("/:id", updateResumeHandler);
-router.patch("/:id/cover-letter", updateCoverLetterHandler);
-router.patch("/:id/outreach-message", updateOutreachMessageHandler);
-router.patch("/:id/title", updateResumeTitleHandler);
-router.delete("/:id", deleteResumeHandler);
+router.patch("/:id", ...requireCandidateRole, updateResumeHandler);
+router.patch("/:id/cover-letter", ...requireCandidateRole, updateCoverLetterHandler);
+router.patch("/:id/outreach-message", ...requireCandidateRole, updateOutreachMessageHandler);
+router.patch("/:id/title", ...requireCandidateRole, updateResumeTitleHandler);
+router.delete("/:id", ...requireCandidateRole, deleteResumeHandler);
 
 export default router;

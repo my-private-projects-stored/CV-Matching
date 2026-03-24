@@ -14,11 +14,7 @@ import SystemConfig from "../../src/models/SystemConfig.js";
 const RUN_INTEGRATION = process.env.RUN_INTEGRATION_TESTS === "1";
 
 function getTestMongoUri() {
-  if (process.env.MONGO_URI_TEST) {
-    return process.env.MONGO_URI_TEST;
-  }
-
-  const mongoUri = process.env.MONGO_URI;
+  const mongoUri = process.env.MONGO_URI_TEST || process.env.MONGO_URI;
   assert.ok(mongoUri, "MONGO_URI is required for integration test");
 
   const url = new URL(mongoUri);
@@ -27,10 +23,15 @@ function getTestMongoUri() {
   return url.toString();
 }
 
-async function requestJson(baseUrl, method, path, body) {
+async function requestJson(baseUrl, method, path, body, token) {
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${baseUrl}${path}`, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
 
@@ -65,8 +66,20 @@ test(
     const baseUrl = `http://127.0.0.1:${address.port}/api`;
 
     try {
+      const candidateSignup = await requestJson(baseUrl, "POST", "/auth/signup", {
+        email: "candidate.enrichment@example.com",
+        password: "StrongPass123",
+        full_name: "Candidate Enrichment",
+        role: "candidate",
+      });
+      assert.equal(candidateSignup.status, 201);
+      const candidateToken = candidateSignup.json?.access_token;
+      const candidateId = candidateSignup.json?.user?.id;
+      assert.ok(candidateToken);
+      assert.ok(candidateId);
+
       const resume = await Resume.create({
-        candidateId: new mongoose.Types.ObjectId(),
+        candidateId,
         fileUrl: "upload://seed-enrichment-resume",
         rawText: "Backend engineer with Node.js and MongoDB experience",
         parsedData: {
@@ -104,7 +117,7 @@ test(
         processingStatus: "ready",
       });
 
-      const analyze = await requestJson(baseUrl, "POST", `/enrichment/analyze/${resume._id}`);
+      const analyze = await requestJson(baseUrl, "POST", `/enrichment/analyze/${resume._id}`, undefined, candidateToken);
       assert.equal(analyze.status, 200);
       assert.equal(Array.isArray(analyze.json?.items_to_enrich), true);
       assert.equal(Array.isArray(analyze.json?.questions), true);
@@ -121,7 +134,7 @@ test(
             answer: "reduced API response time by 35% and cut incidents by 20%",
           },
         ],
-      });
+      }, candidateToken);
 
       assert.equal(enhance.status, 200);
       assert.equal(Array.isArray(enhance.json?.enhancements), true);
@@ -129,7 +142,7 @@ test(
 
       const apply = await requestJson(baseUrl, "POST", `/enrichment/apply/${resume._id}`, {
         enhancements: enhance.json.enhancements,
-      });
+      }, candidateToken);
 
       assert.equal(apply.status, 200);
       assert.equal(typeof apply.json?.updated_items, "number");
@@ -154,7 +167,7 @@ test(
         ],
         instruction: "make it concise and achievement-focused",
         output_language: "en",
-      });
+      }, candidateToken);
 
       assert.equal(regenerate.status, 200);
       assert.equal(Array.isArray(regenerate.json?.regenerated_items), true);
@@ -165,7 +178,8 @@ test(
         baseUrl,
         "POST",
         `/enrichment/apply-regenerated/${resume._id}`,
-        regenerate.json.regenerated_items
+        regenerate.json.regenerated_items,
+        candidateToken
       );
 
       assert.equal(applyRegenerated.status, 200);

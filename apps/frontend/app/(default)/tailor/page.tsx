@@ -20,9 +20,11 @@ import { Loader2, ArrowLeft, AlertTriangle, Settings } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';
 import { DiffPreviewModal } from '@/components/tailor/diff-preview-modal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useAuth } from '@/lib/context/auth-context';
 
 export default function TailorPage() {
   const { t } = useTranslations();
+  const { user } = useAuth();
   const [jobDescription, setJobDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +56,7 @@ export default function TailorPage() {
 
   // Check if LLM is configured
   const isLlmConfigured = !statusLoading && systemStatus?.llm_configured;
+  const isRecruiterOrAdmin = user?.role === 'recruiter' || user?.role === 'admin';
 
   useEffect(() => {
     const storedId = localStorage.getItem('master_resume_id');
@@ -333,15 +336,17 @@ export default function TailorPage() {
                 <p className="font-mono text-xs text-amber-700 mt-1">
                   {t('tailor.noApiKeyMessage')}
                 </p>
-                <Link
-                  href="/settings"
-                  className="inline-flex items-center gap-2 mt-3 text-amber-700 hover:text-amber-900 transition-colors"
-                >
-                  <Settings className="w-4 h-4" />
-                  <span className="font-mono text-xs font-bold uppercase underline">
-                    {t('tailor.configureApiKey')}
-                  </span>
-                </Link>
+                {isRecruiterOrAdmin ? (
+                  <Link
+                    href="/settings"
+                    className="inline-flex items-center gap-2 mt-3 text-amber-700 hover:text-amber-900 transition-colors"
+                  >
+                    <Settings className="w-4 h-4" />
+                    <span className="font-mono text-xs font-bold uppercase underline">
+                      {t('tailor.configureApiKey')}
+                    </span>
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>

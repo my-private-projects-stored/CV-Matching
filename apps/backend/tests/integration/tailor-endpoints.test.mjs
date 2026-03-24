@@ -14,11 +14,7 @@ import SystemConfig from "../../src/models/SystemConfig.js";
 const RUN_INTEGRATION = process.env.RUN_INTEGRATION_TESTS === "1";
 
 function getTestMongoUri() {
-  if (process.env.MONGO_URI_TEST) {
-    return process.env.MONGO_URI_TEST;
-  }
-
-  const mongoUri = process.env.MONGO_URI;
+  const mongoUri = process.env.MONGO_URI_TEST || process.env.MONGO_URI;
   assert.ok(mongoUri, "MONGO_URI is required for integration test");
 
   const url = new URL(mongoUri);
@@ -27,10 +23,15 @@ function getTestMongoUri() {
   return url.toString();
 }
 
-async function requestJson(baseUrl, method, path, body) {
+async function requestJson(baseUrl, method, path, body, token) {
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${baseUrl}${path}`, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
 
@@ -65,8 +66,30 @@ test(
     const baseUrl = `http://127.0.0.1:${address.port}/api`;
 
     try {
+      const recruiterSignup = await requestJson(baseUrl, "POST", "/auth/signup", {
+        email: "recruiter.tailor@example.com",
+        password: "StrongPass123",
+        full_name: "Recruiter Tailor",
+        role: "recruiter",
+      });
+      assert.equal(recruiterSignup.status, 201);
+      const recruiterToken = recruiterSignup.json?.access_token;
+      assert.ok(recruiterToken);
+
+      const candidateSignup = await requestJson(baseUrl, "POST", "/auth/signup", {
+        email: "candidate.tailor@example.com",
+        password: "StrongPass123",
+        full_name: "Candidate Tailor",
+        role: "candidate",
+      });
+      assert.equal(candidateSignup.status, 201);
+      const candidateToken = candidateSignup.json?.access_token;
+      const candidateId = candidateSignup.json?.user?.id;
+      assert.ok(candidateToken);
+      assert.ok(candidateId);
+
       const masterResume = await Resume.create({
-        candidateId: new mongoose.Types.ObjectId(),
+        candidateId,
         fileUrl: "upload://seed-master-resume",
         rawText: "Experienced backend engineer with Node.js and MongoDB expertise",
         parsedData: {
@@ -97,7 +120,7 @@ test(
           "Senior Backend Engineer role requiring Node.js, MongoDB, APIs, Docker, and cloud deployment experience.",
         ],
         resume_id: String(masterResume._id),
-      });
+      }, recruiterToken);
 
       assert.equal(upload.status, 200);
       assert.equal(Array.isArray(upload.json?.job_id), true);
@@ -108,7 +131,7 @@ test(
       const preview = await requestJson(baseUrl, "POST", "/resumes/improve/preview", {
         resume_id: String(masterResume._id),
         job_id: jobId,
-      });
+      }, candidateToken);
 
       assert.equal(preview.status, 200);
       assert.equal(typeof preview.json?.data?.request_id, "string");
@@ -123,7 +146,7 @@ test(
         job_id: jobId,
         improved_data: preview.json.data.resume_preview,
         improvements: preview.json.data.improvements,
-      });
+      }, candidateToken);
 
       assert.equal(confirm.status, 200);
       assert.equal(typeof confirm.json?.data?.resume_id, "string");
@@ -133,7 +156,9 @@ test(
       const fetched = await requestJson(
         baseUrl,
         "GET",
-        `/resumes?resume_id=${encodeURIComponent(tailoredId)}`
+        `/resumes?resume_id=${encodeURIComponent(tailoredId)}`,
+        undefined,
+        candidateToken
       );
 
       assert.equal(fetched.status, 200);

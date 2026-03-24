@@ -16,6 +16,7 @@ import {
 } from '@/lib/api/jobs';
 import { createApplication } from '@/lib/api/applications';
 import { fetchResumeList } from '@/lib/api/resume';
+import { useAuth } from '@/lib/context/auth-context';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -100,6 +101,7 @@ function toDateInputValue(value?: string | null): string {
 export default function JobsPage() {
   const { t } = useTranslations();
   const router = useRouter();
+  const { user } = useAuth();
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [jobs, setJobs] = useState<JobItem[]>([]);
   const [page, setPage] = useState(1);
@@ -137,6 +139,7 @@ export default function JobsPage() {
     experienceLevel: '',
   });
   const [error, setError] = useState<string | null>(null);
+  const isRecruiterOrAdmin = user?.role === 'recruiter' || user?.role === 'admin';
 
   const activeFilters = useMemo(() => ({ ...filters, page, limit: 12 }), [filters, page]);
 
@@ -556,63 +559,67 @@ export default function JobsPage() {
                     {t('jobsPage.updated', { date: formatDate(job.updatedAt) })}
                   </p>
 
-                  <Link
-                    href={`/applications?job_id=${encodeURIComponent(job._id)}`}
-                    className="inline-block font-mono text-[11px] uppercase text-blue-700 hover:underline"
-                  >
-                    {t('jobsPage.viewRankedCandidates')}
-                  </Link>
+                  {isRecruiterOrAdmin ? (
+                    <Link
+                      href={`/applications?job_id=${encodeURIComponent(job._id)}`}
+                      className="inline-block font-mono text-[11px] uppercase text-blue-700 hover:underline"
+                    >
+                      {t('jobsPage.viewRankedCandidates')}
+                    </Link>
+                  ) : null}
 
-                  <div className="flex flex-wrap gap-2">
+                  {isRecruiterOrAdmin ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={disableCardActions || !job.importantChangeHistory?.length}
+                        onClick={() => openHistoryDialog(job)}
+                      >
+                        {t('jobsPage.viewHistory')}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={disableCardActions}
+                        onClick={() => openEditDialog(job)}
+                      >
+                        {t('jobsPage.editJob')}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={disableCardActions}
+                        onClick={() => void handleToggleJobStatus(job)}
+                      >
+                        {isToggling
+                          ? t('jobsPage.updatingJob')
+                          : job.status === 'active'
+                            ? t('jobsPage.closeJob')
+                            : t('jobsPage.reopenJob')}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={disableCardActions}
+                        onClick={() => void handleDeleteJob(job._id)}
+                      >
+                        {isDeleting ? t('jobsPage.deletingJob') : t('jobsPage.deleteJob')}
+                      </Button>
+                    </div>
+                  ) : (
                     <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={disableCardActions || !job.importantChangeHistory?.length}
-                      onClick={() => openHistoryDialog(job)}
+                      variant="success"
+                      disabled={isApplyingJobId === job._id || disableCardActions || job.status === 'closed'}
+                      onClick={() => handleApply(job._id)}
                     >
-                      {t('jobsPage.viewHistory')}
+                      {job.status === 'closed'
+                        ? t('jobsPage.closedUnavailable')
+                        : isApplyingJobId === job._id
+                          ? t('jobsPage.applying')
+                          : t('jobsPage.applyWithMaster')}
                     </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      disabled={disableCardActions}
-                      onClick={() => openEditDialog(job)}
-                    >
-                      {t('jobsPage.editJob')}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={disableCardActions}
-                      onClick={() => void handleToggleJobStatus(job)}
-                    >
-                      {isToggling
-                        ? t('jobsPage.updatingJob')
-                        : job.status === 'active'
-                          ? t('jobsPage.closeJob')
-                          : t('jobsPage.reopenJob')}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      disabled={disableCardActions}
-                      onClick={() => void handleDeleteJob(job._id)}
-                    >
-                      {isDeleting ? t('jobsPage.deletingJob') : t('jobsPage.deleteJob')}
-                    </Button>
-                  </div>
-
-                  <Button
-                    variant="success"
-                    disabled={isApplyingJobId === job._id || disableCardActions || job.status === 'closed'}
-                    onClick={() => handleApply(job._id)}
-                  >
-                    {job.status === 'closed'
-                      ? t('jobsPage.closedUnavailable')
-                      : isApplyingJobId === job._id
-                        ? t('jobsPage.applying')
-                        : t('jobsPage.applyWithMaster')}
-                  </Button>
+                  )}
                 </div>
               </Card>
             );

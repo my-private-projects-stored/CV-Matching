@@ -6,6 +6,7 @@
 
 const DEFAULT_PUBLIC_API_BASE_URL = '/';
 const DEFAULT_INTERNAL_API_BASE_URL = 'http://127.0.0.1:3001';
+const AUTH_STORAGE_KEY = 'cvm_auth_session_v1';
 
 function normalizeApiUrl(value: string): string {
   const trimmed = value.trim();
@@ -47,6 +48,39 @@ export const API_BASE_URL = normalizeApiUrl(
 export const API_URL = API_BASE_URL;
 export const API_BASE = resolveRuntimeApiBase(toApiBase(API_BASE_URL));
 
+function readAccessTokenFromStorage(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as { accessToken?: string };
+    const accessToken = String(parsed?.accessToken || '').trim();
+    return accessToken || null;
+  } catch {
+    return null;
+  }
+}
+
+function buildRequestHeaders(headers?: HeadersInit): Headers {
+  const mergedHeaders = new Headers(headers || undefined);
+  if (mergedHeaders.has('Authorization')) {
+    return mergedHeaders;
+  }
+
+  const accessToken = readAccessTokenFromStorage();
+  if (accessToken) {
+    mergedHeaders.set('Authorization', `Bearer ${accessToken}`);
+  }
+
+  return mergedHeaders;
+}
+
 /**
  * Standard fetch wrapper with common error handling.
  * Returns the Response object for flexibility.
@@ -77,7 +111,12 @@ export async function apiFetch(
   const timer = setTimeout(() => controller.abort(), timeout);
 
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    const headers = buildRequestHeaders(options?.headers);
+    return await fetch(url, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
   } finally {
     clearTimeout(timer);
   }

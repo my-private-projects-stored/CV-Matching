@@ -2,6 +2,8 @@ import { Router } from "express";
 
 import { getSystemStatusHandler } from "../controllers/config.controller.js";
 import applicationRoutes from "./application.routes.js";
+import authRoutes from "./auth.routes.js";
+import candidateProfileRoutes from "./candidate-profile.routes.js";
 import configRoutes from "./config.routes.js";
 import enrichmentRoutes from "./enrichment.routes.js";
 import jobRoutes from "./job.routes.js";
@@ -16,6 +18,8 @@ router.get("/health", (_req, res) => {
 
 router.get("/status", getSystemStatusHandler);
 
+router.use("/auth", authRoutes);
+router.use("/candidate-profile", candidateProfileRoutes);
 router.use("/jobs", jobRoutes);
 router.use("/resumes", resumeRoutes);
 router.use("/applications", applicationRoutes);

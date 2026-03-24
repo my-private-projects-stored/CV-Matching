@@ -46,6 +46,10 @@
     "backToDashboard": "Volver al Panel",
     "goToSettings": "Ir a Configuración"
   },
+  "access": {
+    "recruiterOnlyTitle": "Acceso solo para reclutadores",
+    "recruiterOnlyDescription": "Esta página está disponible solo para cuentas de reclutador y administrador."
+  },
   "jobsPage": {
     "title": "Job Board",
     "subtitle": "Browse and filter active job descriptions",
