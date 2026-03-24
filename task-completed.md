@@ -1960,32 +1960,56 @@
   - Lỗi `MongoServerError: Authentication failed` không còn là blocker chính; test suite đã tiến tới lỗi nghiệp vụ/integration phụ thuộc service và assertion-level.
   - Cần thêm vòng fix tiếp theo cho các failing assertions/backend contract còn lại (đang ở trạng thái post-auth-unblock).
 
-### 116) Stabilize backend integration suite to PASS (11/11)
-- Updated backend integration execution to run test files serially and avoid cross-file env/state interference:
+### 116) Ổn định backend integration đạt PASS (11/11)
+- Đã cập nhật cách chạy backend integration theo chế độ tuần tự để tránh nhiễu trạng thái/env giữa các file test:
   - apps/backend/package.json
-  - script `test:integration` now uses `node --test --test-concurrency=1 tests/integration/*.test.mjs`.
-- Isolated test databases for suites that previously shared the same `_integration` suffix:
+  - script `test:integration` chuyển sang `node --test --test-concurrency=1 tests/integration/*.test.mjs`.
+- Đã tách database test riêng cho các suite trước đó dùng chung hậu tố `_integration`:
   - apps/backend/tests/integration/auth-endpoints.test.mjs -> `/cv_matching_auth_integration`
   - apps/backend/tests/integration/candidate-profile-endpoints.test.mjs -> `/cv_matching_candidate_profile_integration`
   - apps/backend/tests/integration/config-endpoints.test.mjs -> `/cv_matching_config_integration`
-- Reworked brittle assertions in:
+- Đã chỉnh lại các assertion dễ vỡ tại:
   - apps/backend/tests/integration/application-endpoints.test.mjs
-  - changes include:
-    - summary status check now validates total count from `by_status` map instead of hardcoded status label,
-    - audit actor expectations aligned with authenticated actor (`recruiter.application@example.com`),
-    - ranked status-audit assertion made tolerant to ordering between seeded boundary entries and API-updated entries.
-- Validation result:
-  - run command: `npm run test:integration` in `apps/backend`
-  - final status: PASS (`tests=11`, `pass=11`, `fail=0`).
+  - thay đổi gồm:
+    - summary status kiểm tra tổng count từ map `by_status` thay vì cố định theo một nhãn status,
+    - kỳ vọng audit actor đồng bộ theo actor đã xác thực (`recruiter.application@example.com`),
+    - assertion status-audit của ranked cho phép sai khác thứ tự giữa entry seed boundary và entry cập nhật từ API.
+- Kết quả xác minh:
+  - chạy lệnh: `npm run test:integration` trong `apps/backend`
+  - trạng thái cuối: PASS (`tests=11`, `pass=11`, `fail=0`).
 
-### 117) Re-verify integration via wrapper script and refresh artifact log
-- Re-ran integration through the canonical wrapper:
+### 117) Xác minh lại integration qua wrapper script và làm mới artifact log
+- Đã chạy lại integration thông qua wrapper chuẩn:
   - scripts/run-backend-integration.ps1
-- Refreshed UTF-8 artifact log:
+- Đã làm mới artifact log UTF-8:
   - scripts/last-backend-integration.txt
-- Latest verification result:
-  - command exited successfully,
-  - backend integration summary: tests=11, pass=11, fail=0.
-- Runtime notes:
-  - Mongo URI auto-resolved to localhost no-auth (`mongodb://127.0.0.1:27017`).
-  - Existing dependency containers were reused; worker was already running.
+- Kết quả xác minh mới nhất:
+  - lệnh thoát thành công,
+  - tổng kết backend integration: tests=11, pass=11, fail=0.
+- Ghi chú runtime:
+  - Mongo URI được auto-resolve sang localhost no-auth (`mongodb://127.0.0.1:27017`).
+  - Các container phụ thuộc hiện có được tái sử dụng; worker đã chạy sẵn.
+
+### 118) Hardening workflow integration trên CI bằng wrapper chuẩn + artifact log
+- Đã cập nhật workflow CI để chạy backend integration bằng cùng wrapper chuẩn local:
+  - .github/workflows/backend-integration.yml
+  - thay chạy trực tiếp `npm run test:integration` bằng:
+    - `./scripts/run-backend-integration.ps1`
+- Đã bổ sung upload artifact log integration ở mọi lần chạy CI (`if: always()`):
+  - tên artifact: `backend-integration-log`
+  - đường dẫn artifact: `scripts/last-backend-integration.txt`
+- Đã thêm bước cài `jq` rõ ràng trên runner để giữ parsing health-check ổn định.
+- Đã kiểm tra lại target từng flaky ở chế độ chạy lẻ sau khi ổn định:
+  - `tests/integration/application-authorization.test.mjs` hiện PASS khi chạy standalone với env local.
+
+### 119) Xác minh độ ổn định test lẻ application-authorization sau hardening
+- Đã chạy lặp 5 lần test tích hợp lẻ từng có dấu hiệu flaky:
+  - `tests/integration/application-authorization.test.mjs`
+- Môi trường chạy:
+  - `RUN_INTEGRATION_TESTS=1`
+  - `MONGO_URI_TEST=mongodb://127.0.0.1:27017`
+  - `MONGO_URI=mongodb://127.0.0.1:27017`
+  - `EMBEDDING_SERVICE_URL=http://127.0.0.1:8010`
+- Kết quả:
+  - 5/5 lần PASS,
+  - không ghi nhận failure trong vòng stress-run ngắn.

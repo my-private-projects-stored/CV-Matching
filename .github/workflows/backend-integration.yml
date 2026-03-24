@@ -33,6 +33,9 @@ jobs:
         working-directory: apps/backend
         run: npm ci
 
+      - name: Ensure jq is available
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Start infra and embedding worker
         run: docker compose --profile app up -d mongo redis qdrant worker-embedding-sbert
 
@@ -60,27 +63,19 @@ jobs:
           docker compose logs --tail 100
           exit 1
 
-      - name: Bootstrap Qdrant
-        working-directory: apps/backend
-        env:
-          MONGO_URI: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
-          EMBEDDING_SERVICE_URL: http://127.0.0.1:8010
-        run: npm run bootstrap:qdrant
+      - name: Run integration via canonical wrapper
+        shell: pwsh
+        run: |
+          Set-Location "$env:GITHUB_WORKSPACE"
+          ./scripts/run-backend-integration.ps1 2>&1 | Out-File -FilePath ./scripts/last-backend-integration.txt -Encoding utf8
 
-      - name: Seed demo data
-        working-directory: apps/backend
-        env:
-          MONGO_URI: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
-          EMBEDDING_SERVICE_URL: http://127.0.0.1:8010
-        run: npm run seed:demo
-
-      - name: Run integration tests
-        working-directory: apps/backend
-        env:
-          RUN_INTEGRATION_TESTS: "1"
-          MONGO_URI: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
-          EMBEDDING_SERVICE_URL: http://127.0.0.1:8010
-        run: npm run test:integration
+      - name: Upload integration log artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-integration-log
+          path: scripts/last-backend-integration.txt
+          if-no-files-found: warn
 
       - name: Smoke runtime endpoints
         working-directory: apps/backend
