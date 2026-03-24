@@ -1,0 +1,87 @@
+name: Docker Smoke
+
+on:
+  push:
+    paths:
+      - "docker-compose.yml"
+      - "apps/backend/**"
+      - "apps/frontend/**"
+      - "workers/embedding-sbert/**"
+      - ".github/workflows/docker-smoke.yml"
+  pull_request:
+    paths:
+      - "docker-compose.yml"
+      - "apps/backend/**"
+      - "apps/frontend/**"
+      - "workers/embedding-sbert/**"
+      - ".github/workflows/docker-smoke.yml"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Ensure jq is available
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Start full app stack
+        run: docker compose --profile app up -d --build
+
+      - name: Wait for healthy app services
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..120}; do
+            out=$(docker compose --profile app ps --format json)
+
+            mongo_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-mongo"))[0].Health // ""')
+            redis_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-redis"))[0].Health // ""')
+            qdrant_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-qdrant"))[0].Health // ""')
+            emb_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-worker-embedding-sbert"))[0].Health // ""')
+            backend_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-gateway-backend"))[0].Health // ""')
+            frontend_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-frontend"))[0].Health // ""')
+
+            if [[ "$mongo_ok" == "healthy" && "$redis_ok" == "healthy" && "$qdrant_ok" == "healthy" && "$emb_ok" == "healthy" && "$backend_ok" == "healthy" && "$frontend_ok" == "healthy" ]]; then
+              echo "All app services are healthy"
+              exit 0
+            fi
+
+            sleep 2
+          done
+
+          echo "App services did not become healthy in time"
+          docker compose --profile app ps
+          docker compose --profile app logs --tail 200
+          exit 1
+
+      - name: Verify frontend and backend endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e "const run=async()=>{const b=await fetch('http://127.0.0.1:3001/api/health');const f=await fetch('http://127.0.0.1:3000');if(!b.ok||!f.ok){console.error('Smoke failed', {backend:b.status, frontend:f.status});process.exit(1);}console.log('Smoke OK', {backend:b.status, frontend:f.status});};run().catch((e)=>{console.error(e);process.exit(1);});"
+
+      - name: Capture logs
+        if: always()
+        shell: bash
+        run: docker compose --profile app logs --tail 300 > /tmp/docker-smoke-logs.txt
+
+      - name: Upload docker logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-smoke-logs
+          path: |
+            /tmp/docker-smoke-logs.txt
+          if-no-files-found: ignore
+
+      - name: Tear down
+        if: always()
+        run: docker compose --profile app down -v

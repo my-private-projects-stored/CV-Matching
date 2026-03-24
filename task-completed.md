@@ -2118,3 +2118,22 @@
   - `Healthcheck Timeout`
   - `Missing Environment Variables`
   - mỗi nhóm gồm symptom, lệnh chẩn đoán nhanh, và cách khắc phục thực tiễn.
+
+### 127) Ổn định build frontend bằng npm ci + thêm CI Docker smoke cho one-command startup
+- Đã đồng bộ lockfile frontend để đảm bảo clean install ổn định:
+  - chạy `npm install` tại `apps/frontend` để cập nhật `apps/frontend/package-lock.json` theo dependency hiện tại,
+  - xác minh lại `npm ci` PASS tại `apps/frontend`.
+- Đã cập nhật `apps/frontend/Dockerfile.dev`:
+  - chuyển bước cài dependencies từ `npm install` về `npm ci` để build tái lập hơn.
+- Đã thêm workflow mới:
+  - `.github/workflows/docker-smoke.yml`
+  - scope trigger: thay đổi liên quan `docker-compose.yml`, `apps/backend/**`, `apps/frontend/**`, `workers/embedding-sbert/**`.
+  - luồng kiểm tra:
+    - `docker compose --profile app up -d --build`
+    - chờ healthy cho toàn bộ service chính trong profile `app`
+    - verify endpoint runtime: frontend (`:3000`) + backend health (`:3001/api/health`)
+    - capture logs + upload artifact khi failure
+    - teardown `docker compose --profile app down -v` luôn luôn.
+- Đã cập nhật `README.md`:
+  - thêm badge `Docker Smoke`
+  - thêm quick link tới workflow `.github/workflows/docker-smoke.yml`.

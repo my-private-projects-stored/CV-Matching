@@ -2,6 +2,7 @@
 
 ![Backend Integration](https://github.com/my-private-projects-stored/CV-Matching/actions/workflows/backend-integration.yml/badge.svg)
 ![Frontend Quality](https://github.com/my-private-projects-stored/CV-Matching/actions/workflows/frontend-quality.yml/badge.svg)
+![Docker Smoke](https://github.com/my-private-projects-stored/CV-Matching/actions/workflows/docker-smoke.yml/badge.svg)
 
 Monorepo for CV matching workflows, including backend APIs, frontend apps, workers, and infrastructure.
 
@@ -9,6 +10,7 @@ Monorepo for CV matching workflows, including backend APIs, frontend apps, worke
 
 - Backend integration workflow: .github/workflows/backend-integration.yml
 - Frontend quality workflow: .github/workflows/frontend-quality.yml
+- Docker smoke workflow: .github/workflows/docker-smoke.yml
 - Task log: task-completed.md
 - Backend app: apps/backend
 - Frontend app: apps/frontend
