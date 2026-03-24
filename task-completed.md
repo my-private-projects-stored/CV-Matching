@@ -2041,3 +2041,14 @@
     - path artifact: `scripts/isolated-test-logs/<test_file>.log`
 - Kết quả mong đợi:
   - khi một test lẻ fail trong CI matrix, có thể tải đúng log của test đó để khoanh vùng nhanh mà không cần soi toàn bộ service logs.
+
+### 122) Bổ sung README root với badge trạng thái CI
+- Đã tạo mới file tài liệu gốc:
+  - `README.md`
+- Đã thêm badge theo dõi workflow ngay đầu trang:
+  - Backend Integration (`backend-integration.yml`)
+  - Frontend Quality (`frontend-quality.yml`)
+- Đã thêm quick links đến các thành phần quan trọng:
+  - workflow files,
+  - `task-completed.md`,
+  - `apps/backend`, `apps/frontend`.
