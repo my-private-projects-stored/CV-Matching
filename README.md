@@ -72,7 +72,8 @@ docker compose --profile app down
 
 Notes:
 - `gateway-backend` and `frontend` now run directly in Docker via Node 20 containers (development mode).
-- On first run, containers install dependencies (`npm install`), so startup can take longer.
+- Dependencies are pre-installed in app images via `apps/backend/Dockerfile.dev` and `apps/frontend/Dockerfile.dev`.
+- Use `docker compose --profile app up -d --build` after dependency updates to rebuild images.
 
 ## CI Troubleshooting
 

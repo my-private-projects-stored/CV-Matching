@@ -2085,3 +2085,20 @@
     - Frontend: `http://localhost:3000`
     - Backend health: `http://localhost:3001/api/health`
 - Đã validate lại cấu hình compose bằng `docker compose config` (hợp lệ).
+
+### 125) Tối ưu một-lệnh Docker bằng Dockerfile dev cho backend/frontend
+- Đã tạo Dockerfile dev để cài dependencies ở build-time (thay vì cài lại mỗi lần container start):
+  - `apps/backend/Dockerfile.dev`
+  - `apps/frontend/Dockerfile.dev`
+- Đã thêm `.dockerignore` cho từng app để giảm build context:
+  - `apps/backend/.dockerignore`
+  - `apps/frontend/.dockerignore`
+- Đã cập nhật `docker-compose.yml`:
+  - chuyển `gateway-backend` và `frontend` sang `build.context` + `dockerfile: Dockerfile.dev`
+  - bỏ `npm install` khỏi startup command runtime
+  - giữ named volumes `backend_node_modules` và `frontend_node_modules` để dev ổn định
+- Đã cập nhật `README.md` để phản ánh flow mới (dependencies pre-install qua Dockerfile + rebuild khi đổi dependency).
+- Kết quả xác minh:
+  - `docker compose --profile app build gateway-backend frontend` PASS
+  - `docker compose --profile app up -d --build` PASS
+  - kiểm tra runtime bằng HTTP fetch nội bộ: backend=200, frontend=200.
