@@ -66,6 +66,16 @@ test(
     const baseUrl = `http://127.0.0.1:${address.port}/api`;
 
     try {
+      const recruiterSignup = await requestJson(baseUrl, "POST", "/auth/signup", {
+        email: "recruiter.enrichment@example.com",
+        password: "StrongPass123",
+        full_name: "Recruiter Enrichment",
+        role: "recruiter",
+      });
+      assert.equal(recruiterSignup.status, 201);
+      const recruiterToken = recruiterSignup.json?.access_token;
+      assert.ok(recruiterToken);
+
       const candidateSignup = await requestJson(baseUrl, "POST", "/auth/signup", {
         email: "candidate.enrichment@example.com",
         password: "StrongPass123",
@@ -116,6 +126,28 @@ test(
         isMaster: true,
         processingStatus: "ready",
       });
+
+      const privacyPut = await requestJson(baseUrl, "PUT", "/config/privacy", {
+        privacy_mode: "local_only",
+      }, recruiterToken);
+      assert.equal(privacyPut.status, 200);
+
+      const analyzeBlocked = await requestJson(
+        baseUrl,
+        "POST",
+        `/enrichment/analyze/${resume._id}`,
+        undefined,
+        candidateToken
+      );
+      assert.equal(analyzeBlocked.status, 400);
+      assert.match(analyzeBlocked.json?.message || analyzeBlocked.json?.detail || analyzeBlocked.text, /privacy_mode/i);
+
+      const llmPutOllama = await requestJson(baseUrl, "PUT", "/config/llm-api-key", {
+        provider: "ollama",
+        model: "gemma3:4b",
+        api_base: "http://localhost:11434",
+      }, recruiterToken);
+      assert.equal(llmPutOllama.status, 200);
 
       const analyze = await requestJson(baseUrl, "POST", `/enrichment/analyze/${resume._id}`, undefined, candidateToken);
       assert.equal(analyze.status, 200);

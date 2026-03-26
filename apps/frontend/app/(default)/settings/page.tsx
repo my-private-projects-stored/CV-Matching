@@ -766,7 +766,7 @@ export default function SettingsPage() {
 
             {/* Additional Stats Row */}
             {systemStatus && (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="border border-black bg-white p-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]">
                   <div className="flex items-center gap-2 mb-2">
                     <Sparkles className="w-4 h-4 text-gray-500" />
@@ -802,6 +802,24 @@ export default function SettingsPage() {
                       </>
                     )}
                   </div>
+                </div>
+                <div className="border border-black bg-white p-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Server className="w-4 h-4 text-gray-500" />
+                    <span className="font-mono text-xs uppercase text-gray-500">LLM Provider</span>
+                  </div>
+                  <span className="font-mono text-sm font-bold uppercase">
+                    {String(systemStatus.llm_provider || provider || 'openai')}
+                  </span>
+                </div>
+                <div className="border border-black bg-white p-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Globe className="w-4 h-4 text-gray-500" />
+                    <span className="font-mono text-xs uppercase text-gray-500">Privacy Mode</span>
+                  </div>
+                  <span className="font-mono text-sm font-bold uppercase">
+                    {String(systemStatus.privacy_mode || 'hybrid')}
+                  </span>
                 </div>
               </div>
             )}

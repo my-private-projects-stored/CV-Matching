@@ -2213,3 +2213,36 @@
 - Kết quả xác minh:
   - frontend: `npm run test -- tests/config-api.test.ts` PASS.
   - backend: `RUN_INTEGRATION_TESTS=1 node --test tests/integration/config-endpoints.test.mjs` PASS.
+
+### 131) Mở rộng enforcement UC-RM-12: chặn runtime AI generation theo privacy mode + hiển thị trạng thái policy
+- Đã mở rộng guard backend theo runtime cho các luồng AI generation quan trọng:
+  - `apps/backend/src/services/config.service.js`
+    - thêm helper `assertAiGenerationAllowed(feature)` để kiểm tra provider hiện tại có hợp lệ với `privacy_mode`.
+  - `apps/backend/src/controllers/resume.controller.js`
+    - áp dụng guard cho:
+      - `POST /api/resumes/improve/preview`
+      - `POST /api/resumes/improve/confirm`
+      - `POST /api/resumes/improve`
+      - `POST /api/resumes/:id/generate-cover-letter`
+      - `POST /api/resumes/:id/generate-outreach`
+  - `apps/backend/src/controllers/enrichment.controller.js`
+    - áp dụng guard cho:
+      - `POST /api/enrichment/analyze/:resumeId`
+      - `POST /api/enrichment/enhance`
+      - `POST /api/enrichment/regenerate`
+- Đã cập nhật UI Settings để tăng khả năng quan sát policy:
+  - `apps/frontend/app/(default)/settings/page.tsx`
+  - thêm status cards hiển thị `LLM Provider` và `Privacy Mode` trong System Status panel.
+- Đã mở rộng integration tests để verify behavior block/unblock theo policy:
+  - `apps/backend/tests/integration/tailor-endpoints.test.mjs`
+  - `apps/backend/tests/integration/enrichment-endpoints.test.mjs`
+  - thêm bước:
+    - set `privacy_mode=local_only` + provider cloud => endpoint AI trả 400
+    - chuyển provider sang `ollama` => endpoint hoạt động bình thường.
+- Đã cập nhật tài liệu:
+  - `README.md`
+  - ghi rõ AI generation endpoints có enforce privacy policy runtime và status hiển thị provider/mode.
+- Kết quả xác minh:
+  - backend tailor integration: PASS
+  - backend enrichment integration: PASS
+  - frontend config API tests: PASS

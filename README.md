@@ -209,6 +209,8 @@ Privacy + AI provider policy:
 	- `hybrid`: allow both cloud providers and local Ollama.
 	- `local_only`: restrict provider usage to Ollama/local endpoints.
 	- `cloud_only`: block Ollama and enforce cloud-provider usage.
+- AI generation endpoints (tailor, enrichment, cover letter, outreach) enforce this policy at runtime.
+- System Status now shows active `llm_provider` and `privacy_mode` for quick diagnostics.
 
 ## CI Troubleshooting
 

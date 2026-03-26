@@ -128,6 +128,25 @@ test(
 
       const jobId = upload.json.job_id[0];
 
+      const privacyPut = await requestJson(baseUrl, "PUT", "/config/privacy", {
+        privacy_mode: "local_only",
+      }, recruiterToken);
+      assert.equal(privacyPut.status, 200);
+
+      const blockedPreview = await requestJson(baseUrl, "POST", "/resumes/improve/preview", {
+        resume_id: String(masterResume._id),
+        job_id: jobId,
+      }, candidateToken);
+      assert.equal(blockedPreview.status, 400);
+      assert.match(blockedPreview.json?.message || blockedPreview.text, /privacy_mode/i);
+
+      const llmPutOllama = await requestJson(baseUrl, "PUT", "/config/llm-api-key", {
+        provider: "ollama",
+        model: "gemma3:4b",
+        api_base: "http://localhost:11434",
+      }, recruiterToken);
+      assert.equal(llmPutOllama.status, 200);
+
       const preview = await requestJson(baseUrl, "POST", "/resumes/improve/preview", {
         resume_id: String(masterResume._id),
         job_id: jobId,

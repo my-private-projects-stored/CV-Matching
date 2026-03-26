@@ -561,3 +561,27 @@ export async function getSystemStatus() {
     },
   };
 }
+
+export async function assertAiGenerationAllowed(feature = "ai_generation") {
+  const [llmRaw, privacyConfig] = await Promise.all([
+    readConfig(LLM_CONFIG_KEY, DEFAULT_LLM_CONFIG),
+    getPrivacyConfig(),
+  ]);
+
+  const provider = String(llmRaw.provider || DEFAULT_LLM_CONFIG.provider).trim().toLowerCase();
+  const privacyMode = privacyConfig.privacy_mode;
+
+  if (!isProviderAllowedByPrivacy(provider, privacyMode)) {
+    const err = new Error(
+      `AI generation for ${feature} is blocked by privacy_mode=${privacyMode}. Current provider=${provider}.`
+    );
+    err.statusCode = 400;
+    err.code = "provider_blocked_by_privacy_mode";
+    throw err;
+  }
+
+  return {
+    provider,
+    privacy_mode: privacyMode,
+  };
+}

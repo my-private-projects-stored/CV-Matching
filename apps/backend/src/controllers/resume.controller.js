@@ -20,7 +20,7 @@ import {
   updateResumeById,
   updateResumeFields,
 } from "../services/resume.service.js";
-import { getLanguageConfig } from "../services/config.service.js";
+import { assertAiGenerationAllowed, getLanguageConfig } from "../services/config.service.js";
 
 const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi"]);
 
@@ -265,6 +265,8 @@ export async function retryResumeProcessingHandler(req, res, next) {
 
 export async function previewImproveResumeHandler(req, res, next) {
   try {
+    await assertAiGenerationAllowed("resume_tailor_preview");
+
     const resumeId = String(req.body?.resume_id || "").trim();
     const jobId = String(req.body?.job_id || "").trim();
 
@@ -296,6 +298,8 @@ export async function previewImproveResumeHandler(req, res, next) {
 
 export async function confirmImproveResumeHandler(req, res, next) {
   try {
+    await assertAiGenerationAllowed("resume_tailor_confirm");
+
     const resumeId = String(req.body?.resume_id || "").trim();
     const jobId = String(req.body?.job_id || "").trim();
     const improvedData = req.body?.improved_data;
@@ -335,6 +339,8 @@ export async function confirmImproveResumeHandler(req, res, next) {
 
 export async function improveResumeHandler(req, res, next) {
   try {
+    await assertAiGenerationAllowed("resume_tailor");
+
     const resumeId = String(req.body?.resume_id || "").trim();
     const jobId = String(req.body?.job_id || "").trim();
 
@@ -473,6 +479,8 @@ export async function getResumeJobDescriptionHandler(req, res, next) {
 
 export async function generateCoverLetterHandler(req, res, next) {
   try {
+    await assertAiGenerationAllowed("cover_letter_generation");
+
     if (isCandidateRole(req)) {
       const resume = await getResumeByPublicId(req.params.id);
       if (!resume) {
@@ -591,6 +599,8 @@ export async function downloadOriginalResumeHandler(req, res, next) {
 
 export async function generateOutreachHandler(req, res, next) {
   try {
+    await assertAiGenerationAllowed("outreach_generation");
+
     if (isCandidateRole(req)) {
       const resume = await getResumeByPublicId(req.params.id);
       if (!resume) {

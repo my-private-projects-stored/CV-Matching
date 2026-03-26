@@ -5,9 +5,12 @@ import {
   enhanceResumeDescriptions,
   regenerateResumeItems,
 } from "../services/enrichment.service.js";
+import { assertAiGenerationAllowed } from "../services/config.service.js";
 
 export async function analyzeResumeHandler(req, res, next) {
   try {
+    await assertAiGenerationAllowed("enrichment_analyze");
+
     const result = await analyzeResumeEnrichment(req.params.resumeId);
     if (!result) {
       return res.status(404).json({ detail: "Resume not found" });
@@ -21,6 +24,8 @@ export async function analyzeResumeHandler(req, res, next) {
 
 export async function enhanceResumeHandler(req, res, next) {
   try {
+    await assertAiGenerationAllowed("enrichment_enhance");
+
     const resumeId = String(req.body?.resume_id || "").trim();
     const answers = Array.isArray(req.body?.answers) ? req.body.answers : [];
 
@@ -56,6 +61,8 @@ export async function applyEnhancementsHandler(req, res, next) {
 
 export async function regenerateItemsHandler(req, res, next) {
   try {
+    await assertAiGenerationAllowed("enrichment_regenerate");
+
     const payload = {
       resumeId: String(req.body?.resume_id || "").trim(),
       items: Array.isArray(req.body?.items) ? req.body.items : [],
