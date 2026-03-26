@@ -28,8 +28,20 @@ export interface SystemStatus {
   status: 'ready' | 'setup_required';
   llm_configured: boolean;
   llm_healthy: boolean;
+  llm_provider?: string;
+  privacy_mode?: PrivacyMode;
   has_master_resume: boolean;
   database_stats: DatabaseStats;
+}
+
+export type PrivacyMode = 'hybrid' | 'local_only' | 'cloud_only';
+
+export interface PrivacyConfig {
+  privacy_mode: PrivacyMode;
+}
+
+export interface PrivacyConfigUpdate {
+  privacy_mode?: PrivacyMode;
 }
 
 export interface LLMHealthCheck {
@@ -183,6 +195,32 @@ export async function updateFeatureConfig(config: FeatureConfigUpdate): Promise<
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.detail || `Failed to update feature config (status ${res.status}).`);
+  }
+
+  return res.json();
+}
+
+export async function fetchPrivacyConfig(): Promise<PrivacyConfig> {
+  const res = await apiFetch('/config/privacy', { credentials: 'include' });
+
+  if (!res.ok) {
+    throw new Error(`Failed to load privacy config (status ${res.status}).`);
+  }
+
+  return res.json();
+}
+
+export async function updatePrivacyConfig(config: PrivacyConfigUpdate): Promise<PrivacyConfig> {
+  const res = await apiFetch('/config/privacy', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(config),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || `Failed to update privacy config (status ${res.status}).`);
   }
 
   return res.json();

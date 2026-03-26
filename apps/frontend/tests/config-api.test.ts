@@ -10,10 +10,12 @@ import {
   fetchApiKeyStatus,
   fetchCompanyProfileConfig,
   fetchLlmConfig,
+  fetchPrivacyConfig,
   fetchSystemStatus,
   resetDatabase,
   updateCompanyProfileConfig,
   updateLlmConfig,
+  updatePrivacyConfig,
 } from '@/lib/api/config';
 import { apiFetch } from '@/lib/api/client';
 
@@ -175,6 +177,28 @@ describe('settings API client', () => {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ overview: 'Builds AI tools globally' }),
+    });
+  });
+
+  it('fetchPrivacyConfig and updatePrivacyConfig call expected endpoints', async () => {
+    mockedApiFetch
+      .mockResolvedValueOnce(jsonResponse({ privacy_mode: 'hybrid' }))
+      .mockResolvedValueOnce(jsonResponse({ privacy_mode: 'local_only' }));
+
+    const privacy = await fetchPrivacyConfig();
+    expect(privacy.privacy_mode).toBe('hybrid');
+
+    const updated = await updatePrivacyConfig({ privacy_mode: 'local_only' });
+    expect(updated.privacy_mode).toBe('local_only');
+
+    expect(mockedApiFetch).toHaveBeenNthCalledWith(1, '/config/privacy', {
+      credentials: 'include',
+    });
+    expect(mockedApiFetch).toHaveBeenNthCalledWith(2, '/config/privacy', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ privacy_mode: 'local_only' }),
     });
   });
 });

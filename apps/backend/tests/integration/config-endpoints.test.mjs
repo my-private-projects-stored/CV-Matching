@@ -130,9 +130,41 @@ test(
       assert.equal(llmPut.status, 200);
       assert.match(llmPut.json?.api_key || "", /\*\*\*\*/);
 
-      const llmTest = await requestJson(baseUrl, "POST", "/config/llm-test", {
+      const privacyGet = await requestJson(baseUrl, "GET", "/config/privacy", undefined, recruiterToken);
+      assert.equal(privacyGet.status, 200);
+      assert.equal(privacyGet.json?.privacy_mode, "hybrid");
+
+      const privacyPut = await requestJson(baseUrl, "PUT", "/config/privacy", {
+        privacy_mode: "local_only",
+      }, recruiterToken);
+      assert.equal(privacyPut.status, 200);
+      assert.equal(privacyPut.json?.privacy_mode, "local_only");
+
+      const llmPutBlockedByPrivacy = await requestJson(baseUrl, "PUT", "/config/llm-api-key", {
         provider: "openai",
         model: "gpt-5-nano-2025-08-07",
+      }, recruiterToken);
+      assert.equal(llmPutBlockedByPrivacy.status, 400);
+
+      const llmTestBlockedByPrivacy = await requestJson(baseUrl, "POST", "/config/llm-test", {
+        provider: "openai",
+        model: "gpt-5-nano-2025-08-07",
+      }, recruiterToken);
+      assert.equal(llmTestBlockedByPrivacy.status, 200);
+      assert.equal(llmTestBlockedByPrivacy.json?.healthy, false);
+      assert.equal(llmTestBlockedByPrivacy.json?.error_code, "provider_blocked_by_privacy_mode");
+
+      const llmPutOllama = await requestJson(baseUrl, "PUT", "/config/llm-api-key", {
+        provider: "ollama",
+        model: "gemma3:4b",
+        api_base: "http://localhost:11434",
+      }, recruiterToken);
+      assert.equal(llmPutOllama.status, 200);
+      assert.equal(llmPutOllama.json?.provider, "ollama");
+
+      const llmTest = await requestJson(baseUrl, "POST", "/config/llm-test", {
+        provider: "ollama",
+        model: "gemma3:4b",
       }, recruiterToken);
       assert.equal(llmTest.status, 200);
       assert.equal(llmTest.json?.healthy, true);
@@ -236,6 +268,7 @@ test(
       assert.equal(statusAfter.json?.database_stats?.total_jobs, 0);
       assert.equal(statusAfter.json?.database_stats?.total_resumes, 0);
       assert.equal(statusAfter.json?.llm_configured, false);
+      assert.equal(statusAfter.json?.privacy_mode, "hybrid");
     } finally {
       await new Promise((resolve, reject) => {
         server.close((error) => {

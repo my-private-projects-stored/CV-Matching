@@ -6,6 +6,7 @@ import {
   getApiKeyStatus,
   getLanguageConfig,
   getLlmConfig,
+  getPrivacyConfig,
   getPromptConfig,
   getSystemStatus,
   resetDatabase,
@@ -15,6 +16,7 @@ import {
   updateFeatureConfig,
   updateLanguageConfig,
   updateLlmConfig,
+  updatePrivacyConfig,
   updatePromptConfig,
 } from "../services/config.service.js";
 
@@ -30,6 +32,24 @@ export async function getLlmConfigHandler(_req, res, next) {
 export async function updateLlmConfigHandler(req, res, next) {
   try {
     const config = await updateLlmConfig(req.body || {});
+    return res.status(200).json(config);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function getPrivacyConfigHandler(_req, res, next) {
+  try {
+    const config = await getPrivacyConfig();
+    return res.status(200).json(config);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function updatePrivacyConfigHandler(req, res, next) {
+  try {
+    const config = await updatePrivacyConfig(req.body || {});
     return res.status(200).json(config);
   } catch (error) {
     return next(error);

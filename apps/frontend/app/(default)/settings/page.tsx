@@ -6,7 +6,9 @@ import Image from 'next/image';
 import {
   fetchCompanyProfileConfig,
   fetchLlmConfig,
+  fetchPrivacyConfig,
   updateLlmConfig,
+  updatePrivacyConfig,
   testLlmConnection,
   fetchFeatureConfig,
   updateCompanyProfileConfig,
@@ -19,6 +21,7 @@ import {
   type LLMConfig,
   type LLMProvider,
   type LLMHealthCheck,
+  type PrivacyMode,
   type PromptOption,
   type CompanyProfileConfig,
 } from '@/lib/api/config';
@@ -110,6 +113,8 @@ export default function SettingsPage() {
   const [apiKey, setApiKey] = useState('');
   const [apiBase, setApiBase] = useState('');
   const [hasStoredApiKey, setHasStoredApiKey] = useState(false);
+  const [privacyMode, setPrivacyMode] = useState<PrivacyMode>('hybrid');
+  const [privacySaving, setPrivacySaving] = useState(false);
 
   // Use cached system status (loaded on app start, refreshes every 30 min)
   const {
@@ -276,11 +281,12 @@ export default function SettingsPage() {
 
     async function loadConfig() {
       try {
-        const [llmConfig, featureConfig, promptConfig, companyProfileConfig] = await Promise.all([
+        const [llmConfig, featureConfig, promptConfig, companyProfileConfig, privacyConfig] = await Promise.all([
           fetchLlmConfig().catch(() => null),
           fetchFeatureConfig().catch(() => null),
           fetchPromptConfig().catch(() => null),
           fetchCompanyProfileConfig().catch(() => null),
+          fetchPrivacyConfig().catch(() => null),
         ]);
 
         if (cancelled) return;
@@ -314,6 +320,10 @@ export default function SettingsPage() {
 
         if (companyProfileConfig) {
           setCompanyProfile(companyProfileConfig);
+        }
+
+        if (privacyConfig?.privacy_mode) {
+          setPrivacyMode(privacyConfig.privacy_mode);
         }
 
         setStatus('idle');
@@ -458,6 +468,24 @@ export default function SettingsPage() {
       setError((err as Error).message || t('settings.errors.unableToSaveConfiguration'));
     } finally {
       setPromptConfigLoading(false);
+    }
+  };
+
+  const handleSavePrivacyMode = async () => {
+    setPrivacySaving(true);
+    setError(null);
+
+    try {
+      const updated = await updatePrivacyConfig({ privacy_mode: privacyMode });
+      setPrivacyMode(updated.privacy_mode);
+      setStatus('saved');
+      setTimeout(() => setStatus('idle'), 1500);
+    } catch (err) {
+      console.error('Failed to update privacy mode', err);
+      setError((err as Error).message || t('settings.errors.unableToSaveConfiguration'));
+      setStatus('error');
+    } finally {
+      setPrivacySaving(false);
     }
   };
 
@@ -872,6 +900,50 @@ export default function SettingsPage() {
                 <p className="text-xs text-gray-500 font-mono">
                   {t('settings.llmConfiguration.baseUrlDescription')}
                 </p>
+              </div>
+
+              <div className="space-y-3 border border-black/10 bg-white p-4">
+                <Label>Privacy Mode</Label>
+                <p className="text-xs text-gray-600 font-mono">
+                  Control whether AI requests can use cloud providers, local-only Ollama, or both.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  {[
+                    { value: 'hybrid', label: 'Hybrid', description: 'Allow cloud + local providers' },
+                    {
+                      value: 'local_only',
+                      label: 'Local only',
+                      description: 'Restrict to Ollama/local endpoints',
+                    },
+                    {
+                      value: 'cloud_only',
+                      label: 'Cloud only',
+                      description: 'Block local provider and enforce cloud APIs',
+                    },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setPrivacyMode(option.value as PrivacyMode)}
+                      className={`px-3 py-2 text-left ${SEGMENTED_BUTTON_BASE} ${
+                        privacyMode === option.value ? SEGMENTED_BUTTON_ACTIVE : SEGMENTED_BUTTON_INACTIVE
+                      }`}
+                    >
+                      <div className="font-mono text-xs uppercase">{option.label}</div>
+                      <div className="font-mono text-[10px] normal-case mt-1 opacity-80">
+                        {option.description}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleSavePrivacyMode}
+                  disabled={privacySaving || status === 'saving' || status === 'testing'}
+                >
+                  {privacySaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Privacy Mode
+                </Button>
               </div>
 
               {/* Action Buttons */}

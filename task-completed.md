@@ -2180,3 +2180,36 @@
   - thêm badge `Docker Prod Smoke`,
   - thêm quick link workflow `.github/workflows/docker-prod-smoke.yml`,
   - bổ sung nhắc đến production CI gate trong phần `Production Profile (Minimal)`.
+
+### 130) Triển khai UC-RM-12: Privacy mode + AI provider policy (backend + settings + test)
+- Đã mở rộng backend config service:
+  - `apps/backend/src/services/config.service.js`
+  - thêm `privacyConfig` với `privacy_mode` hỗ trợ 3 mode: `hybrid`, `local_only`, `cloud_only`.
+  - thêm API service `getPrivacyConfig()` và `updatePrivacyConfig()`.
+  - enforce chính sách privacy khi update/test LLM config:
+    - `local_only` chỉ cho phép provider `ollama`
+    - `cloud_only` chặn provider `ollama`
+  - mở rộng payload `/api/status` với `privacy_mode` và `llm_provider`.
+  - bổ sung reset cleanup key `privacyConfig` trong `resetDatabase`.
+- Đã mở rộng API backend:
+  - `apps/backend/src/controllers/config.controller.js`
+  - `apps/backend/src/routes/config.routes.js`
+  - thêm endpoints:
+    - `GET /api/config/privacy`
+    - `PUT /api/config/privacy`
+- Đã mở rộng frontend API client:
+  - `apps/frontend/lib/api/config.ts`
+  - thêm types + API:
+    - `PrivacyMode`, `PrivacyConfig`, `PrivacyConfigUpdate`
+    - `fetchPrivacyConfig()`, `updatePrivacyConfig()`
+- Đã cập nhật UI Settings để quản trị privacy mode:
+  - `apps/frontend/app/(default)/settings/page.tsx`
+  - thêm control chọn mode privacy và nút lưu riêng trong khối LLM configuration.
+- Đã cập nhật test:
+  - `apps/backend/tests/integration/config-endpoints.test.mjs`
+    - thêm assert cho privacy endpoint + enforcement behavior.
+  - `apps/frontend/tests/config-api.test.ts`
+    - thêm case fetch/update privacy config.
+- Kết quả xác minh:
+  - frontend: `npm run test -- tests/config-api.test.ts` PASS.
+  - backend: `RUN_INTEGRATION_TESTS=1 node --test tests/integration/config-endpoints.test.mjs` PASS.

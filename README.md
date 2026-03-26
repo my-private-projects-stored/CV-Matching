@@ -203,6 +203,13 @@ Script shortcuts:
 Production CI gate:
 - `.github/workflows/docker-prod-smoke.yml`
 
+Privacy + AI provider policy:
+- Recruiter/Admin can configure `privacy_mode` in Settings.
+- Modes:
+	- `hybrid`: allow both cloud providers and local Ollama.
+	- `local_only`: restrict provider usage to Ollama/local endpoints.
+	- `cloud_only`: block Ollama and enforce cloud-provider usage.
+
 ## CI Troubleshooting
 
 If backend CI fails in `.github/workflows/backend-integration.yml`:

@@ -8,6 +8,7 @@ import {
   getFeatureConfigHandler,
   getLanguageConfigHandler,
   getLlmConfigHandler,
+  getPrivacyConfigHandler,
   getPromptConfigHandler,
   resetDatabaseHandler,
   testLlmConfigHandler,
@@ -16,6 +17,7 @@ import {
   updateFeatureConfigHandler,
   updateLanguageConfigHandler,
   updateLlmConfigHandler,
+  updatePrivacyConfigHandler,
   updatePromptConfigHandler,
 } from "../controllers/config.controller.js";
 import { requireAuth, requireRoles } from "../middleware/auth.middleware.js";
@@ -28,6 +30,9 @@ router.use(...requireRecruiterRole);
 router.get("/llm-api-key", getLlmConfigHandler);
 router.put("/llm-api-key", updateLlmConfigHandler);
 router.post("/llm-test", testLlmConfigHandler);
+
+router.get("/privacy", getPrivacyConfigHandler);
+router.put("/privacy", updatePrivacyConfigHandler);
 
 router.get("/features", getFeatureConfigHandler);
 router.put("/features", updateFeatureConfigHandler);

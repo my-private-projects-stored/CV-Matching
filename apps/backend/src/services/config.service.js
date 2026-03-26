@@ -9,6 +9,7 @@ const LLM_CONFIG_KEY = "llmConfig";
 const PROMPT_CONFIG_KEY = "promptConfig";
 const API_KEYS_CONFIG_KEY = "apiKeysConfig";
 const COMPANY_PROFILE_CONFIG_KEY = "companyProfileConfig";
+const PRIVACY_CONFIG_KEY = "privacyConfig";
 
 const SUPPORTED_API_KEY_PROVIDERS = ["openai", "anthropic", "google", "openrouter", "deepseek"];
 
@@ -78,6 +79,12 @@ const DEFAULT_COMPANY_PROFILE_CONFIG = {
   brand_primary_color: "#1D4ED8",
   brand_logo_url: "",
 };
+
+const DEFAULT_PRIVACY_CONFIG = {
+  privacy_mode: "hybrid",
+};
+
+const SUPPORTED_PRIVACY_MODES = new Set(["hybrid", "local_only", "cloud_only"]);
 
 const SUPPORTED_LANGUAGES = new Set(DEFAULT_LANGUAGE_CONFIG.supported_languages);
 
@@ -254,6 +261,34 @@ function sanitizeCompanyProfileConfig(input = {}) {
   };
 }
 
+function sanitizePrivacyConfig(input = {}) {
+  const privacyMode = String(input.privacy_mode || DEFAULT_PRIVACY_CONFIG.privacy_mode)
+    .trim()
+    .toLowerCase();
+
+  if (!SUPPORTED_PRIVACY_MODES.has(privacyMode)) {
+    const err = new Error(`Unsupported privacy_mode: ${privacyMode}`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return {
+    privacy_mode: privacyMode,
+  };
+}
+
+function isProviderAllowedByPrivacy(provider, privacyMode) {
+  if (privacyMode === "local_only") {
+    return provider === "ollama";
+  }
+
+  if (privacyMode === "cloud_only") {
+    return provider !== "ollama";
+  }
+
+  return true;
+}
+
 export async function getFeatureConfig() {
   return readConfig(FEATURE_CONFIG_KEY, DEFAULT_FEATURE_CONFIG);
 }
@@ -271,6 +306,7 @@ export async function getLlmConfig() {
 
 export async function updateLlmConfig(input) {
   const currentRaw = await readConfig(LLM_CONFIG_KEY, DEFAULT_LLM_CONFIG);
+  const privacyConfig = await getPrivacyConfig();
   const current = {
     ...sanitizeLlmConfig(currentRaw),
     api_key: currentRaw.api_key || "",
@@ -284,6 +320,14 @@ export async function updateLlmConfig(input) {
     api_base: incoming.api_base,
     api_key: incoming.api_key === undefined ? current.api_key : incoming.api_key,
   };
+
+  if (!isProviderAllowedByPrivacy(merged.provider, privacyConfig.privacy_mode)) {
+    const err = new Error(
+      `Provider ${merged.provider} is not allowed in privacy_mode=${privacyConfig.privacy_mode}`
+    );
+    err.statusCode = 400;
+    throw err;
+  }
 
   await upsertConfig(LLM_CONFIG_KEY, merged);
   return publicLlmConfig(merged);
@@ -324,6 +368,22 @@ export async function getApiKeyStatus() {
 export async function getCompanyProfileConfig() {
   const raw = await readConfig(COMPANY_PROFILE_CONFIG_KEY, DEFAULT_COMPANY_PROFILE_CONFIG);
   return sanitizeCompanyProfileConfig(raw);
+}
+
+export async function getPrivacyConfig() {
+  const raw = await readConfig(PRIVACY_CONFIG_KEY, DEFAULT_PRIVACY_CONFIG);
+  return sanitizePrivacyConfig(raw);
+}
+
+export async function updatePrivacyConfig(input = {}) {
+  const current = await getPrivacyConfig();
+  const merged = sanitizePrivacyConfig({
+    ...current,
+    ...input,
+  });
+
+  await upsertConfig(PRIVACY_CONFIG_KEY, merged);
+  return merged;
 }
 
 export async function updateCompanyProfileConfig(input = {}) {
@@ -392,7 +452,7 @@ export async function resetDatabase(confirm) {
     Application.deleteMany({}),
     Job.deleteMany({}),
     Resume.deleteMany({}),
-    SystemConfig.deleteMany({ key: { $in: [FEATURE_CONFIG_KEY, LANGUAGE_CONFIG_KEY, LLM_CONFIG_KEY, PROMPT_CONFIG_KEY, API_KEYS_CONFIG_KEY, COMPANY_PROFILE_CONFIG_KEY] } }),
+    SystemConfig.deleteMany({ key: { $in: [FEATURE_CONFIG_KEY, LANGUAGE_CONFIG_KEY, LLM_CONFIG_KEY, PROMPT_CONFIG_KEY, API_KEYS_CONFIG_KEY, COMPANY_PROFILE_CONFIG_KEY, PRIVACY_CONFIG_KEY] } }),
   ]);
 
   return {
@@ -402,6 +462,7 @@ export async function resetDatabase(confirm) {
 
 export async function testLlmConfig(input = {}) {
   const currentRaw = await readConfig(LLM_CONFIG_KEY, DEFAULT_LLM_CONFIG);
+  const privacyConfig = await getPrivacyConfig();
   const current = {
     ...sanitizeLlmConfig(currentRaw),
     api_key: currentRaw.api_key || "",
@@ -414,6 +475,16 @@ export async function testLlmConfig(input = {}) {
     api_base: incoming.api_base ?? current.api_base,
     api_key: incoming.api_key === undefined ? current.api_key : incoming.api_key,
   };
+
+  if (!isProviderAllowedByPrivacy(effective.provider, privacyConfig.privacy_mode)) {
+    return {
+      healthy: false,
+      provider: effective.provider,
+      model: effective.model,
+      error: `Provider ${effective.provider} is not allowed in current privacy mode`,
+      error_code: "provider_blocked_by_privacy_mode",
+    };
+  }
 
   const requiresKey = effective.provider !== "ollama";
 
@@ -463,10 +534,11 @@ export async function updateLanguageConfig(input) {
 }
 
 export async function getSystemStatus() {
-  const [totalResumes, totalJobs, totalApplications] = await Promise.all([
+  const [totalResumes, totalJobs, totalApplications, privacyConfig] = await Promise.all([
     Resume.countDocuments({}),
     Job.countDocuments({}),
     Application.countDocuments({}),
+    getPrivacyConfig(),
   ]);
 
   const llmRaw = await readConfig(LLM_CONFIG_KEY, DEFAULT_LLM_CONFIG);
@@ -478,6 +550,8 @@ export async function getSystemStatus() {
     status: "ready",
     llm_configured: llmConfigured,
     llm_healthy: llmConfigured,
+    llm_provider: llmRaw.provider || DEFAULT_LLM_CONFIG.provider,
+    privacy_mode: privacyConfig.privacy_mode,
     has_master_resume: hasMasterResume,
     database_stats: {
       total_resumes: totalResumes,
