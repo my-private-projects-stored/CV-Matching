@@ -3,6 +3,7 @@
 ![Backend Integration](https://github.com/my-private-projects-stored/CV-Matching/actions/workflows/backend-integration.yml/badge.svg)
 ![Frontend Quality](https://github.com/my-private-projects-stored/CV-Matching/actions/workflows/frontend-quality.yml/badge.svg)
 ![Docker Smoke](https://github.com/my-private-projects-stored/CV-Matching/actions/workflows/docker-smoke.yml/badge.svg)
+![Docker Prod Smoke](https://github.com/my-private-projects-stored/CV-Matching/actions/workflows/docker-prod-smoke.yml/badge.svg)
 
 Monorepo for CV matching workflows, including backend APIs, frontend apps, workers, and infrastructure.
 
@@ -11,6 +12,7 @@ Monorepo for CV matching workflows, including backend APIs, frontend apps, worke
 - Backend integration workflow: .github/workflows/backend-integration.yml
 - Frontend quality workflow: .github/workflows/frontend-quality.yml
 - Docker smoke workflow: .github/workflows/docker-smoke.yml
+- Docker prod smoke workflow: .github/workflows/docker-prod-smoke.yml
 - Production compose override: docker-compose.prod.yml
 - Task log: task-completed.md
 - Backend app: apps/backend
@@ -197,6 +199,9 @@ Script shortcuts:
 ./scripts/dev-logs.ps1 -Prod -Follow
 ./scripts/dev-down.ps1 -Prod
 ```
+
+Production CI gate:
+- `.github/workflows/docker-prod-smoke.yml`
 
 ## CI Troubleshooting
 

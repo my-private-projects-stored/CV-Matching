@@ -1,0 +1,83 @@
+name: Docker Prod Smoke
+
+on:
+  push:
+    paths:
+      - "docker-compose.yml"
+      - "docker-compose.prod.yml"
+      - "apps/backend/**"
+      - "apps/frontend/**"
+      - "workers/embedding-sbert/**"
+      - ".github/workflows/docker-prod-smoke.yml"
+  pull_request:
+    paths:
+      - "docker-compose.yml"
+      - "docker-compose.prod.yml"
+      - "apps/backend/**"
+      - "apps/frontend/**"
+      - "workers/embedding-sbert/**"
+      - ".github/workflows/docker-prod-smoke.yml"
+
+jobs:
+  smoke-prod:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure jq is available
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Start production app stack
+        run: docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app up -d --build
+
+      - name: Wait for healthy production services
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..150}; do
+            out=$(docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app ps --format json)
+
+            mongo_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-mongo"))[0].Health // ""')
+            redis_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-redis"))[0].Health // ""')
+            qdrant_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-qdrant"))[0].Health // ""')
+            emb_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-worker-embedding-sbert"))[0].Health // ""')
+            backend_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-gateway-backend"))[0].Health // ""')
+            frontend_ok=$(echo "$out" | jq -r 'map(select(.Name=="cvm-frontend"))[0].Health // ""')
+
+            if [[ "$mongo_ok" == "healthy" && "$redis_ok" == "healthy" && "$qdrant_ok" == "healthy" && "$emb_ok" == "healthy" && "$backend_ok" == "healthy" && "$frontend_ok" == "healthy" ]]; then
+              echo "All production profile services are healthy"
+              exit 0
+            fi
+
+            sleep 2
+          done
+
+          echo "Production services did not become healthy in time"
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app ps
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app logs --tail 200
+          exit 1
+
+      - name: Verify production frontend and backend endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e "const run=async()=>{const b=await fetch('http://127.0.0.1:3001/api/health');const f=await fetch('http://127.0.0.1:3000');if(!b.ok||!f.ok){console.error('Prod smoke failed', {backend:b.status, frontend:f.status});process.exit(1);}console.log('Prod smoke OK', {backend:b.status, frontend:f.status});};run().catch((e)=>{console.error(e);process.exit(1);});"
+
+      - name: Capture production docker logs
+        if: always()
+        shell: bash
+        run: docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app logs --tail 300 > /tmp/docker-prod-smoke-logs.txt
+
+      - name: Upload production docker logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-prod-smoke-logs
+          path: /tmp/docker-prod-smoke-logs.txt
+          if-no-files-found: ignore
+
+      - name: Tear down production stack
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app down -v

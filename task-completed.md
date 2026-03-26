@@ -2163,3 +2163,20 @@
   - quick link tới `docker-compose.prod.yml`,
   - phần `Daily Dev Scripts (PowerShell)`,
   - phần `Production Profile (Minimal)` với lệnh start/stop và script shortcuts.
+
+### 129) Thêm CI riêng cho production profile (Docker Prod Smoke)
+- Đã tạo workflow mới:
+  - `.github/workflows/docker-prod-smoke.yml`
+- Phạm vi trigger:
+  - thay đổi `docker-compose.yml`, `docker-compose.prod.yml`, backend/frontend app code, worker embedding, hoặc chính workflow file.
+- Luồng kiểm tra CI production profile:
+  - start stack bằng base + prod override:
+    - `docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app up -d --build`
+  - chờ healthy cho toàn bộ service chính (`mongo`, `redis`, `qdrant`, `worker-embedding-sbert`, `gateway-backend`, `frontend`),
+  - verify endpoint runtime (`:3000` và `:3001/api/health`),
+  - capture logs và upload artifact khi failure,
+  - teardown luôn luôn bằng `down -v`.
+- Đã cập nhật `README.md`:
+  - thêm badge `Docker Prod Smoke`,
+  - thêm quick link workflow `.github/workflows/docker-prod-smoke.yml`,
+  - bổ sung nhắc đến production CI gate trong phần `Production Profile (Minimal)`.
