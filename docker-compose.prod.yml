@@ -1,0 +1,24 @@
+services:
+  gateway-backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile.prod
+    command: ["npm", "run", "start"]
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+    volumes: []
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile.prod
+    command: ["node", "server.js"]
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      BACKEND_ORIGIN: http://gateway-backend:3001
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
+      INTERNAL_API_BASE_URL: http://gateway-backend:3001
+    volumes: []

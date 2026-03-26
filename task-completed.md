@@ -2137,3 +2137,29 @@
 - Đã cập nhật `README.md`:
   - thêm badge `Docker Smoke`
   - thêm quick link tới workflow `.github/workflows/docker-smoke.yml`.
+
+### 128) Thiết lập profile production tối thiểu + chuẩn hóa script dev start/stop/logs/smoke
+- Đã bổ sung production Dockerfiles:
+  - `apps/backend/Dockerfile.prod`:
+    - Node 20 Alpine,
+    - `npm ci --omit=dev`,
+    - chạy `npm run start` cho backend runtime.
+  - `apps/frontend/Dockerfile.prod`:
+    - multi-stage build,
+    - build Next.js production,
+    - chạy standalone server bằng `node server.js`.
+- Đã bổ sung override compose production:
+  - `docker-compose.prod.yml`
+  - override service `gateway-backend` và `frontend` sang Dockerfile.prod,
+  - tắt bind-mount code runtime (`volumes: []`),
+  - set env production tối thiểu + `BACKEND_ORIGIN` nội bộ.
+- Đã thêm bộ script vận hành dev/prod tại `scripts/`:
+  - `dev-up.ps1`
+  - `dev-down.ps1`
+  - `dev-logs.ps1`
+  - `dev-smoke.ps1`
+  - hỗ trợ cờ `-Prod` để chạy cùng override production.
+- Đã cập nhật `README.md`:
+  - quick link tới `docker-compose.prod.yml`,
+  - phần `Daily Dev Scripts (PowerShell)`,
+  - phần `Production Profile (Minimal)` với lệnh start/stop và script shortcuts.

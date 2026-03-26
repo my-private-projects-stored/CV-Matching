@@ -11,6 +11,7 @@ Monorepo for CV matching workflows, including backend APIs, frontend apps, worke
 - Backend integration workflow: .github/workflows/backend-integration.yml
 - Frontend quality workflow: .github/workflows/frontend-quality.yml
 - Docker smoke workflow: .github/workflows/docker-smoke.yml
+- Production compose override: docker-compose.prod.yml
 - Task log: task-completed.md
 - Backend app: apps/backend
 - Frontend app: apps/frontend
@@ -57,6 +58,15 @@ npm run dev -- --hostname 0.0.0.0 --port 3000
 
 ```powershell
 docker compose --profile app up -d --build
+```
+
+### Daily Dev Scripts (PowerShell)
+
+```powershell
+./scripts/dev-up.ps1
+./scripts/dev-smoke.ps1
+./scripts/dev-logs.ps1 -Follow
+./scripts/dev-down.ps1
 ```
 
 ## Service Profiles Map
@@ -159,6 +169,34 @@ Notes:
 - `gateway-backend` and `frontend` now run directly in Docker via Node 20 containers (development mode).
 - Dependencies are pre-installed in app images via `apps/backend/Dockerfile.dev` and `apps/frontend/Dockerfile.dev`.
 - Use `docker compose --profile app up -d --build` after dependency updates to rebuild images.
+
+## Production Profile (Minimal)
+
+Production mode uses [docker-compose.prod.yml](docker-compose.prod.yml) as an override on top of [docker-compose.yml](docker-compose.yml).
+
+- Backend image: `apps/backend/Dockerfile.prod` (Node 20, `npm ci --omit=dev`, `npm run start`)
+- Frontend image: `apps/frontend/Dockerfile.prod` (multi-stage build, Next.js standalone, `node server.js`)
+
+Start production profile:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app up -d --build
+```
+
+Stop production profile:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app down
+```
+
+Script shortcuts:
+
+```powershell
+./scripts/dev-up.ps1 -Prod
+./scripts/dev-smoke.ps1 -Prod
+./scripts/dev-logs.ps1 -Prod -Follow
+./scripts/dev-down.ps1 -Prod
+```
 
 ## CI Troubleshooting
 
