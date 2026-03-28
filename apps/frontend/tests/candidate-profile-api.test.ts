@@ -91,4 +91,15 @@ describe('candidate profile API client', () => {
     expect(result.data.profile.headline).toBe('Senior Frontend Engineer');
     expect(mockedApiPut).toHaveBeenCalledWith('/candidate-profile/me', payload);
   });
+
+  it('updateMyCandidateProfile preserves backend error_code on validation failure', async () => {
+    mockedApiPut.mockResolvedValueOnce(
+      jsonResponse({ message: 'Invalid website URL', error_code: 'invalid_website_url' }, 400)
+    );
+
+    await expect(updateMyCandidateProfile({ website: 'not-a-url' })).rejects.toMatchObject({
+      errorCode: 'invalid_website_url',
+      statusCode: 400,
+    });
+  });
 });

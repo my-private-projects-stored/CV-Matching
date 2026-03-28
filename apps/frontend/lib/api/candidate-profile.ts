@@ -1,4 +1,5 @@
 import { apiFetch, apiPut } from './client';
+import { buildApiClientError } from './error';
 
 export interface CandidateProfileExperience {
   title: string;
@@ -48,23 +49,15 @@ export interface CandidateProfileResponse {
   };
 }
 
-async function readErrorMessage(res: Response, fallback: string): Promise<string> {
-  let detail = '';
-  try {
-    const payload = (await res.json()) as { message?: string; detail?: string };
-    detail = payload?.message || payload?.detail || '';
-  } catch {
-    // Ignore parse failures and use fallback message.
-  }
-
-  return detail || fallback;
+async function assertOk(res: Response, fallbackMessagePrefix: string): Promise<void> {
+  if (res.ok) return;
+  const text = await res.text().catch(() => '');
+  throw buildApiClientError(res.status, text, fallbackMessagePrefix);
 }
 
 export async function fetchMyCandidateProfile(): Promise<CandidateProfileResponse> {
   const res = await apiFetch('/candidate-profile/me');
-  if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Fetch candidate profile failed (status ${res.status})`));
-  }
+  await assertOk(res, 'Fetch candidate profile failed');
   return (await res.json()) as CandidateProfileResponse;
 }
 
@@ -72,8 +65,6 @@ export async function updateMyCandidateProfile(
   payload: Partial<CandidateProfilePayload>
 ): Promise<CandidateProfileResponse> {
   const res = await apiPut('/candidate-profile/me', payload);
-  if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Update candidate profile failed (status ${res.status})`));
-  }
+  await assertOk(res, 'Update candidate profile failed');
   return (await res.json()) as CandidateProfileResponse;
 }

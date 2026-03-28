@@ -57,9 +57,12 @@ describe('resume API client', () => {
   it('improveResume throws with backend status and body when request fails', async () => {
     mockedApiPost.mockResolvedValueOnce(new Response('bad request', { status: 400 }));
 
-    await expect(improveResume('resume-1', 'job-1')).rejects.toThrow(
-      'Improve failed with status 400: bad request'
-    );
+    const error = await improveResume('resume-1', 'job-1').catch((err: unknown) => err as Error & {
+      statusCode?: number;
+    });
+
+    expect(error.message).toBe('Improve failed (status 400).');
+    expect(error.statusCode).toBe(400);
   });
 
   it('fetchResume calls encoded endpoint and returns data payload', async () => {
@@ -90,9 +93,7 @@ describe('resume API client', () => {
   it('deleteResume throws detailed error when delete fails', async () => {
     mockedApiDelete.mockResolvedValueOnce(new Response('forbidden', { status: 403 }));
 
-    await expect(deleteResume('resume-1')).rejects.toThrow(
-      'Failed to delete resume (status 403): forbidden'
-    );
+    await expect(deleteResume('resume-1')).rejects.toThrow('Failed to delete resume (status 403).');
   });
 
   it('fetchJobDescription returns parsed payload', async () => {
@@ -207,6 +208,26 @@ describe('resume API client', () => {
 
     expect(result.is_master).toBe(true);
     expect(mockedApiPost).toHaveBeenCalledWith('/resumes/resume-2/set-as-master', {});
+  });
+
+  it('setResumeAsMaster preserves backend error_code for downstream handling', async () => {
+    mockedApiPost.mockResolvedValueOnce(
+      jsonResponse(
+        {
+          message: 'Master resume already selected',
+          error_code: 'resume_already_master',
+        },
+        409
+      )
+    );
+
+    const error = await setResumeAsMaster('resume-2').catch(
+      (err: unknown) => err as Error & { errorCode?: string; statusCode?: number }
+    );
+
+    expect(error.message).toBe('Master resume already selected');
+    expect(error.errorCode).toBe('resume_already_master');
+    expect(error.statusCode).toBe(409);
   });
 
   it('generateCoverLetter posts output language when provided', async () => {

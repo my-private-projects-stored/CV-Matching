@@ -77,6 +77,9 @@ services:
       REDIS_URL: redis://redis:6379
       QDRANT_URL: http://qdrant:6333
       EMBEDDING_SERVICE_URL: http://worker-embedding-sbert:8010
+      PARSING_SERVICE_URL: http://worker-parsing:8020
+      SCORING_QUEUE_NAME: application_scoring_queue
+      WORKER_INTERNAL_TOKEN: ${WORKER_INTERNAL_TOKEN:-dev-worker-token}
       PORT: "3001"
     ports:
       - "3001:3001"
@@ -139,46 +142,53 @@ services:
       - app
 
   worker-parsing:
-    image: python:3.11-slim
+    build:
+      context: ./workers/parsing
     container_name: cvm-worker-parsing
-    working_dir: /workspace
-    command: ["sh", "-c", "echo 'workers/parsing is scaffolded. Replace with parser worker startup.'; tail -f /dev/null"]
-    volumes:
-      - ./workers/parsing:/workspace
     environment:
-      REDIS_URL: redis://redis:6379
-      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongo:27017
-    depends_on:
-      redis:
-        condition: service_healthy
-      mongo:
-        condition: service_healthy
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "8020:8020"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8020/health', timeout=2)\"",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     networks:
       - cvm_net
     profiles:
+      - app
       - workers
 
   worker-scoring:
-    image: python:3.11-slim
+    build:
+      context: ./workers/scoring
     container_name: cvm-worker-scoring
-    working_dir: /workspace
-    command: ["sh", "-c", "echo 'workers/scoring is scaffolded. Replace with scoring worker startup.'; tail -f /dev/null"]
-    volumes:
-      - ./workers/scoring:/workspace
     environment:
       REDIS_URL: redis://redis:6379
-      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongo:27017
-      QDRANT_URL: http://qdrant:6333
+      SCORING_QUEUE_NAME: application_scoring_queue
+      SCORING_DLQ_NAME: application_scoring_queue_dlq
+      SCORING_QUEUE_MAX_RETRIES: "3"
+      SCORING_RETRY_BACKOFF_MODE: linear
+      SCORING_RETRY_BACKOFF_MS: "1000"
+      SCORING_RETRY_BACKOFF_MAX_MS: "10000"
+      SCORING_METRICS_LOG_INTERVAL_MS: "30000"
+      BACKEND_INTERNAL_BASE_URL: http://gateway-backend:3001/api/internal
+      WORKER_INTERNAL_TOKEN: ${WORKER_INTERNAL_TOKEN:-dev-worker-token}
     depends_on:
       redis:
         condition: service_healthy
-      mongo:
-        condition: service_healthy
-      qdrant:
+      gateway-backend:
         condition: service_healthy
     networks:
       - cvm_net
     profiles:
+      - app
       - workers
 
   worker-notification:

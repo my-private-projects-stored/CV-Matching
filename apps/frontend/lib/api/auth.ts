@@ -1,4 +1,5 @@
 import { apiFetch, apiPost } from './client';
+import { buildApiClientError } from './error';
 
 export type UserRole = 'candidate' | 'recruiter' | 'admin';
 
@@ -19,16 +20,10 @@ export interface AuthResponse {
   expires_in: string;
 }
 
-async function readErrorMessage(res: Response, fallback: string): Promise<string> {
-  let detail = '';
-  try {
-    const payload = (await res.json()) as { message?: string; detail?: string };
-    detail = payload?.message || payload?.detail || '';
-  } catch {
-    // Ignore parse failures and use fallback message.
-  }
-
-  return detail || fallback;
+async function throwIfNotOk(res: Response, fallbackMessagePrefix: string): Promise<void> {
+  if (res.ok) return;
+  const text = await res.text().catch(() => '');
+  throw buildApiClientError(res.status, text, fallbackMessagePrefix);
 }
 
 export async function signup(payload: {
@@ -38,17 +33,13 @@ export async function signup(payload: {
   role?: UserRole;
 }): Promise<AuthResponse> {
   const res = await apiPost('/auth/signup', payload);
-  if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Signup failed (status ${res.status})`));
-  }
+  await throwIfNotOk(res, 'Signup failed');
   return (await res.json()) as AuthResponse;
 }
 
 export async function login(payload: { email: string; password: string }): Promise<AuthResponse> {
   const res = await apiPost('/auth/login', payload);
-  if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Login failed (status ${res.status})`));
-  }
+  await throwIfNotOk(res, 'Login failed');
   return (await res.json()) as AuthResponse;
 }
 
@@ -60,26 +51,20 @@ export async function fetchMe(accessToken: string): Promise<{ user: AuthUser }> 
     },
   });
 
-  if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Fetch profile failed (status ${res.status})`));
-  }
+  await throwIfNotOk(res, 'Fetch profile failed');
 
   return (await res.json()) as { user: AuthUser };
 }
 
 export async function forgotPassword(email: string): Promise<{ message: string; reset_token?: string }> {
   const res = await apiPost('/auth/forgot-password', { email });
-  if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Forgot password failed (status ${res.status})`));
-  }
+  await throwIfNotOk(res, 'Forgot password failed');
   return (await res.json()) as { message: string; reset_token?: string };
 }
 
 export async function resetPassword(payload: { token: string; new_password: string }): Promise<{ message: string }> {
   const res = await apiPost('/auth/reset-password', payload);
-  if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Reset password failed (status ${res.status})`));
-  }
+  await throwIfNotOk(res, 'Reset password failed');
   return (await res.json()) as { message: string };
 }
 
@@ -96,9 +81,7 @@ export async function changePassword(
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Change password failed (status ${res.status})`));
-  }
+  await throwIfNotOk(res, 'Change password failed');
 
   return (await res.json()) as { message: string };
 }

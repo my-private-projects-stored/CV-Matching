@@ -22,6 +22,7 @@ import { useFileUpload, formatBytes } from '@/hooks/use-file-upload';
 import { getUploadUrl } from '@/lib/api/client';
 import { useTranslations } from '@/lib/i18n';
 import { retryProcessing } from '@/lib/api/resume';
+import { logError } from '@/lib/utils/logger';
 
 interface ResumeUploadDialogProps {
   trigger?: React.ReactNode;
@@ -179,7 +180,7 @@ export function ResumeUploadDialog({
         message: t('dashboard.retrySuccess'),
       });
     } catch (err) {
-      console.error('Retry processing failed:', err);
+      logError('resume-upload-dialog', 'Retry processing failed', err);
       setUploadFeedback({ type: 'error', message: t('dashboard.retryFailed') });
     } finally {
       setIsRetryingProcessing(false);

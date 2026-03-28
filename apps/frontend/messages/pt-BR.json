@@ -663,6 +663,7 @@
     },
     "errors": {
       "jobDescriptionTooShort": "Descrição da vaga muito curta. Por favor, forneça mais detalhes.",
+      "privacyModeBlocked": "O modo de privacidade atual bloqueia esta ação de IA. Altere o provedor ou o modo de privacidade em Configurações.",
       "apiKeyError": "Erro na chave de API. Verifique sua configuração de LLM em Configurações.",
       "rateLimit": "Limite de requisições atingido. Por favor, aguarde um momento e tente novamente.",
       "failedToGenerate": "Falha ao gerar currículo. Verifique suas configurações e tente novamente.",

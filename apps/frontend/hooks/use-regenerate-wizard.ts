@@ -10,6 +10,7 @@ import type {
 } from '@/lib/api/enrichment';
 import type { RegenerateWizardStep } from '@/components/builder/regenerate-wizard';
 import { useTranslations } from '@/lib/i18n';
+import { mapApiErrorToMessage } from '@/lib/utils/api-error-message';
 
 interface UseRegenerateWizardProps {
   resumeId: string;
@@ -84,6 +85,13 @@ export function useRegenerateWizard({
   // Error state
   const [error, setError] = useState<string | null>(null);
 
+  const toUserErrorMessage = useCallback(
+    (err: unknown, fallback: string) => {
+      return mapApiErrorToMessage(err, t, fallback);
+    },
+    [t]
+  );
+
   // Start the regenerate flow
   const startRegenerate = useCallback(() => {
     setStep('selecting');
@@ -115,14 +123,14 @@ export function useRegenerateWizard({
       setRegenerateErrors(response.errors ?? []);
       setStep('previewing');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to generate content';
+      const errorMessage = toUserErrorMessage(err, 'Failed to generate content');
       setError(errorMessage);
       setStep('instructing'); // Go back to instruction step on error
       onError?.(errorMessage);
     } finally {
       setIsGenerating(false);
     }
-  }, [resumeId, selectedItems, instruction, outputLanguage, onError, t]);
+  }, [resumeId, selectedItems, instruction, outputLanguage, onError, t, toUserErrorMessage]);
 
   // Reset all state
   const reset = useCallback(() => {
@@ -157,13 +165,13 @@ export function useRegenerateWizard({
       await new Promise((resolve) => setTimeout(resolve, 0));
       reset();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to apply changes';
+      const errorMessage = toUserErrorMessage(err, 'Failed to apply changes');
       setError(errorMessage);
       onError?.(errorMessage);
     } finally {
       setIsApplying(false);
     }
-  }, [resumeId, regeneratedItems, onSuccess, onError, reset]);
+  }, [resumeId, regeneratedItems, onSuccess, onError, reset, toUserErrorMessage]);
 
   // Reject changes and go back to instruction step
   const rejectAndRegenerate = useCallback(() => {

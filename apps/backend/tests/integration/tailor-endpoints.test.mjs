@@ -138,6 +138,7 @@ test(
         job_id: jobId,
       }, candidateToken);
       assert.equal(blockedPreview.status, 400);
+      assert.equal(blockedPreview.json?.error_code, "provider_blocked_by_privacy_mode");
       assert.match(blockedPreview.json?.message || blockedPreview.text, /privacy_mode/i);
 
       const llmPutOllama = await requestJson(baseUrl, "PUT", "/config/llm-api-key", {

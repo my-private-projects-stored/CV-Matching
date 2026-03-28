@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Save, Loader2, Copy, Check, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/lib/i18n';
+import { logError } from '@/lib/utils/logger';
 
 export interface OutreachEditorProps {
   /** Outreach message content */
@@ -41,7 +42,7 @@ export function OutreachEditor({
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      logError('outreach-editor', 'Failed to copy outreach content', err);
     }
   };
 

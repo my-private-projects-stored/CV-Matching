@@ -140,6 +140,7 @@ test(
         candidateToken
       );
       assert.equal(analyzeBlocked.status, 400);
+      assert.equal(analyzeBlocked.json?.error_code, "provider_blocked_by_privacy_mode");
       assert.match(analyzeBlocked.json?.message || analyzeBlocked.json?.detail || analyzeBlocked.text, /privacy_mode/i);
 
       const llmPutOllama = await requestJson(baseUrl, "PUT", "/config/llm-api-key", {

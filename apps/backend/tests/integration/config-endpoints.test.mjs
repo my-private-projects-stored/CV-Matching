@@ -145,6 +145,7 @@ test(
         model: "gpt-5-nano-2025-08-07",
       }, recruiterToken);
       assert.equal(llmPutBlockedByPrivacy.status, 400);
+      assert.equal(llmPutBlockedByPrivacy.json?.error_code, "provider_blocked_by_privacy_mode");
 
       const llmTestBlockedByPrivacy = await requestJson(baseUrl, "POST", "/config/llm-test", {
         provider: "openai",

@@ -4,6 +4,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/lib/i18n';
+import { logError } from '@/lib/utils/logger';
 
 interface ErrorBoundaryStrings {
   title: string;
@@ -40,7 +41,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log error to console (could be sent to error tracking service)
-    console.error('Error Boundary caught an error:', error, errorInfo);
+    logError('error-boundary', 'Error Boundary caught an error', error, {
+      componentStack: errorInfo.componentStack,
+    });
     this.setState({ errorInfo });
   }
 

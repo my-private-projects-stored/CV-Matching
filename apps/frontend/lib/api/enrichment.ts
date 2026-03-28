@@ -3,6 +3,7 @@
  */
 
 import { apiFetch, apiPost } from './client';
+import { buildApiClientError } from './error';
 
 // Types matching backend schemas
 
@@ -56,8 +57,8 @@ export async function analyzeResume(resumeId: string): Promise<AnalysisResponse>
   });
 
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to analyze resume (status ${res.status}).`);
+    const text = await res.text().catch(() => '');
+    throw buildApiClientError(res.status, text, 'Failed to analyze resume');
   }
 
   return res.json();
@@ -76,8 +77,8 @@ export async function generateEnhancements(
   });
 
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to generate enhancements (status ${res.status}).`);
+    const text = await res.text().catch(() => '');
+    throw buildApiClientError(res.status, text, 'Failed to generate enhancements');
   }
 
   return res.json();
@@ -95,8 +96,8 @@ export async function applyEnhancements(
   });
 
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to apply enhancements (status ${res.status}).`);
+    const text = await res.text().catch(() => '');
+    throw buildApiClientError(res.status, text, 'Failed to apply enhancements');
   }
 
   return res.json();
@@ -152,8 +153,8 @@ export async function regenerateItems(request: RegenerateRequest): Promise<Regen
   const res = await apiPost('/enrichment/regenerate', request);
 
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to regenerate content (status ${res.status}).`);
+    const text = await res.text().catch(() => '');
+    throw buildApiClientError(res.status, text, 'Failed to regenerate content');
   }
 
   return res.json();
@@ -169,8 +170,8 @@ export async function applyRegeneratedItems(
   const res = await apiPost(`/enrichment/apply-regenerated/${resumeId}`, regeneratedItems);
 
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to apply changes (status ${res.status}).`);
+    const text = await res.text().catch(() => '');
+    throw buildApiClientError(res.status, text, 'Failed to apply changes');
   }
 
   return res.json();

@@ -13,6 +13,7 @@ import { API_BASE } from '@/lib/api/client';
 import { translate } from '@/lib/i18n/server';
 import { resolveLocale } from '@/lib/i18n/locale';
 import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
+import { logError } from '@/lib/utils/logger';
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -95,7 +96,7 @@ async function fetchResumeData(id: string): Promise<ResumeData> {
     } catch (error) {
       // Log error for debugging instead of silently failing
       // Note: Avoid logging content preview to prevent PII exposure
-      console.error('Failed to parse resume JSON:', {
+      logError('print-resume-page', 'Failed to parse resume JSON', undefined, {
         resumeId: id,
         error: error instanceof Error ? error.message : 'Unknown error',
         contentLength: payload.data.raw_resume.content.length,

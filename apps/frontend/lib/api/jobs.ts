@@ -1,4 +1,11 @@
 import { apiDelete, apiFetch, apiPatch } from './client';
+import { buildApiClientError } from './error';
+
+async function assertOk(res: Response, fallbackMessagePrefix: string): Promise<void> {
+  if (res.ok) return;
+  const body = await res.text().catch(() => '');
+  throw buildApiClientError(res.status, body, fallbackMessagePrefix);
+}
 
 export type JobStatus = 'active' | 'closed';
 export type JobCategory = 'IT' | 'Accounting' | 'Marketing';
@@ -85,30 +92,21 @@ export async function fetchJobs(query: JobListQuery = {}): Promise<JobListRespon
   const endpoint = qs ? `/jobs?${qs}` : '/jobs';
 
   const res = await apiFetch(endpoint);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Failed to load jobs (status ${res.status}): ${body}`);
-  }
+  await assertOk(res, 'Failed to load jobs');
 
   return res.json();
 }
 
 export async function fetchJobById(jobId: string): Promise<JobItem> {
   const res = await apiFetch(`/jobs/${encodeURIComponent(jobId)}`);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Failed to load job detail (status ${res.status}): ${body}`);
-  }
+  await assertOk(res, 'Failed to load job detail');
 
   return res.json();
 }
 
 export async function updateJob(jobId: string, payload: UpdateJobPayload): Promise<JobItem> {
   const res = await apiPatch(`/jobs/${encodeURIComponent(jobId)}`, payload);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Failed to update job (status ${res.status}): ${body}`);
-  }
+  await assertOk(res, 'Failed to update job');
 
   return res.json();
 }
@@ -123,8 +121,5 @@ export async function reopenJob(jobId: string): Promise<JobItem> {
 
 export async function deleteJob(jobId: string): Promise<void> {
   const res = await apiDelete(`/jobs/${encodeURIComponent(jobId)}`);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Failed to delete job (status ${res.status}): ${body}`);
-  }
+  await assertOk(res, 'Failed to delete job');
 }

@@ -52,6 +52,7 @@ import { useLanguage } from '@/lib/context/language-context';
 import { useTranslations } from '@/lib/i18n';
 import type { SupportedLanguage } from '@/lib/api/config';
 import type { Locale } from '@/i18n/config';
+import { logError } from '@/lib/utils/logger';
 
 type Status = 'idle' | 'loading' | 'saving' | 'saved' | 'error' | 'testing';
 
@@ -272,7 +273,7 @@ export default function SettingsPage() {
 
         setStatus('idle');
       } catch (err) {
-        console.error('Failed to load settings', err);
+        logError('settings-page', 'Failed to load settings', err);
         if (!cancelled) {
           setError(t('settings.errors.unableToConnectBackend'));
           setStatus('error');
@@ -337,7 +338,7 @@ export default function SettingsPage() {
       setStatus('saved');
       setTimeout(() => setStatus('idle'), 2000);
     } catch (err) {
-      console.error('Failed to save config', err);
+      logError('settings-page', 'Failed to save config', err);
       setError((err as Error).message || t('settings.errors.unableToSaveConfiguration'));
       setStatus('error');
     }
@@ -369,7 +370,7 @@ export default function SettingsPage() {
       setHealthCheck(result);
       setStatus('idle');
     } catch (err) {
-      console.error('Failed to test connection', err);
+      logError('settings-page', 'Failed to test connection', err);
       setHealthCheck({ healthy: false, provider, model, error: (err as Error).message });
       setStatus('idle');
     }
@@ -386,7 +387,7 @@ export default function SettingsPage() {
       setEnableCoverLetter(updated.enable_cover_letter);
       setEnableOutreach(updated.enable_outreach_message);
     } catch (err) {
-      console.error('Failed to update feature config', err);
+      logError('settings-page', 'Failed to update feature config', err);
       // Revert on error
       if (key === 'enable_cover_letter') {
         setEnableCoverLetter(!value);
@@ -408,7 +409,7 @@ export default function SettingsPage() {
         setPromptOptions(updated.prompt_options);
       }
     } catch (err) {
-      console.error('Failed to update prompt config', err);
+      logError('settings-page', 'Failed to update prompt config', err);
       setError((err as Error).message || t('settings.errors.unableToSaveConfiguration'));
     } finally {
       setPromptConfigLoading(false);
@@ -446,7 +447,7 @@ export default function SettingsPage() {
       });
       setShowSuccessDialog(true);
     } catch (err) {
-      console.error('Failed to clear API keys', err);
+      logError('settings-page', 'Failed to clear API keys', err);
       setError(t('settings.errors.failedToClearApiKeys'));
     } finally {
       setIsResetting(false);
@@ -478,7 +479,7 @@ export default function SettingsPage() {
       });
       setShowSuccessDialog(true);
     } catch (err) {
-      console.error('Failed to reset database', err);
+      logError('settings-page', 'Failed to reset database', err);
       setError(t('settings.errors.failedToResetDatabase'));
     } finally {
       setIsResetting(false);

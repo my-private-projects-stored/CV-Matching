@@ -3,6 +3,7 @@ import Job from "../models/Job.js";
 import { ensureQdrantId } from "../utils/qdrant-id.js";
 import { createSimplePdf } from "../utils/simple-pdf.js";
 import { generateEmbedding } from "./embedding.service.js";
+import { parseUploadedResume } from "./resume-parsing.service.js";
 import { deleteResumeVector, upsertResumeVector } from "./vector-index.service.js";
 
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
@@ -380,6 +381,7 @@ export async function createResumeFromUpload(file, candidateId = DEFAULT_CANDIDA
   if (!file) {
     const error = new Error("Missing uploaded file");
     error.statusCode = 400;
+    error.error_code = "missing_uploaded_file";
     throw error;
   }
 
@@ -387,6 +389,7 @@ export async function createResumeFromUpload(file, candidateId = DEFAULT_CANDIDA
   if (!ALLOWED_UPLOAD_TYPES.has(mimeType)) {
     const error = new Error(`Invalid file type: ${mimeType || "unknown"}`);
     error.statusCode = 400;
+    error.error_code = "invalid_upload_file_type";
     throw error;
   }
 
@@ -394,28 +397,40 @@ export async function createResumeFromUpload(file, candidateId = DEFAULT_CANDIDA
   if (size <= 0 || !file.buffer) {
     const error = new Error("Empty file");
     error.statusCode = 400;
+    error.error_code = "empty_uploaded_file";
     throw error;
   }
 
   if (size > MAX_UPLOAD_BYTES) {
     const error = new Error("File too large. Maximum size is 4MB");
     error.statusCode = 413;
+    error.error_code = "uploaded_file_too_large";
     throw error;
   }
 
-  const rawText = toUploadText(file.buffer);
+  let parsingResult = null;
+  try {
+    parsingResult = await parseUploadedResume(file);
+  } catch (_error) {
+    parsingResult = null;
+  }
+
+  const rawText = String(parsingResult?.rawText || toUploadText(file.buffer)).trim();
   if (!rawText) {
     const error = new Error("Unable to extract textual content from file");
     error.statusCode = 422;
+    error.error_code = "unable_to_extract_textual_content";
     throw error;
   }
+
+  const parsedData = isStructuredData(parsingResult?.parsedData) ? parsingResult.parsedData : null;
 
   const hasMaster = await Resume.exists({ isMaster: true });
   const created = await createResume({
     candidateId,
     fileUrl: `upload://${Date.now()}-${file.originalname || "resume"}`,
     rawText,
-    parsedData: null,
+    parsedData,
     filename: file.originalname || null,
     sourceFile: {
       filename: file.originalname || null,

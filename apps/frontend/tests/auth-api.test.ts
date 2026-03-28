@@ -63,6 +63,17 @@ describe('auth API client', () => {
     );
   });
 
+  it('login keeps backend error_code for downstream handling', async () => {
+    mockedApiPost.mockResolvedValueOnce(
+      jsonResponse({ message: 'Account locked', error_code: 'account_locked' }, 423)
+    );
+
+    await expect(login({ email: 'candidate@example.com', password: 'bad' })).rejects.toMatchObject({
+      errorCode: 'account_locked',
+      statusCode: 423,
+    });
+  });
+
   it('fetchMe sends bearer token and returns user', async () => {
     mockedApiFetch.mockResolvedValueOnce(
       jsonResponse({ user: { id: 'u-1', email: 'candidate@example.com', role: 'candidate', full_name: 'Candidate', avatar: null } })

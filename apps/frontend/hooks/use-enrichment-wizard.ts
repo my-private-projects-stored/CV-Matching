@@ -4,6 +4,8 @@
  */
 
 import { useReducer, useCallback } from 'react';
+import { useTranslations } from '@/lib/i18n';
+import { mapApiErrorToMessage } from '@/lib/utils/api-error-message';
 import {
   analyzeResume,
   generateEnhancements,
@@ -166,7 +168,15 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 // Hook
 export function useEnrichmentWizard(resumeId: string) {
+  const { t } = useTranslations();
   const [state, dispatch] = useReducer(wizardReducer, initialState);
+
+  const toUserErrorMessage = useCallback(
+    (error: unknown, fallback: string) => {
+      return mapApiErrorToMessage(error, t, fallback);
+    },
+    [t]
+  );
 
   // Start analysis
   const startAnalysis = useCallback(async () => {
@@ -193,10 +203,10 @@ export function useEnrichmentWizard(resumeId: string) {
     } catch (error) {
       dispatch({
         type: 'SET_ERROR',
-        error: error instanceof Error ? error.message : 'Failed to analyze resume',
+        error: toUserErrorMessage(error, 'Failed to analyze resume'),
       });
     }
-  }, [resumeId]);
+  }, [resumeId, toUserErrorMessage]);
 
   // Set answer for current question
   const setAnswer = useCallback((questionId: string, answer: string) => {
@@ -238,10 +248,10 @@ export function useEnrichmentWizard(resumeId: string) {
     } catch (error) {
       dispatch({
         type: 'SET_ERROR',
-        error: error instanceof Error ? error.message : 'Failed to generate enhancements',
+        error: toUserErrorMessage(error, 'Failed to generate enhancements'),
       });
     }
-  }, [resumeId, state.answers]);
+  }, [resumeId, state.answers, toUserErrorMessage]);
 
   // Apply enhancements to resume
   const applyChanges = useCallback(async () => {
@@ -253,10 +263,10 @@ export function useEnrichmentWizard(resumeId: string) {
     } catch (error) {
       dispatch({
         type: 'SET_ERROR',
-        error: error instanceof Error ? error.message : 'Failed to apply enhancements',
+        error: toUserErrorMessage(error, 'Failed to apply enhancements'),
       });
     }
-  }, [resumeId, state.preview]);
+  }, [resumeId, state.preview, toUserErrorMessage]);
 
   // Reset wizard
   const reset = useCallback(() => {

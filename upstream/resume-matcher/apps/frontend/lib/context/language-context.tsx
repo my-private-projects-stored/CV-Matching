@@ -7,6 +7,7 @@ import {
   type SupportedLanguage,
 } from '@/lib/api/config';
 import { locales, defaultLocale, localeNames, type Locale } from '@/i18n/config';
+import { logError } from '@/lib/utils/logger';
 
 const CONTENT_STORAGE_KEY = 'resume_matcher_content_language';
 const UI_STORAGE_KEY = 'resume_matcher_ui_language';
@@ -51,7 +52,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem(CONTENT_STORAGE_KEY, config.content_language);
         }
       } catch (error) {
-        console.error('Failed to load language config:', error);
+        logError('language-context', 'Failed to load language config', error);
         // Keep using cached/default values
       } finally {
         setIsLoading(false);
@@ -64,7 +65,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const setContentLanguage = useCallback(
     async (lang: SupportedLanguage) => {
       if (!locales.includes(lang as Locale)) {
-        console.error(`Unsupported language: ${lang}`);
+        logError('language-context', `Unsupported language: ${lang}`);
         return;
       }
 
@@ -77,7 +78,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         // Persist to backend
         await updateLanguageConfig({ content_language: lang });
       } catch (error) {
-        console.error('Failed to update content language:', error);
+        logError('language-context', 'Failed to update content language', error);
         // Revert on error
         setContentLanguageState(previousLang);
         localStorage.setItem(CONTENT_STORAGE_KEY, previousLang);
@@ -88,7 +89,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const setUiLanguage = useCallback((lang: Locale) => {
     if (!locales.includes(lang)) {
-      console.error(`Unsupported UI language: ${lang}`);
+      logError('language-context', `Unsupported UI language: ${lang}`);
       return;
     }
     setUiLanguageState(lang);

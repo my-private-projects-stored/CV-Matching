@@ -2,6 +2,7 @@ import { ImprovedResult } from '@/components/common/resume_previewer_context';
 import type { ResumeData } from '@/components/dashboard/resume-component';
 import { type TemplateSettings } from '@/lib/types/template-settings';
 import { type Locale } from '@/i18n/config';
+import { logError } from '@/lib/utils/logger';
 import { API_BASE, apiPost, apiPatch, apiDelete, apiFetch } from './client';
 
 // Matches backend schemas/models.py ResumeData
@@ -116,20 +117,27 @@ async function postImprove(
   try {
     response = await apiPost(endpoint, payload, 240_000);
   } catch (networkError) {
-    console.error(`Network error during ${endpoint}:`, networkError);
+    logError('resume-api', `Network error during ${endpoint}`, networkError);
     throw networkError;
   }
 
   const text = await response.text();
   if (!response.ok) {
-    console.error('Improve failed response body:', text);
+    logError('resume-api', 'Improve failed response body', undefined, {
+      endpoint,
+      status: response.status,
+      body: text,
+    });
     throw new Error(`Improve failed with status ${response.status}: ${text}`);
   }
 
   try {
     return JSON.parse(text) as ImprovedResult;
   } catch (parseError) {
-    console.error('Failed to parse improve response:', parseError, 'Raw response:', text);
+    logError('resume-api', 'Failed to parse improve response', parseError, {
+      endpoint,
+      body: text,
+    });
     throw parseError;
   }
 }

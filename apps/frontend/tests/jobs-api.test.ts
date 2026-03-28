@@ -92,6 +92,17 @@ describe('jobs API client', () => {
   it('deleteJob throws backend status details on failure', async () => {
     mockedApiDelete.mockResolvedValueOnce(new Response('cannot delete', { status: 409 }));
 
-    await expect(deleteJob('job-1')).rejects.toThrow('Failed to delete job (status 409): cannot delete');
+    await expect(deleteJob('job-1')).rejects.toThrow('Failed to delete job (status 409).');
+  });
+
+  it('deleteJob preserves backend error_code for downstream handling', async () => {
+    mockedApiDelete.mockResolvedValueOnce(
+      jsonResponse({ message: 'Job has active applications', error_code: 'job_has_active_applications' }, 409)
+    );
+
+    await expect(deleteJob('job-1')).rejects.toMatchObject({
+      errorCode: 'job_has_active_applications',
+      statusCode: 409,
+    });
   });
 });

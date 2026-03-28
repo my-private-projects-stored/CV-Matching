@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { fetchLlmApiKey, updateLlmApiKey } from '@/lib/api/config';
 import { ChevronDown } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';
+import { logError } from '@/lib/utils/logger';
 
 type Status = 'idle' | 'loading' | 'saving' | 'saved' | 'error';
 
@@ -27,7 +28,7 @@ export default function ApiKeyMenu(): React.ReactElement {
         setDraft(value);
         setStatus('idle');
       } catch (err) {
-        console.error('Failed to load LLM API key', err);
+        logError('api-key-menu', 'Failed to load LLM API key', err);
         if (!cancelled) {
           setError(t('settings.apiKeyMenu.loadError'));
           setStatus('error');
@@ -68,7 +69,7 @@ export default function ApiKeyMenu(): React.ReactElement {
       setStatus('saved');
       setTimeout(() => setStatus('idle'), 1800);
     } catch (err) {
-      console.error('Failed to update LLM API key', err);
+      logError('api-key-menu', 'Failed to update LLM API key', err);
       setError((err as Error).message || t('settings.apiKeyMenu.updateError'));
       setStatus('error');
     }

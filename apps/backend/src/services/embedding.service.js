@@ -1,4 +1,6 @@
-const EMBEDDING_SERVICE_URL = process.env.EMBEDDING_SERVICE_URL || "http://localhost:8010";
+function getEmbeddingServiceUrl() {
+  return process.env.EMBEDDING_SERVICE_URL || "http://localhost:8010";
+}
 
 export async function generateEmbedding(text) {
   const safeText = String(text || "").trim();
@@ -6,7 +8,7 @@ export async function generateEmbedding(text) {
     throw new Error("Text is required to generate embedding");
   }
 
-  const response = await fetch(`${EMBEDDING_SERVICE_URL}/embed`, {
+  const response = await fetch(`${getEmbeddingServiceUrl()}/embed`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -33,7 +35,7 @@ export async function generateEmbeddings(texts = []) {
     return [];
   }
 
-  const response = await fetch(`${EMBEDDING_SERVICE_URL}/embed/batch`, {
+  const response = await fetch(`${getEmbeddingServiceUrl()}/embed/batch`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -9,6 +9,7 @@ import {
   type DragEvent,
   type InputHTMLAttributes,
 } from 'react';
+import { logError } from '@/lib/utils/logger';
 
 export type FileMetadata = {
   name: string;
@@ -173,7 +174,7 @@ export const useFileUpload = (
       // Ensure fileToUpload.file is a File instance for upload
       if (!(fileToUpload.file instanceof File)) {
         const errorMsg = `Cannot upload "${(fileToUpload.file as FileMetadata).name}"; it's not a valid file object for direct upload.`;
-        console.error(errorMsg, fileToUpload);
+        logError('use-file-upload', errorMsg, fileToUpload);
         // Update this specific file's metadata with an error
         const updatedFileWithMetaError: FileWithPreview = {
           ...fileToUpload,

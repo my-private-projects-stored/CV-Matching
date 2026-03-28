@@ -1,0 +1,12 @@
+{
+  "name": "cv-matching-scoring-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "ioredis": "^5.7.0"
+  }
+}

@@ -2,6 +2,7 @@ import Application from "../models/Application.js";
 import Job from "../models/Job.js";
 import Resume from "../models/Resume.js";
 import User from "../models/User.js";
+import { enqueueApplicationScoring } from "./application-queue.service.js";
 
 const APPLICATION_STATUSES = new Set(["new", "screening", "interview", "offer", "hired", "rejected"]);
 const APPLICATION_STATUS_ORDER = ["new", "screening", "interview", "offer", "hired", "rejected"];
@@ -334,6 +335,12 @@ export async function createApplication(payload = {}) {
         },
       ],
     });
+
+    try {
+      await enqueueApplicationScoring(created._id);
+    } catch (_error) {
+      // Keep application creation successful even if queue is temporarily unavailable.
+    }
 
     return {
       data: {

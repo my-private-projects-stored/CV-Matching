@@ -1,4 +1,11 @@
 import { apiFetch, apiPatch, apiPost } from './client';
+import { buildApiClientError } from './error';
+
+async function assertOk(res: Response, fallbackMessagePrefix: string): Promise<void> {
+  if (res.ok) return;
+  const body = await res.text().catch(() => '');
+  throw buildApiClientError(res.status, body, fallbackMessagePrefix);
+}
 
 export type ApplicationStatus = 'new' | 'screening' | 'interview' | 'offer' | 'hired' | 'rejected';
 export type ApplicationAiStatus = 'pending' | 'parsing' | 'scoring' | 'completed' | 'failed';
@@ -182,10 +189,7 @@ export async function createApplication(payload: {
   resume_id: string;
 }): Promise<{ request_id: string; data: { application_id: string } }> {
   const res = await apiPost('/applications', payload);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Failed to create application (status ${res.status}): ${body}`);
-  }
+  await assertOk(res, 'Failed to create application');
 
   return res.json();
 }
@@ -210,10 +214,7 @@ export async function fetchRankedApplications(params: {
   if (params.changedBefore) query.set('changed_before', params.changedBefore);
 
   const res = await apiFetch(`/applications/ranked?${query.toString()}`);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Failed to load ranked applications (status ${res.status}): ${body}`);
-  }
+  await assertOk(res, 'Failed to load ranked applications');
 
   return res.json();
 }
@@ -230,10 +231,7 @@ export async function fetchCandidateApplicationHistory(params: {
   if (params.status) query.set('status', params.status);
 
   const res = await apiFetch(`/applications/history?${query.toString()}`);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Failed to load application history (status ${res.status}): ${body}`);
-  }
+  await assertOk(res, 'Failed to load application history');
 
   return res.json();
 }
@@ -249,10 +247,7 @@ export async function updateApplicationStatus(
   }
 
   const res = await apiPatch(`/applications/${encodeURIComponent(applicationId)}/status`, payload);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Failed to update application status (status ${res.status}): ${body}`);
-  }
+  await assertOk(res, 'Failed to update application status');
 
   return res.json();
 }
@@ -278,10 +273,7 @@ export async function bulkUpdateApplicationStatus(payload: {
     changed_by: payload.changedBy?.trim() || undefined,
   });
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Failed to bulk update application status (status ${res.status}): ${body}`);
-  }
+  await assertOk(res, 'Failed to bulk update application status');
 
   return res.json();
 }
@@ -290,10 +282,7 @@ export async function fetchApplicationFeedback(
   applicationId: string
 ): Promise<ApplicationFeedbackResponse> {
   const res = await apiFetch(`/applications/${encodeURIComponent(applicationId)}/feedback`);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Failed to load application feedback (status ${res.status}): ${body}`);
-  }
+  await assertOk(res, 'Failed to load application feedback');
 
   return res.json();
 }
@@ -301,10 +290,7 @@ export async function fetchApplicationFeedback(
 export async function fetchApplicationStatusSummary(jobId: string): Promise<ApplicationSummaryResponse> {
   const query = new URLSearchParams({ job_id: jobId.trim() });
   const res = await apiFetch(`/applications/summary?${query.toString()}`);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Failed to load application summary (status ${res.status}): ${body}`);
-  }
+  await assertOk(res, 'Failed to load application summary');
 
   return res.json();
 }
@@ -333,10 +319,7 @@ export async function fetchRecentStatusChanges(params: {
   }
 
   const res = await apiFetch(`/applications/status-changes?${query.toString()}`);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Failed to load recent status changes (status ${res.status}): ${body}`);
-  }
+  await assertOk(res, 'Failed to load recent status changes');
 
   return res.json();
 }
@@ -361,10 +344,7 @@ export async function exportRecentStatusChangesCsv(params: {
   }
 
   const res = await apiFetch(`/applications/status-changes/export?${query.toString()}`);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Failed to export recent status changes CSV (status ${res.status}): ${body}`);
-  }
+  await assertOk(res, 'Failed to export recent status changes CSV');
 
   return res.blob();
 }
@@ -373,10 +353,7 @@ export async function fetchApplicationStatusHistory(
   applicationId: string
 ): Promise<ApplicationStatusHistoryResponse> {
   const res = await apiFetch(`/applications/${encodeURIComponent(applicationId)}/status-history`);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Failed to load application status history (status ${res.status}): ${body}`);
-  }
+  await assertOk(res, 'Failed to load application status history');
 
   return res.json();
 }

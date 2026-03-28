@@ -50,6 +50,17 @@ describe('applications API client', () => {
     });
   });
 
+  it('createApplication preserves backend error_code on failure', async () => {
+    mockedApiPost.mockResolvedValueOnce(
+      jsonResponse({ message: 'Duplicate application', error_code: 'application_already_exists' }, 409)
+    );
+
+    await expect(createApplication({ job_id: 'job-1', resume_id: 'resume-1' })).rejects.toMatchObject({
+      errorCode: 'application_already_exists',
+      statusCode: 409,
+    });
+  });
+
   it('fetches ranked applications with query string', async () => {
     mockedApiFetch.mockResolvedValueOnce(
       jsonResponse({

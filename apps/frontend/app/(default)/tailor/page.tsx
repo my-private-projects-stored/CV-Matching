@@ -21,6 +21,8 @@ import { useTranslations } from '@/lib/i18n';
 import { DiffPreviewModal } from '@/components/tailor/diff-preview-modal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/lib/context/auth-context';
+import { mapApiErrorToMessage } from '@/lib/utils/api-error-message';
+import { logError } from '@/lib/utils/logger';
 
 export default function TailorPage() {
   const { t } = useTranslations();
@@ -81,7 +83,7 @@ export default function TailorPage() {
           }
         }
       } catch (err) {
-        console.error('Failed to load prompt config', err);
+        logError('tailor-page', 'Failed to load prompt config', err);
       } finally {
         if (!cancelled) {
           setPromptLoading(false);
@@ -176,7 +178,13 @@ export default function TailorPage() {
       setPendingResult(result);
       setShowDiffModal(true);
     } catch (err) {
-      console.error(err);
+      logError('tailor-page', 'Failed to preview resume improvement', err);
+      const mappedMessage = mapApiErrorToMessage(err, t, '');
+      if (mappedMessage === t('tailor.errors.privacyModeBlocked')) {
+        setError(mappedMessage);
+        return;
+      }
+
       // Check for common error patterns
       const errorMessage = err instanceof Error ? err.message : '';
       if (
@@ -229,7 +237,7 @@ export default function TailorPage() {
       setShowDiffModal(false);
       setPendingResult(null);
     } catch (err) {
-      console.error(err);
+      logError('tailor-page', 'Failed to confirm tailored resume', err);
       const errorMessage = t('tailor.errors.failedToConfirm');
       setError(errorMessage);
       setDiffConfirmError(errorMessage);
@@ -269,7 +277,7 @@ export default function TailorPage() {
       await confirmAndNavigate(missingDiffResult);
       handleCloseMissingDiffDialog();
     } catch (err) {
-      console.error(err);
+      logError('tailor-page', 'Failed to confirm tailored resume without diff', err);
       const errorMessage = t('tailor.errors.failedToConfirm');
       setError(errorMessage);
       setMissingDiffError(errorMessage);

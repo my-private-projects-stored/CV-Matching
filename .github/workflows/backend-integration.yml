@@ -13,6 +13,16 @@ on:
       - "workers/embedding-sbert/**"
       - "docker-compose.yml"
       - ".github/workflows/backend-integration.yml"
+  workflow_dispatch:
+    inputs:
+      runner_class:
+        description: "Runner class preset for queue-load thresholds"
+        required: false
+        default: "github-hosted"
+        type: choice
+        options:
+          - github-hosted
+          - self-hosted
 
 jobs:
   integration:
@@ -35,6 +45,51 @@ jobs:
 
       - name: Ensure jq is available
         run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Resolve runner-class performance preset
+        shell: bash
+        env:
+          RUNNER_CLASS: ${{ github.event.inputs.runner_class || 'github-hosted' }}
+        run: |
+          set -euo pipefail
+          runner_class=$(echo "${RUNNER_CLASS:-github-hosted}" | tr '[:upper:]' '[:lower:]')
+          echo "RUNNER_CLASS_RESOLVED=$runner_class" >> "$GITHUB_ENV"
+
+          case "$runner_class" in
+            self-hosted)
+              echo "SCORING_SYNTHETIC_MAX_DROP_PCT=35" >> "$GITHUB_ENV"
+              echo 'SCORING_SYNTHETIC_BASELINE_TPS_JSON={"50":140,"200":130,"500":105}' >> "$GITHUB_ENV"
+              echo "SCORING_SYNTHETIC_BASELINE_EXCEPTION_MODE=enforce" >> "$GITHUB_ENV"
+              echo "SCORING_WARN_STREAK_FAIL=true" >> "$GITHUB_ENV"
+              ;;
+            github-hosted|*)
+              echo "SCORING_SYNTHETIC_MAX_DROP_PCT=45" >> "$GITHUB_ENV"
+              echo 'SCORING_SYNTHETIC_BASELINE_TPS_JSON={"50":120,"200":110,"500":90}' >> "$GITHUB_ENV"
+              echo "SCORING_SYNTHETIC_BASELINE_EXCEPTION_MODE=warn" >> "$GITHUB_ENV"
+              echo "SCORING_SYNTHETIC_BASELINE_EXCEPTION_REASON=github-hosted-runner-variance" >> "$GITHUB_ENV"
+              echo "SCORING_WARN_STREAK_FAIL=false" >> "$GITHUB_ENV"
+              ;;
+          esac
+
+          baseline_file="scripts/queue-load-baseline-current.json"
+          if [[ -f "$baseline_file" ]]; then
+            baseline_json=$(jq -c --arg cls "$runner_class" '.[$cls] // empty' "$baseline_file")
+            if [[ -n "$baseline_json" && "$baseline_json" != "null" ]]; then
+              echo "SCORING_SYNTHETIC_BASELINE_TPS_JSON=$baseline_json" >> "$GITHUB_ENV"
+            fi
+          fi
+
+          echo "SCORING_SYNTHETIC_LOAD_TIERS=50,200,500" >> "$GITHUB_ENV"
+          echo "SCORING_TREND_HISTORY_MAX_LINES=3000" >> "$GITHUB_ENV"
+
+      - name: Restore queue-load trend history cache
+        uses: actions/cache/restore@v4
+        with:
+          path: scripts/queue-load-trend-history-*.jsonl
+          key: queue-load-trend-history-${{ github.ref_name }}
+          restore-keys: |
+            queue-load-trend-history-${{ github.event.repository.default_branch }}
+            queue-load-trend-history-
 
       - name: Start infra and embedding worker
         run: docker compose --profile app up -d mongo redis qdrant worker-embedding-sbert
@@ -68,6 +123,426 @@ jobs:
         run: |
           Set-Location "$env:GITHUB_WORKSPACE"
           ./scripts/run-backend-integration.ps1 2>&1 | Out-File -FilePath ./scripts/last-backend-integration.txt -Encoding utf8
+
+      - name: Run parsing-focused integration group
+        working-directory: apps/backend
+        shell: bash
+        env:
+          RUN_INTEGRATION_TESTS: "1"
+          MONGO_URI: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
+          MONGO_URI_TEST: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
+          REDIS_URL: redis://127.0.0.1:6379
+          QDRANT_URL: http://127.0.0.1:6333
+          EMBEDDING_SERVICE_URL: http://127.0.0.1:8010
+        run: npm run test:integration:parsing
+
+      - name: Run worker-focused integration group
+        working-directory: apps/backend
+        shell: bash
+        env:
+          RUN_INTEGRATION_TESTS: "1"
+          MONGO_URI: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
+          MONGO_URI_TEST: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
+          REDIS_URL: redis://127.0.0.1:6379
+          WORKER_INTERNAL_TOKEN: ci-worker-token
+          ALLOW_INTERNAL_MOCK_SCORING: "1"
+          SCORING_SYNTHETIC_LOAD_TIERS: ${{ env.SCORING_SYNTHETIC_LOAD_TIERS }}
+          SCORING_SYNTHETIC_MAX_DROP_PCT: ${{ env.SCORING_SYNTHETIC_MAX_DROP_PCT }}
+          SCORING_SYNTHETIC_BASELINE_TPS_JSON: ${{ env.SCORING_SYNTHETIC_BASELINE_TPS_JSON }}
+          SCORING_SYNTHETIC_BASELINE_EXCEPTION_MODE: ${{ env.SCORING_SYNTHETIC_BASELINE_EXCEPTION_MODE }}
+          SCORING_SYNTHETIC_BASELINE_EXCEPTION_REASON: ${{ env.SCORING_SYNTHETIC_BASELINE_EXCEPTION_REASON }}
+        run: |
+          npm run test:integration:worker
+          npm run test:integration:worker-metrics
+          npm run test:integration:queue
+          npm run test:integration:queue-variants
+          npm run test:integration:dlq
+
+      - name: Run queue-load with trend capture
+        working-directory: apps/backend
+        shell: bash
+        env:
+          RUN_INTEGRATION_TESTS: "1"
+          MONGO_URI: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
+          MONGO_URI_TEST: mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin
+          REDIS_URL: redis://127.0.0.1:6379
+          SCORING_SYNTHETIC_LOAD_TIERS: ${{ env.SCORING_SYNTHETIC_LOAD_TIERS }}
+          SCORING_SYNTHETIC_MAX_DROP_PCT: ${{ env.SCORING_SYNTHETIC_MAX_DROP_PCT }}
+          SCORING_SYNTHETIC_BASELINE_TPS_JSON: ${{ env.SCORING_SYNTHETIC_BASELINE_TPS_JSON }}
+          SCORING_SYNTHETIC_BASELINE_EXCEPTION_MODE: ${{ env.SCORING_SYNTHETIC_BASELINE_EXCEPTION_MODE }}
+          SCORING_SYNTHETIC_BASELINE_EXCEPTION_REASON: ${{ env.SCORING_SYNTHETIC_BASELINE_EXCEPTION_REASON }}
+        run: |
+          set -euo pipefail
+          npm run test:integration:queue-load 2>&1 | tee ../../scripts/queue-load-trend.log
+
+      - name: Append queue-load snapshots to trend JSONL
+        shell: pwsh
+        run: |
+          Set-Location "$env:GITHUB_WORKSPACE"
+          ./scripts/queue-load-snapshot-append.ps1 -InputLogFile ./scripts/queue-load-trend.log -OutputJsonl ./scripts/queue-load-trend.jsonl
+
+      - name: Merge queue-load trend into history
+        shell: pwsh
+        run: |
+          Set-Location "$env:GITHUB_WORKSPACE"
+
+          $runnerClass = if ([string]::IsNullOrWhiteSpace($env:RUNNER_CLASS_RESOLVED)) { "github-hosted" } else { $env:RUNNER_CLASS_RESOLVED }
+          $historyPath = "./scripts/queue-load-trend-history-$runnerClass.jsonl"
+          $latestPath = "./scripts/queue-load-trend.jsonl"
+
+          if (-not (Test-Path $historyPath)) {
+            New-Item -ItemType File -Path $historyPath -Force | Out-Null
+          }
+
+          if (Test-Path $latestPath) {
+            Get-Content -Path $latestPath | Add-Content -Path $historyPath
+            Write-Host "Merged latest queue-load trend into history cache file." -ForegroundColor Cyan
+          } else {
+            Write-Host "Latest queue-load trend file not found; skipping history merge." -ForegroundColor Yellow
+          }
+
+      - name: Normalize queue-load history (dedupe + retention)
+        shell: pwsh
+        run: |
+          Set-Location "$env:GITHUB_WORKSPACE"
+
+          $runnerClass = if ([string]::IsNullOrWhiteSpace($env:RUNNER_CLASS_RESOLVED)) { "github-hosted" } else { $env:RUNNER_CLASS_RESOLVED }
+          $historyPath = "./scripts/queue-load-trend-history-$runnerClass.jsonl"
+          $maxLines = [int]($env:SCORING_TREND_HISTORY_MAX_LINES)
+          if ($maxLines -le 0) {
+            $maxLines = 3000
+          }
+
+          if (-not (Test-Path $historyPath)) {
+            Write-Host "History file not found; skipping normalization." -ForegroundColor Yellow
+            exit 0
+          }
+
+          $seen = New-Object System.Collections.Generic.HashSet[string]
+          $deduped = New-Object System.Collections.Generic.List[string]
+
+          Get-Content -Path $historyPath -Encoding utf8 | ForEach-Object {
+            $line = $_.Trim()
+            if ([string]::IsNullOrWhiteSpace($line)) {
+              return
+            }
+
+            try {
+              $null = $line | ConvertFrom-Json -ErrorAction Stop
+            } catch {
+              return
+            }
+
+            if ($seen.Add($line)) {
+              $deduped.Add($line)
+            }
+          }
+
+          if ($deduped.Count -gt $maxLines) {
+            $start = $deduped.Count - $maxLines
+            $deduped = [System.Collections.Generic.List[string]]($deduped.GetRange($start, $maxLines))
+          }
+
+          $deduped | Out-File -FilePath $historyPath -Encoding utf8
+          Write-Host "Normalized trend history lines: $($deduped.Count) (max=$maxLines)" -ForegroundColor Cyan
+
+      - name: Save queue-load trend history cache
+        uses: actions/cache/save@v4
+        with:
+          path: scripts/queue-load-trend-history-*.jsonl
+          key: queue-load-trend-history-${{ github.ref_name }}
+
+      - name: Suggest queue-load throughput baseline
+        shell: pwsh
+        run: |
+          Set-Location "$env:GITHUB_WORKSPACE"
+          $runnerClass = if ([string]::IsNullOrWhiteSpace($env:RUNNER_CLASS_RESOLVED)) { "github-hosted" } else { $env:RUNNER_CLASS_RESOLVED }
+          ./scripts/queue-load-baseline-suggest.ps1 -InputJsonl "./scripts/queue-load-trend-history-$runnerClass.jsonl" -MinSamplesPerTier 5 -OutputJson ./scripts/queue-load-baseline-suggestion.json
+
+      - name: Watch queue-load warn regression streak
+        shell: pwsh
+        run: |
+          Set-Location "$env:GITHUB_WORKSPACE"
+          $failOnStreak = $env:SCORING_WARN_STREAK_FAIL
+          $workflowRunUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $runnerClass = if ([string]::IsNullOrWhiteSpace($env:RUNNER_CLASS_RESOLVED)) { "github-hosted" } else { $env:RUNNER_CLASS_RESOLVED }
+          $commonArgs = @(
+            "-TrendJsonl", "./scripts/queue-load-trend-history-$runnerClass.jsonl",
+            "-WarnStreakThreshold", "3",
+            "-WebhookUrl", "${{ secrets.QUEUE_LOAD_WARN_WEBHOOK_URL }}",
+            "-CommitSha", "${{ github.sha }}",
+            "-WorkflowRunUrl", $workflowRunUrl,
+            "-Repository", "${{ github.repository }}",
+            "-RefName", "${{ github.ref_name }}",
+            "-RunnerClass", $runnerClass
+          )
+
+          if (-not [string]::IsNullOrWhiteSpace("${{ secrets.QUEUE_LOAD_WARN_WEBHOOK_AUTH_HEADER }}") -and -not [string]::IsNullOrWhiteSpace("${{ secrets.QUEUE_LOAD_WARN_WEBHOOK_AUTH_TOKEN }}")) {
+            $commonArgs += @(
+              "-WebhookAuthHeaderName", "${{ secrets.QUEUE_LOAD_WARN_WEBHOOK_AUTH_HEADER }}",
+              "-WebhookAuthToken", "${{ secrets.QUEUE_LOAD_WARN_WEBHOOK_AUTH_TOKEN }}"
+            )
+          }
+
+          if (-not [string]::IsNullOrWhiteSpace("${{ secrets.QUEUE_LOAD_WARN_WEBHOOK_SIGNING_SECRET }}")) {
+            $commonArgs += @(
+              "-WebhookSigningSecret", "${{ secrets.QUEUE_LOAD_WARN_WEBHOOK_SIGNING_SECRET }}"
+            )
+          }
+
+          if ($failOnStreak -eq "true") {
+            ./scripts/queue-load-regression-watch.ps1 @commonArgs -FailOnStreak
+          } else {
+            ./scripts/queue-load-regression-watch.ps1 @commonArgs
+          }
+
+      - name: Generate replay-audit sample (JSONL)
+        shell: pwsh
+        run: |
+          Set-Location "$env:GITHUB_WORKSPACE"
+          $workflowRunUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $runnerClass = if ([string]::IsNullOrWhiteSpace($env:RUNNER_CLASS_RESOLVED)) { "github-hosted" } else { $env:RUNNER_CLASS_RESOLVED }
+
+          $replayArgs = @(
+            "-Count", "1",
+            "-DryRun",
+            "-Actor", "ci-bot",
+            "-AuditFile", "./scripts/replay-audit-ci.jsonl",
+            "-CommitSha", "${{ github.sha }}",
+            "-WorkflowRunUrl", $workflowRunUrl,
+            "-Repository", "${{ github.repository }}",
+            "-RefName", "${{ github.ref_name }}",
+            "-RunnerClass", $runnerClass
+          )
+
+          if (-not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_URL }}")) {
+            $replayArgs += @("-WebhookUrl", "${{ secrets.REPLAY_AUDIT_WEBHOOK_URL }}")
+          }
+
+          if (-not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_AUTH_HEADER }}") -and -not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_AUTH_TOKEN }}")) {
+            $replayArgs += @(
+              "-WebhookAuthHeaderName", "${{ secrets.REPLAY_AUDIT_WEBHOOK_AUTH_HEADER }}",
+              "-WebhookAuthToken", "${{ secrets.REPLAY_AUDIT_WEBHOOK_AUTH_TOKEN }}"
+            )
+          }
+
+          if (-not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_SIGNING_SECRET }}")) {
+            $replayArgs += @(
+              "-WebhookSigningSecret", "${{ secrets.REPLAY_AUDIT_WEBHOOK_SIGNING_SECRET }}"
+            )
+          }
+
+          if (-not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_MIN_INTERVAL_SECONDS }}")) {
+            $replayArgs += @(
+              "-WebhookMinIntervalSeconds", "${{ secrets.REPLAY_AUDIT_WEBHOOK_MIN_INTERVAL_SECONDS }}"
+            )
+          }
+
+          if (-not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_MAX_ATTEMPTS }}")) {
+            $replayArgs += @(
+              "-WebhookMaxAttempts", "${{ secrets.REPLAY_AUDIT_WEBHOOK_MAX_ATTEMPTS }}"
+            )
+          }
+
+          if (-not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_RETRY_BACKOFF_MS }}")) {
+            $replayArgs += @(
+              "-WebhookRetryBackoffMs", "${{ secrets.REPLAY_AUDIT_WEBHOOK_RETRY_BACKOFF_MS }}"
+            )
+          }
+
+          if (-not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_RETRY_JITTER_MS }}")) {
+            $replayArgs += @(
+              "-WebhookRetryJitterMs", "${{ secrets.REPLAY_AUDIT_WEBHOOK_RETRY_JITTER_MS }}"
+            )
+          }
+
+          if (-not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_TIMEOUT_SECONDS }}")) {
+            $replayArgs += @(
+              "-WebhookTimeoutSeconds", "${{ secrets.REPLAY_AUDIT_WEBHOOK_TIMEOUT_SECONDS }}"
+            )
+          }
+
+          if (-not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_IDEMPOTENCY_HEADER }}")) {
+            $replayArgs += @(
+              "-WebhookIdempotencyHeader", "${{ secrets.REPLAY_AUDIT_WEBHOOK_IDEMPOTENCY_HEADER }}"
+            )
+          }
+
+          if (-not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_IDEMPOTENCY_KEY }}")) {
+            $replayArgs += @(
+              "-WebhookIdempotencyKey", "${{ secrets.REPLAY_AUDIT_WEBHOOK_IDEMPOTENCY_KEY }}"
+            )
+          }
+
+          function Assert-ReplayArgPresent {
+            param(
+              [string]$ArgName,
+              [bool]$ShouldExist,
+              [string]$Reason
+            )
+
+            $exists = $replayArgs -contains $ArgName
+            if ($ShouldExist -and -not $exists) {
+              throw "Replay argument wiring assertion failed: missing $ArgName ($Reason)."
+            }
+
+            if (-not $ShouldExist -and $exists) {
+              throw "Replay argument wiring assertion failed: unexpected $ArgName ($Reason)."
+            }
+          }
+
+          $hasWebhookUrl = -not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_URL }}")
+          $hasAuthHeader = -not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_AUTH_HEADER }}")
+          $hasAuthToken = -not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_AUTH_TOKEN }}")
+          $hasSigningSecret = -not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_SIGNING_SECRET }}")
+          $hasMinInterval = -not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_MIN_INTERVAL_SECONDS }}")
+          $hasMaxAttempts = -not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_MAX_ATTEMPTS }}")
+          $hasRetryBackoff = -not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_RETRY_BACKOFF_MS }}")
+          $hasRetryJitter = -not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_RETRY_JITTER_MS }}")
+          $hasTimeout = -not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_TIMEOUT_SECONDS }}")
+          $hasIdempotencyHeader = -not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_IDEMPOTENCY_HEADER }}")
+          $hasIdempotencyKey = -not [string]::IsNullOrWhiteSpace("${{ secrets.REPLAY_AUDIT_WEBHOOK_IDEMPOTENCY_KEY }}")
+
+          Assert-ReplayArgPresent -ArgName "-DryRun" -ShouldExist $true -Reason "CI replay-audit invocation should always be dry-run"
+          Assert-ReplayArgPresent -ArgName "-WebhookUrl" -ShouldExist $hasWebhookUrl -Reason "webhook URL secret"
+          Assert-ReplayArgPresent -ArgName "-WebhookSigningSecret" -ShouldExist $hasSigningSecret -Reason "signing secret"
+          Assert-ReplayArgPresent -ArgName "-WebhookMinIntervalSeconds" -ShouldExist $hasMinInterval -Reason "min interval secret"
+          Assert-ReplayArgPresent -ArgName "-WebhookMaxAttempts" -ShouldExist $hasMaxAttempts -Reason "max attempts secret"
+          Assert-ReplayArgPresent -ArgName "-WebhookRetryBackoffMs" -ShouldExist $hasRetryBackoff -Reason "retry backoff secret"
+          Assert-ReplayArgPresent -ArgName "-WebhookRetryJitterMs" -ShouldExist $hasRetryJitter -Reason "retry jitter secret"
+          Assert-ReplayArgPresent -ArgName "-WebhookTimeoutSeconds" -ShouldExist $hasTimeout -Reason "timeout secret"
+          Assert-ReplayArgPresent -ArgName "-WebhookIdempotencyHeader" -ShouldExist $hasIdempotencyHeader -Reason "idempotency header secret"
+          Assert-ReplayArgPresent -ArgName "-WebhookIdempotencyKey" -ShouldExist $hasIdempotencyKey -Reason "idempotency key secret"
+
+          $hasAuthPair = $hasAuthHeader -and $hasAuthToken
+          Assert-ReplayArgPresent -ArgName "-WebhookAuthHeaderName" -ShouldExist $hasAuthPair -Reason "auth header/token pair"
+          Assert-ReplayArgPresent -ArgName "-WebhookAuthToken" -ShouldExist $hasAuthPair -Reason "auth header/token pair"
+
+          $replayArgNames = @()
+          foreach ($arg in $replayArgs) {
+            if ($arg -is [string] -and $arg.StartsWith("-")) {
+              $replayArgNames += $arg
+            }
+          }
+          Write-Host "Replay audit dry-run arg names: $($replayArgNames -join ', ')"
+
+          ./scripts/queue-replay-dlq.ps1 @replayArgs
+
+      - name: Validate replay-audit JSONL format
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f scripts/replay-audit-ci.jsonl
+          has_webhook="false"
+          if [[ -n "${{ secrets.REPLAY_AUDIT_WEBHOOK_URL }}" ]]; then
+            has_webhook="true"
+          fi
+
+          awk 'NF { print $0 }' scripts/replay-audit-ci.jsonl \
+            | jq -c --arg hasWebhook "$has_webhook" 'select(.event != null and .status != null and .timestamp_utc != null and .actor != null and (.webhook_delivery | type == "object") and (.webhook_delivery.final_status != null) and (.webhook_delivery.final_status != "pending") and (.webhook_delivery.attempted != null) and (.webhook_delivery.retry_count != null) and (.webhook_delivery.state_transition_count != null) and (.webhook_delivery.status_transition_window_size != null) and (.webhook_delivery.attempt_status_sequence_count != null) and (.webhook_delivery.attempt_status_sequence_last_index != null) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason == "ok") and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_code == 0) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_source | IN("derived"; "validated")) and ((.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_code != 0) or (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_source == "derived")) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope | IN("tail_only"; "tail_and_final")) and (((.webhook_delivery.attempt_status_sequence | length) == 0) or (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope == "tail_and_final")) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_code | type == "number") and (((.webhook_delivery.attempt_status_sequence | length) == 0) or (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_code == 1)) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_code_valid | type == "boolean") and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_code_valid == true) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_consistent | type == "boolean") and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_consistent == true) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_code_matches_scope | type == "boolean") and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_code_matches_scope == true) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_code_matches_scope == .webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_consistent) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_label_code_pair | type == "string") and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_label_code_pair == (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope + ":" + (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_code | tostring))) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_source | IN("derived")) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version | IN("v1")) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source | IN("derived")) and ((.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_consistent != true) or (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_source == "derived")) and ((.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_consistent != true) or (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version == "v1")) and ((.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_consistent != true) or (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source == "derived")) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_consistent | type == "boolean") and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_consistent == true) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_consistent | type == "boolean") and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_consistent == true) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_valid | type == "boolean") and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_valid == true) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source | type == "boolean") and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source == true) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistent | type == "boolean") and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistent == true) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_consistent | type == "boolean") and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_consistent == true) and ((.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_consistent != true) or (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code == 1)) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_valid == (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code == 1)) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source == ((.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source == "derived") and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code == 1))) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistent == (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source == ((.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source == "derived") and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code == 1)))) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code == (if .webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source == "derived" then 1 else -1 end)) and ((.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_code == 0) or ((.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_detail | type == "string") and ((.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_detail | length) > 0))) and (.webhook_delivery.attempt_status_sequence_tail_status_consistent != null) and (.webhook_delivery.attempt_status_sequence_tail_status_deviation != null) and (.webhook_delivery.attempt_status_sequence_tail_status_present | type == "boolean") and (.webhook_delivery.attempt_status_sequence_tail_matches_final | type == "boolean") and (.webhook_delivery.attempt_status_sequence_tail_matches_final == true) and (.webhook_delivery.attempt_status_sequence_tail_status_consistent == true) and (.webhook_delivery.attempt_status_sequence_tail_status_deviation == false) and (.webhook_delivery.attempt_status_sequence_tail_status_present == ((.webhook_delivery.attempt_status_sequence | length) > 0)) and (.webhook_delivery.attempt_status_sequence_tail_status != null or (.webhook_delivery.attempt_status_sequence | length) == 0) and (((.webhook_delivery.attempt_status_sequence | length) == 0) or (.webhook_delivery.attempt_status_sequence_tail_status != null)) and (.webhook_delivery.attempt_status_sequence_is_empty | type == "boolean") and (.webhook_delivery.attempt_status_sequence_consistent | type == "boolean") and (.webhook_delivery.attempt_status_sequence_truncated | type == "boolean") and (.webhook_delivery.attempt_errors | type == "array") and (.webhook_delivery.attempt_status_sequence | type == "array") and (.webhook_delivery.retry_count == ((.webhook_delivery.attempted - 1) | if . < 0 then 0 else . end)) and ((.webhook_delivery.delivery_mode != "throttled") or (.webhook_delivery.final_status == "throttled")) and ((.webhook_delivery.delivery_mode != "not_configured") or (.webhook_delivery.configured == false)) and ((.webhook_delivery.delivery_mode != "not_configured") or (.webhook_delivery.state_transition_count == 0)) and ((.webhook_delivery.attempt_status_sequence_count == (.webhook_delivery.attempt_status_sequence | length))) and (.webhook_delivery.attempt_status_sequence_is_empty == ((.webhook_delivery.attempt_status_sequence | length) == 0)) and (.webhook_delivery.attempt_status_sequence_consistent == true) and ((.webhook_delivery.attempt_status_sequence_truncated != true) or (.webhook_delivery.state_transition_count > .webhook_delivery.status_transition_window_size)) and ((.webhook_delivery.attempt_status_sequence_truncated != false) or (.webhook_delivery.state_transition_count <= .webhook_delivery.status_transition_window_size)) and (((.webhook_delivery.attempt_status_sequence | length) == 0) or ((.webhook_delivery.attempt_status_sequence | last) == .webhook_delivery.final_status)) and (((.webhook_delivery.attempt_status_sequence | length) == 0) or (.webhook_delivery.attempt_status_sequence_tail_status == .webhook_delivery.final_status)) and (((.webhook_delivery.attempt_status_sequence | length) == 0) or (.webhook_delivery.attempt_status_sequence_tail_matches_final == true)) and (((.webhook_delivery.attempt_status_sequence | length) == 0) or (.webhook_delivery.attempt_status_sequence_last_index == ((.webhook_delivery.attempt_status_sequence | length) - 1))) and (((.webhook_delivery.attempt_status_sequence | length) != 0) or (.webhook_delivery.attempt_status_sequence_last_index == -1)) and (((.webhook_delivery.attempt_status_sequence | length) != 0) or (.webhook_delivery.attempt_status_sequence_tail_status == null)) and ((.webhook_delivery.final_status != "success") or (.webhook_delivery.final_error_code == null)) and ((.webhook_delivery.result_bucket != "success") or (.webhook_delivery.sent == true)) and ((.webhook_delivery.terminal_state != "success") or (.webhook_delivery.final_status == "success")) and ((.webhook_delivery.terminal_state != "throttled") or (.webhook_delivery.delivery_mode == "throttled")) and ((.webhook_delivery.endpoint_host_classification == null) or (.webhook_delivery.endpoint_host != null)) and ((.webhook_delivery.sent != true) or (.webhook_delivery.last_success_at_utc != null)) and ((.webhook_delivery.success_after_retry != true) or (.webhook_delivery.attempted > 1)) and (($hasWebhook == "false") or (.webhook_delivery.endpoint_host_classification != null)))' \
+            > /tmp/replay-audit-ci.validated.jsonl
+
+          test -s /tmp/replay-audit-ci.validated.jsonl
+
+          total_lines=$(awk 'NF {count++} END {print count+0}' scripts/replay-audit-ci.jsonl)
+          valid_lines=$(wc -l < /tmp/replay-audit-ci.validated.jsonl)
+          if [[ "$total_lines" -ne "$valid_lines" ]]; then
+            echo "Replay audit required-field validation failed: total=$total_lines valid=$valid_lines"
+            exit 1
+          fi
+
+      - name: Replay-audit status summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f scripts/replay-audit-ci.jsonl
+          echo "Replay audit status counts:"
+          awk 'NF { print $0 }' scripts/replay-audit-ci.jsonl \
+            | jq -r '.status' \
+            | sort \
+            | uniq -c
+
+      - name: Replay-audit status threshold checks
+        shell: bash
+        env:
+          REPLAY_AUDIT_PROFILE: "ci"
+          REPLAY_AUDIT_MAX_EXECUTED: ""
+          REPLAY_AUDIT_MAX_NO_OP: ""
+          REPLAY_AUDIT_MIN_DRY_RUN: ""
+        run: |
+          set -euo pipefail
+          test -f scripts/replay-audit-ci.jsonl
+
+          profile=$(echo "${REPLAY_AUDIT_PROFILE:-ci}" | tr '[:upper:]' '[:lower:]')
+          case "$profile" in
+            local)
+              default_max_executed=3
+              default_max_no_op=20
+              default_min_dry_run=0
+              ;;
+            staging)
+              default_max_executed=1
+              default_max_no_op=10
+              default_min_dry_run=1
+              ;;
+            ci|*)
+              default_max_executed=0
+              default_max_no_op=5
+              default_min_dry_run=1
+              ;;
+          esac
+
+          max_executed=${REPLAY_AUDIT_MAX_EXECUTED:-$default_max_executed}
+          max_no_op=${REPLAY_AUDIT_MAX_NO_OP:-$default_max_no_op}
+          min_dry_run=${REPLAY_AUDIT_MIN_DRY_RUN:-$default_min_dry_run}
+
+          status_counts=$(awk 'NF { print $0 }' scripts/replay-audit-ci.jsonl | jq -r '.status' | sort | uniq -c)
+          echo "$status_counts"
+
+          executed_count=$(echo "$status_counts" | awk '$2=="executed" {print $1}' | tail -n1)
+          no_op_count=$(echo "$status_counts" | awk '$2=="no-op" {print $1}' | tail -n1)
+          dry_run_count=$(echo "$status_counts" | awk '$2=="dry-run" {print $1}' | tail -n1)
+
+          executed_count=${executed_count:-0}
+          no_op_count=${no_op_count:-0}
+          dry_run_count=${dry_run_count:-0}
+
+          echo "Replay-audit threshold profile=$profile executed<=$max_executed no-op<=$max_no_op dry-run>=$min_dry_run"
+
+          if (( executed_count > max_executed )); then
+            echo "Replay audit anomaly: executed_count=$executed_count exceeds threshold=$max_executed"
+            exit 1
+          fi
+
+          if (( no_op_count > max_no_op )); then
+            echo "Replay audit anomaly: no_op_count=$no_op_count exceeds threshold=$max_no_op"
+            exit 1
+          fi
+
+          if (( dry_run_count < min_dry_run )); then
+            echo "Replay audit anomaly: dry_run_count=$dry_run_count below threshold=$min_dry_run"
+            exit 1
+          fi
+
+      - name: Upload replay-audit artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: replay-audit-ci
+          path: scripts/replay-audit-ci.jsonl
+          if-no-files-found: warn
+
+      - name: Upload queue-load trend artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: queue-load-trend
+          path: |
+            scripts/queue-load-trend.log
+            scripts/queue-load-trend.jsonl
+            scripts/queue-load-trend-history-*.jsonl
+            scripts/queue-load-baseline-suggestion.json
+          if-no-files-found: warn
 
       - name: Upload integration log artifact
         if: always()

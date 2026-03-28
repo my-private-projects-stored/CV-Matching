@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { fetchSystemStatus, type SystemStatus } from '@/lib/api/config';
+import { logError } from '@/lib/utils/logger';
 
 // Cache duration constants
 const LLM_HEALTH_CHECK_INTERVAL = 30 * 60 * 1000; // 30 minutes
@@ -89,7 +90,7 @@ export function StatusCacheProvider({ children }: { children: React.ReactNode })
       }));
     } catch (err) {
       // Silent fail for background refresh - keep existing data
-      console.error('Background LLM health check failed:', err);
+      logError('status-cache', 'Background LLM health check failed', err);
     }
   }, []);
 

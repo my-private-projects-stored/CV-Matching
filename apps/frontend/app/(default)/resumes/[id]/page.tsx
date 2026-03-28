@@ -22,6 +22,7 @@ import { useTranslations } from '@/lib/i18n';
 import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
 import { useLanguage } from '@/lib/context/language-context';
 import { downloadBlobAsFile, openUrlInNewTab, sanitizeFilename } from '@/lib/utils/download';
+import { logError } from '@/lib/utils/logger';
 
 type ProcessingStatus = 'pending' | 'processing' | 'ready' | 'failed';
 
@@ -90,7 +91,7 @@ export default function ResumeViewerPage() {
           setError(t('resumeViewer.errors.noDataAvailable'));
         }
       } catch (err) {
-        console.error('Failed to load resume:', err);
+        logError('resume-viewer-page', 'Failed to load resume', err);
         setError(t('resumeViewer.errors.failedToLoad'));
       } finally {
         setLoading(false);
@@ -113,7 +114,7 @@ export default function ResumeViewerPage() {
         setError(t('resumeViewer.errors.processingFailed'));
       }
     } catch (err) {
-      console.error('Retry processing failed:', err);
+      logError('resume-viewer-page', 'Retry processing failed', err);
       setError(t('resumeViewer.errors.processingFailed'));
     } finally {
       setIsRetrying(false);
@@ -134,7 +135,7 @@ export default function ResumeViewerPage() {
       await renameResume(resumeId, trimmed);
       setResumeTitle(trimmed);
     } catch (err) {
-      console.error('Failed to rename resume:', err);
+      logError('resume-viewer-page', 'Failed to rename resume', err);
     }
     setIsEditingTitle(false);
   };
@@ -156,7 +157,7 @@ export default function ResumeViewerPage() {
         setError(null);
       }
     } catch (err) {
-      console.error('Failed to reload resume:', err);
+      logError('resume-viewer-page', 'Failed to reload resume', err);
     }
   };
 
@@ -172,7 +173,7 @@ export default function ResumeViewerPage() {
       downloadBlobAsFile(blob, filename);
       setShowDownloadSuccessDialog(true);
     } catch (err) {
-      console.error('Failed to download resume:', err);
+      logError('resume-viewer-page', 'Failed to download resume', err);
       if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
         const fallbackUrl = getResumePdfUrl(resumeId, undefined, uiLanguage);
         const didOpen = openUrlInNewTab(fallbackUrl);
@@ -195,7 +196,7 @@ export default function ResumeViewerPage() {
       downloadBlobAsFile(blob, filename);
       setShowDownloadSuccessDialog(true);
     } catch (err) {
-      console.error('Failed to download original resume:', err);
+      logError('resume-viewer-page', 'Failed to download original resume', err);
     }
   };
 
@@ -212,7 +213,7 @@ export default function ResumeViewerPage() {
       setShowDeleteDialog(false);
       setShowDeleteSuccessDialog(true);
     } catch (err) {
-      console.error('Failed to delete resume:', err);
+      logError('resume-viewer-page', 'Failed to delete resume', err);
       setDeleteError(t('resumeViewer.errors.failedToDelete'));
       setShowDeleteDialog(false);
     }
@@ -228,7 +229,7 @@ export default function ResumeViewerPage() {
       setIsMasterResume(true);
       setHasMasterResume(true);
     } catch (err) {
-      console.error('Failed to set master resume:', err);
+      logError('resume-viewer-page', 'Failed to set master resume', err);
       setError(t('resumeViewer.errors.failedToSetMaster'));
     } finally {
       setIsSettingMaster(false);

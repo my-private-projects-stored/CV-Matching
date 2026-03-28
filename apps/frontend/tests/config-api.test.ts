@@ -70,6 +70,25 @@ describe('settings API client', () => {
     });
   });
 
+  it('updateLlmConfig preserves error_code for policy-aware UI', async () => {
+    mockedApiFetch.mockResolvedValueOnce(
+      jsonResponse(
+        {
+          message: 'Blocked by privacy mode',
+          error_code: 'provider_blocked_by_privacy_mode',
+        },
+        400
+      )
+    );
+
+    await expect(
+      updateLlmConfig({ provider: 'openai', model: 'gpt-5-nano-2025-08-07' })
+    ).rejects.toMatchObject({
+      errorCode: 'provider_blocked_by_privacy_mode',
+      statusCode: 400,
+    });
+  });
+
   it('fetchLlmConfig returns masked API key config', async () => {
     mockedApiFetch.mockResolvedValueOnce(
       jsonResponse({

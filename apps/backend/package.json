@@ -11,13 +11,21 @@
     "smoke:qdrant": "node scripts/smoke-test-qdrant.mjs",
     "reindex:vectors": "node scripts/reindex-vectors.mjs",
     "seed:demo": "node scripts/seed-demo-data.mjs",
-    "test:integration": "node --test --test-concurrency=1 tests/integration/*.test.mjs"
+    "test:integration": "node --test --test-concurrency=1 tests/integration/*.test.mjs",
+    "test:integration:parsing": "node --test --test-concurrency=1 tests/integration/resume-upload-parsing.test.mjs tests/integration/resume-upload-endpoint.test.mjs",
+    "test:integration:worker": "node --test --test-concurrency=1 tests/integration/application-worker-processing.test.mjs",
+    "test:integration:worker-metrics": "node --test --test-concurrency=1 tests/integration/application-worker-metrics-endpoint.test.mjs",
+    "test:integration:queue": "node --test --test-concurrency=1 tests/integration/application-queue-observability.test.mjs",
+    "test:integration:queue-load": "node --test --test-concurrency=1 tests/integration/application-queue-synthetic-load.test.mjs",
+    "test:integration:queue-variants": "node --test --test-concurrency=1 tests/integration/application-queue-synthetic-failure-variants.test.mjs",
+    "test:integration:dlq": "node --test --test-concurrency=1 tests/integration/worker-dlq-flow.test.mjs"
   },
   "dependencies": {
     "@qdrant/js-client-rest": "^1.17.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
+    "ioredis": "^5.7.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.23.0",
     "multer": "^2.1.1"

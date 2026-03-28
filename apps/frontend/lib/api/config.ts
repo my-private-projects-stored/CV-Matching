@@ -1,4 +1,11 @@
 import { apiFetch } from './client';
+import { buildApiClientError } from './error';
+
+async function assertOk(res: Response, fallbackMessagePrefix: string): Promise<void> {
+  if (res.ok) return;
+  const text = await res.text().catch(() => '');
+  throw buildApiClientError(res.status, text, fallbackMessagePrefix);
+}
 
 // Supported LLM providers
 export type LLMProvider = 'openai' | 'anthropic' | 'openrouter' | 'gemini' | 'deepseek' | 'ollama';
@@ -61,10 +68,7 @@ export interface LLMHealthCheck {
 // Fetch full LLM configuration
 export async function fetchLlmConfig(): Promise<LLMConfig> {
   const res = await apiFetch('/config/llm-api-key', { credentials: 'include' });
-
-  if (!res.ok) {
-    throw new Error(`Failed to load LLM config (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to load LLM config');
 
   return res.json();
 }
@@ -84,10 +88,7 @@ export async function updateLlmConfig(config: LLMConfigUpdate): Promise<LLMConfi
     body: JSON.stringify(config),
   });
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to update LLM config (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to update LLM config');
 
   return res.json();
 }
@@ -113,9 +114,7 @@ export async function testLlmConnection(config?: LLMConfigUpdate): Promise<LLMHe
 
   const res = await apiFetch('/config/llm-test', options);
 
-  if (!res.ok) {
-    throw new Error(`Failed to test LLM connection (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to test LLM connection');
 
   return res.json();
 }
@@ -123,10 +122,7 @@ export async function testLlmConnection(config?: LLMConfigUpdate): Promise<LLMHe
 // Fetch system status
 export async function fetchSystemStatus(): Promise<SystemStatus> {
   const res = await apiFetch('/status', { credentials: 'include' });
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch system status (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to fetch system status');
 
   return res.json();
 }
@@ -175,10 +171,7 @@ export type CompanyProfileConfigUpdate = Partial<CompanyProfileConfig>;
 // Fetch feature configuration
 export async function fetchFeatureConfig(): Promise<FeatureConfig> {
   const res = await apiFetch('/config/features', { credentials: 'include' });
-
-  if (!res.ok) {
-    throw new Error(`Failed to load feature config (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to load feature config');
 
   return res.json();
 }
@@ -192,20 +185,14 @@ export async function updateFeatureConfig(config: FeatureConfigUpdate): Promise<
     body: JSON.stringify(config),
   });
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to update feature config (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to update feature config');
 
   return res.json();
 }
 
 export async function fetchPrivacyConfig(): Promise<PrivacyConfig> {
   const res = await apiFetch('/config/privacy', { credentials: 'include' });
-
-  if (!res.ok) {
-    throw new Error(`Failed to load privacy config (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to load privacy config');
 
   return res.json();
 }
@@ -218,20 +205,14 @@ export async function updatePrivacyConfig(config: PrivacyConfigUpdate): Promise<
     body: JSON.stringify(config),
   });
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to update privacy config (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to update privacy config');
 
   return res.json();
 }
 
 export async function fetchCompanyProfileConfig(): Promise<CompanyProfileConfig> {
   const res = await apiFetch('/config/company-profile', { credentials: 'include' });
-
-  if (!res.ok) {
-    throw new Error(`Failed to load company profile config (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to load company profile config');
 
   return res.json();
 }
@@ -246,10 +227,7 @@ export async function updateCompanyProfileConfig(
     body: JSON.stringify(config),
   });
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to update company profile (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to update company profile');
 
   return res.json();
 }
@@ -271,10 +249,7 @@ export interface LanguageConfigUpdate {
 // Fetch language configuration
 export async function fetchLanguageConfig(): Promise<LanguageConfig> {
   const res = await apiFetch('/config/language', { credentials: 'include' });
-
-  if (!res.ok) {
-    throw new Error(`Failed to load language config (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to load language config');
 
   return res.json();
 }
@@ -288,10 +263,7 @@ export async function updateLanguageConfig(update: LanguageConfigUpdate): Promis
     body: JSON.stringify(update),
   });
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to update language config (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to update language config');
 
   return res.json();
 }
@@ -314,10 +286,7 @@ export interface PromptConfigUpdate {
 // Fetch prompt configuration
 export async function fetchPromptConfig(): Promise<PromptConfig> {
   const res = await apiFetch('/config/prompts', { credentials: 'include' });
-
-  if (!res.ok) {
-    throw new Error(`Failed to load prompt config (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to load prompt config');
 
   return res.json();
 }
@@ -331,10 +300,7 @@ export async function updatePromptConfig(update: PromptConfigUpdate): Promise<Pr
     body: JSON.stringify(update),
   });
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to update prompt config (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to update prompt config');
 
   return res.json();
 }
@@ -378,10 +344,7 @@ export const API_KEY_PROVIDER_INFO: Record<ApiKeyProvider, { name: string; descr
 // Fetch API key status for all providers
 export async function fetchApiKeyStatus(): Promise<ApiKeyStatusResponse> {
   const res = await apiFetch('/config/api-keys', { credentials: 'include' });
-
-  if (!res.ok) {
-    throw new Error(`Failed to load API key status (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to load API key status');
 
   return res.json();
 }
@@ -395,10 +358,7 @@ export async function updateApiKeys(keys: ApiKeysUpdateRequest): Promise<ApiKeys
     body: JSON.stringify(keys),
   });
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to update API keys (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to update API keys');
 
   return res.json();
 }
@@ -410,10 +370,7 @@ export async function deleteApiKey(provider: ApiKeyProvider): Promise<void> {
     credentials: 'include',
   });
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to delete API key (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to delete API key');
 
   // 204 No Content is expected here.
   if (res.status === 204) {
@@ -428,10 +385,7 @@ export async function clearAllApiKeys(): Promise<void> {
     credentials: 'include',
   });
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to clear API keys (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to clear API keys');
 }
 
 // Reset database
@@ -443,8 +397,5 @@ export async function resetDatabase(): Promise<void> {
     body: JSON.stringify({ confirm: 'RESET_ALL_DATA' }),
   });
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to reset database (status ${res.status}).`);
-  }
+  await assertOk(res, 'Failed to reset database');
 }

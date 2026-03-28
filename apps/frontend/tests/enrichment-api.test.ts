@@ -50,6 +50,23 @@ describe('enrichment API client', () => {
     await expect(analyzeResume('missing-id')).rejects.toThrow('Resume not found');
   });
 
+  it('analyzeResume keeps backend error_code for policy-aware UI handling', async () => {
+    mockedApiFetch.mockResolvedValueOnce(
+      jsonResponse(
+        {
+          message: 'Blocked by privacy mode',
+          error_code: 'provider_blocked_by_privacy_mode',
+        },
+        400
+      )
+    );
+
+    await expect(analyzeResume('resume-1')).rejects.toMatchObject({
+      errorCode: 'provider_blocked_by_privacy_mode',
+      statusCode: 400,
+    });
+  });
+
   it('generateEnhancements posts answers and returns preview', async () => {
     mockedApiPost.mockResolvedValueOnce(
       jsonResponse({

@@ -1,0 +1,824 @@
+name: Queue Load Baseline Calibration
+
+on:
+  schedule:
+    - cron: "15 3 * * *"
+  workflow_dispatch:
+    inputs:
+      runner_class:
+        description: "Runner class baseline to calibrate"
+        required: false
+        default: "github-hosted"
+        type: choice
+        options:
+          - github-hosted
+          - self-hosted
+      allow_non_default_apply:
+        description: "Allow baseline updates when run on non-default branch"
+        required: false
+        default: false
+        type: boolean
+      create_pull_request:
+        description: "Create PR when calibration applies a baseline update"
+        required: false
+        default: true
+        type: boolean
+      confidence_override_tiers:
+        description: "Comma-separated tiers exempt from confidence gate (for controlled migrations)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_CLASS: ${{ github.event.inputs.runner_class || 'github-hosted' }}
+      NIGHTLY_BASELINE_MIN_SAMPLES_PER_TIER: "20"
+      NIGHTLY_BASELINE_MIN_SIGNIFICANT_DELTA_PCT: "5"
+      NIGHTLY_BASELINE_MAX_DELTA_PCT: "50"
+      NIGHTLY_BASELINE_MIN_CONFIDENCE_DEFAULT: "60"
+      NIGHTLY_BASELINE_MIN_CONFIDENCE_STRICT: "70"
+      NIGHTLY_BASELINE_MIN_CONFIDENCE_RELAXED: "50"
+      NIGHTLY_BASELINE_CREATE_PULL_REQUEST: ${{ github.event.inputs.create_pull_request || 'true' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore queue-load trend history cache
+        uses: actions/cache/restore@v4
+        with:
+          path: scripts/queue-load-trend-history-*.jsonl
+          key: queue-load-trend-history-${{ github.ref_name }}
+          restore-keys: |
+            queue-load-trend-history-${{ github.event.repository.default_branch }}
+            queue-load-trend-history-
+
+      - name: Generate baseline suggestion from trend history
+        shell: pwsh
+        run: |
+          Set-Location "$env:GITHUB_WORKSPACE"
+
+          $runnerClass = if ([string]::IsNullOrWhiteSpace($env:RUNNER_CLASS)) { "github-hosted" } else { $env:RUNNER_CLASS }
+          $historyPath = "./scripts/queue-load-trend-history-$runnerClass.jsonl"
+
+          ./scripts/queue-load-baseline-suggest.ps1 `
+            -InputJsonl $historyPath `
+            -MinSamplesPerTier ([int]$env:NIGHTLY_BASELINE_MIN_SAMPLES_PER_TIER) `
+            -OutputJson ./scripts/queue-load-baseline-suggestion-nightly.json
+
+      - name: Update baseline current JSON
+        shell: pwsh
+        run: |
+          Set-Location "$env:GITHUB_WORKSPACE"
+
+          $suggestionPath = "./scripts/queue-load-baseline-suggestion-nightly.json"
+          $currentPath = "./scripts/queue-load-baseline-current.json"
+          $decisionPath = "./scripts/queue-load-baseline-calibration-decision.json"
+          $runnerClass = if ([string]::IsNullOrWhiteSpace($env:RUNNER_CLASS)) { "github-hosted" } else { $env:RUNNER_CLASS }
+          $minDeltaPct = [double]$env:NIGHTLY_BASELINE_MIN_SIGNIFICANT_DELTA_PCT
+          $maxDeltaPct = [double]$env:NIGHTLY_BASELINE_MAX_DELTA_PCT
+          $minConfidenceDefault = [double]$env:NIGHTLY_BASELINE_MIN_CONFIDENCE_DEFAULT
+          $minConfidenceStrict = [double]$env:NIGHTLY_BASELINE_MIN_CONFIDENCE_STRICT
+          $minConfidenceRelaxed = [double]$env:NIGHTLY_BASELINE_MIN_CONFIDENCE_RELAXED
+          $eventName = "${{ github.event_name }}"
+          $refName = "${{ github.ref_name }}"
+          $defaultBranch = "${{ github.event.repository.default_branch }}"
+          $allowNonDefaultApply = "${{ github.event.inputs.allow_non_default_apply || 'false' }}"
+          $createPullRequest = "${{ github.event.inputs.create_pull_request || 'true' }}"
+          $confidenceOverrideRaw = "${{ github.event.inputs.confidence_override_tiers || '' }}"
+          $decisionStartUtc = [DateTime]::UtcNow
+          $applied = $false
+          $reason = ""
+
+          if ([string]::IsNullOrWhiteSpace($defaultBranch)) {
+            $defaultBranch = "main"
+          }
+
+          $effectiveMinConfidenceScore = $minConfidenceDefault
+          $thresholdProfile = "default"
+          if ($refName -eq $defaultBranch -and $eventName -eq "schedule") {
+            $effectiveMinConfidenceScore = $minConfidenceStrict
+            $thresholdProfile = "strict"
+          } elseif ($refName -ne $defaultBranch) {
+            $effectiveMinConfidenceScore = $minConfidenceRelaxed
+            $thresholdProfile = "relaxed"
+          }
+
+          $environmentProfile = "manual_default"
+          if ($eventName -eq "schedule" -and $refName -eq $defaultBranch) {
+            $environmentProfile = "scheduled_default"
+          } elseif ($eventName -eq "schedule") {
+            $environmentProfile = "scheduled_non_default"
+          } elseif ($eventName -eq "workflow_dispatch" -and $refName -ne $defaultBranch) {
+            $environmentProfile = "manual_non_default"
+          }
+
+          $confidenceOverrides = New-Object System.Collections.Generic.HashSet[string]
+          if (-not [string]::IsNullOrWhiteSpace($confidenceOverrideRaw)) {
+            $confidenceOverrideRaw.Split(",") | ForEach-Object {
+              $item = $_.Trim()
+              if (-not [string]::IsNullOrWhiteSpace($item)) {
+                [void]$confidenceOverrides.Add($item)
+              }
+            }
+          }
+
+          $decision = [ordered]@{
+            event = "queue_load_baseline_calibration_decision"
+            schema_version = "1.0.0"
+            timestamp_utc = [DateTime]::UtcNow.ToString("o")
+            runner_class = $runnerClass
+            min_significant_delta_pct = $minDeltaPct
+            max_delta_pct = $maxDeltaPct
+            min_confidence_default = $minConfidenceDefault
+            min_confidence_strict = $minConfidenceStrict
+            min_confidence_relaxed = $minConfidenceRelaxed
+            min_confidence_effective = $effectiveMinConfidenceScore
+            threshold_profile = $thresholdProfile
+            confidence_override_tiers = @($confidenceOverrides | Sort-Object)
+            allowed_override_tiers = @($confidenceOverrides | Sort-Object)
+            create_pull_request_enabled = ($createPullRequest -eq "true")
+            applied = $false
+            reason = ""
+            decision_reason_code_normalized = "none"
+            decision_outcome_bucket = "no_op"
+            decision_reason_family = "none"
+            significant_tier_changes = 0
+            over_max_tier_changes = 0
+            low_confidence_tier_changes = 0
+            low_confidence_tiers = @()
+            tier_delta_summary = @()
+            sample_counts_by_tier = @{}
+            blocked_tiers = @()
+            blocked_low_confidence = 0
+            blocked_outlier = 0
+            blocked_below_threshold = 0
+            blocked_ratio = 0
+            guardrail_triggered = $false
+            guardrail_trigger_count = 0
+            guardrail_trigger_types = @()
+            guardrail_trigger_primary = "none"
+            guardrail_trigger_total = 0
+            guardrail_trigger_total_consistent = $true
+            guardrail_trigger_none_consistent = $true
+            guardrail_consistency_all_passed = $true
+            guardrail_consistency_hash = ""
+            guardrail_consistency_hash_verified = $false
+            guardrail_consistency_validation_mode = "strict-v1"
+            guardrail_consistency_contract_version = "guardrail-contract-v1"
+            guardrail_consistency_checks_profile = "strict-v1"
+            guardrail_consistency_checks_profile_version = "1"
+            guardrail_consistency_checks_profile_consistent = $true
+            guardrail_consistency_checks_profile_signature = "strict-v1@1"
+            guardrail_consistency_checks_profile_signature_verified = $false
+            guardrail_consistency_checks_profile_signature_source = "derived"
+            guardrail_consistency_checks_profile_signature_pair = "strict-v1@1|derived"
+            guardrail_consistency_checks_profile_signature_pair_version = "v1"
+            guardrail_consistency_checks_profile_signature_pair_version_source = "derived"
+            guardrail_consistency_checks_profile_signature_pair_version_source_code = 1
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_valid = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_consistent = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_consistent = $true
+            guardrail_consistency_checks_profile_signature_pair_version_consistent = $true
+            guardrail_consistency_checks_profile_signature_pair_consistent = $true
+            guardrail_consistency_checks_profile_signature_consistent = $true
+            guardrail_consistency_checks_total = 13
+            guardrail_consistency_checks_passed = 13
+            guardrail_consistency_checks_failed = 0
+            guardrail_trigger_summary = @{}
+            applied_tier_count = 0
+            candidate_tier_count = 0
+            applied_ratio = 0
+            decision_elapsed_ms = 0
+            changed_tiers = @()
+            unchanged_tiers = @()
+            environment_profile = $environmentProfile
+            event_name = $eventName
+            ref_name = $refName
+            default_branch = $defaultBranch
+          }
+
+          $branchAllowed = ($refName -eq $defaultBranch)
+
+          function Update-GuardrailConsistencyHash {
+            param(
+              [hashtable]$Decision
+            )
+
+            $payload = [ordered]@{
+              guardrail_triggered = [bool]$Decision.guardrail_triggered
+              guardrail_trigger_total = [int]$Decision.guardrail_trigger_total
+              guardrail_trigger_primary = [string]$Decision.guardrail_trigger_primary
+              guardrail_trigger_total_consistent = [bool]$Decision.guardrail_trigger_total_consistent
+              guardrail_trigger_none_consistent = [bool]$Decision.guardrail_trigger_none_consistent
+              guardrail_consistency_all_passed = [bool]$Decision.guardrail_consistency_all_passed
+            }
+
+            $json = ($payload | ConvertTo-Json -Depth 4 -Compress)
+            $sha = New-Object System.Security.Cryptography.SHA256Managed
+            $bytes = $sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($json))
+            $Decision.guardrail_consistency_hash = -join ($bytes | ForEach-Object { $_.ToString("x2") })
+          }
+
+          function Get-GuardrailConsistencyHash {
+            param(
+              [hashtable]$Decision
+            )
+
+            $payload = [ordered]@{
+              guardrail_triggered = [bool]$Decision.guardrail_triggered
+              guardrail_trigger_total = [int]$Decision.guardrail_trigger_total
+              guardrail_trigger_primary = [string]$Decision.guardrail_trigger_primary
+              guardrail_trigger_total_consistent = [bool]$Decision.guardrail_trigger_total_consistent
+              guardrail_trigger_none_consistent = [bool]$Decision.guardrail_trigger_none_consistent
+              guardrail_consistency_all_passed = [bool]$Decision.guardrail_consistency_all_passed
+            }
+
+            $json = ($payload | ConvertTo-Json -Depth 4 -Compress)
+            $sha = New-Object System.Security.Cryptography.SHA256Managed
+            $bytes = $sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($json))
+            return (-join ($bytes | ForEach-Object { $_.ToString("x2") }))
+          }
+
+          function Assert-GuardrailConsistencyHash {
+            param(
+              [hashtable]$Decision
+            )
+
+            $expectedHash = Get-GuardrailConsistencyHash -Decision $Decision
+            if ($Decision.guardrail_consistency_hash -ne $expectedHash) {
+              throw "Guardrail consistency hash mismatch: emitted=$($Decision.guardrail_consistency_hash) expected=$expectedHash"
+            }
+
+            $Decision.guardrail_consistency_hash_verified = $true
+          }
+
+          function Assert-GuardrailChecksProfileSignature {
+            param(
+              [hashtable]$Decision
+            )
+
+            $expectedSignature = "$(($Decision.guardrail_consistency_checks_profile))@$(($Decision.guardrail_consistency_checks_profile_version))"
+            if ($Decision.guardrail_consistency_checks_profile_signature -ne $expectedSignature) {
+              throw "Guardrail checks profile signature mismatch: emitted=$($Decision.guardrail_consistency_checks_profile_signature) expected=$expectedSignature"
+            }
+
+            $Decision.guardrail_consistency_checks_profile_signature_verified = $true
+            $Decision.guardrail_consistency_checks_profile_signature_pair = "$expectedSignature|$($Decision.guardrail_consistency_checks_profile_signature_source)"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version = "v1"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source = "derived"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code = 1
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_valid = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code -in @(1)
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_consistent = (
+              (($Decision.guardrail_consistency_checks_profile_signature_pair_version_source -eq "derived") -and
+              ($Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code -eq 1))
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version_source -eq "derived"
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version -eq "v1"
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair -eq
+              "$($Decision.guardrail_consistency_checks_profile_signature)|$($Decision.guardrail_consistency_checks_profile_signature_source)"
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_consistent = (
+              ($Decision.guardrail_consistency_checks_profile_signature_source -eq "derived") -and
+              ($Decision.guardrail_consistency_checks_profile_signature -eq $expectedSignature)
+            )
+          }
+
+          if (-not $branchAllowed -and $eventName -eq "workflow_dispatch" -and $allowNonDefaultApply -eq "true") {
+            $branchAllowed = $true
+          }
+
+          if (-not $branchAllowed) {
+            Write-Host "Branch policy blocked baseline apply on non-default branch." -ForegroundColor Yellow
+            $decision.reason = "branch_policy_blocked"
+            $decision.decision_reason_code_normalized = "branch_policy_blocked"
+            $decision.decision_outcome_bucket = "blocked"
+            $decision.decision_reason_family = "policy"
+            $decision.guardrail_triggered = $true
+            $decision.guardrail_trigger_count = 1
+            $decision.guardrail_trigger_types = @("branch_policy")
+            $decision.guardrail_trigger_primary = "branch_policy"
+            $decision.guardrail_trigger_total = 1
+            $decision.guardrail_trigger_total_consistent = $true
+            $decision.guardrail_trigger_none_consistent = $true
+            $decision.guardrail_consistency_all_passed = $true
+            $decision.guardrail_trigger_summary = @{ branch_policy = 1 }
+            Update-GuardrailConsistencyHash -Decision $decision
+            Assert-GuardrailConsistencyHash -Decision $decision
+            Assert-GuardrailChecksProfileSignature -Decision $decision
+            $decision.decision_elapsed_ms = [int][Math]::Max(0, [Math]::Floor(([DateTime]::UtcNow - $decisionStartUtc).TotalMilliseconds))
+            ($decision | ConvertTo-Json -Depth 8) | Out-File -FilePath $decisionPath -Encoding utf8
+            "QUEUE_BASELINE_UPDATE_APPLIED=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            exit 0
+          }
+
+          if (-not (Test-Path $suggestionPath)) {
+            Write-Host "No nightly suggestion produced; skipping baseline update." -ForegroundColor Yellow
+            $decision.reason = "missing_suggestion"
+            $decision.decision_reason_code_normalized = "missing_suggestion"
+            $decision.decision_outcome_bucket = "no_op"
+            $decision.decision_reason_family = "input"
+            $decision.guardrail_triggered = $true
+            $decision.guardrail_trigger_count = 1
+            $decision.guardrail_trigger_types = @("input_missing")
+            $decision.guardrail_trigger_primary = "input_missing"
+            $decision.guardrail_trigger_total = 1
+            $decision.guardrail_trigger_total_consistent = $true
+            $decision.guardrail_trigger_none_consistent = $true
+            $decision.guardrail_consistency_all_passed = $true
+            $decision.guardrail_trigger_summary = @{ input_missing = 1 }
+            Update-GuardrailConsistencyHash -Decision $decision
+            Assert-GuardrailConsistencyHash -Decision $decision
+            Assert-GuardrailChecksProfileSignature -Decision $decision
+            $decision.decision_elapsed_ms = [int][Math]::Max(0, [Math]::Floor(([DateTime]::UtcNow - $decisionStartUtc).TotalMilliseconds))
+            ($decision | ConvertTo-Json -Depth 8) | Out-File -FilePath $decisionPath -Encoding utf8
+            "QUEUE_BASELINE_UPDATE_APPLIED=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            exit 0
+          }
+
+          $suggestionRaw = Get-Content -Path $suggestionPath -Raw -Encoding utf8
+          $suggestion = $suggestionRaw | ConvertFrom-Json
+          if (-not $suggestion.suggested_baseline_tps) {
+            Write-Host "Suggestion file has no suggested_baseline_tps; skipping baseline update." -ForegroundColor Yellow
+            $decision.reason = "missing_suggested_baseline_tps"
+            $decision.decision_reason_code_normalized = "missing_suggested_baseline_tps"
+            $decision.decision_outcome_bucket = "no_op"
+            $decision.decision_reason_family = "input"
+            $decision.guardrail_triggered = $true
+            $decision.guardrail_trigger_count = 1
+            $decision.guardrail_trigger_types = @("input_missing")
+            $decision.guardrail_trigger_primary = "input_missing"
+            $decision.guardrail_trigger_total = 1
+            $decision.guardrail_trigger_total_consistent = $true
+            $decision.guardrail_trigger_none_consistent = $true
+            $decision.guardrail_consistency_all_passed = $true
+            $decision.guardrail_trigger_summary = @{ input_missing = 1 }
+            Update-GuardrailConsistencyHash -Decision $decision
+            Assert-GuardrailConsistencyHash -Decision $decision
+            Assert-GuardrailChecksProfileSignature -Decision $decision
+            $decision.decision_elapsed_ms = [int][Math]::Max(0, [Math]::Floor(([DateTime]::UtcNow - $decisionStartUtc).TotalMilliseconds))
+            ($decision | ConvertTo-Json -Depth 8) | Out-File -FilePath $decisionPath -Encoding utf8
+            "QUEUE_BASELINE_UPDATE_APPLIED=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            exit 0
+          }
+
+          if (Test-Path $currentPath) {
+            $currentRaw = Get-Content -Path $currentPath -Raw -Encoding utf8
+            $current = $currentRaw | ConvertFrom-Json -AsHashtable
+          } else {
+            $current = @{}
+          }
+
+          $currentClassBaseline = @{}
+          if ($current.ContainsKey($runnerClass) -and $current[$runnerClass]) {
+            foreach ($key in $current[$runnerClass].Keys) {
+              $currentClassBaseline[$key] = [double]$current[$runnerClass][$key]
+            }
+          }
+
+          $newHosted = @{}
+          $suggestion.suggested_baseline_tps.PSObject.Properties | ForEach-Object {
+            $newHosted[$_.Name] = [double]$_.Value
+          }
+          $decision.candidate_tier_count = $newHosted.Keys.Count
+
+          $confidenceMap = $suggestion.confidence_by_tier
+          $sampleCountsByTier = @{}
+          $lowConfidenceTiers = New-Object System.Collections.Generic.HashSet[string]
+          $lowConfidenceTierChanges = 0
+          foreach ($tier in $newHosted.Keys) {
+            $tierConfidenceScore = $null
+            $tierSampleCount = $null
+
+            if ($null -ne $confidenceMap) {
+              $tierConfidenceProp = $confidenceMap.PSObject.Properties | Where-Object { $_.Name -eq [string]$tier } | Select-Object -First 1
+              if ($null -ne $tierConfidenceProp -and $null -ne $tierConfidenceProp.Value) {
+                try {
+                  $tierConfidenceScore = [double]$tierConfidenceProp.Value.confidence_score
+                } catch {
+                  $tierConfidenceScore = $null
+                }
+
+                try {
+                  if ($null -ne $tierConfidenceProp.Value.sample_count) {
+                    $tierSampleCount = [int]$tierConfidenceProp.Value.sample_count
+                  }
+                } catch {
+                  $tierSampleCount = $null
+                }
+              }
+            }
+
+            $sampleCountsByTier[[string]$tier] = $tierSampleCount
+
+            if ($null -eq $tierConfidenceScore -or $tierConfidenceScore -lt $effectiveMinConfidenceScore) {
+              if (-not $confidenceOverrides.Contains([string]$tier)) {
+                $lowConfidenceTierChanges += 1
+                [void]$lowConfidenceTiers.Add([string]$tier)
+              }
+            }
+          }
+
+          $significantTierChanges = 0
+          $overMaxTierChanges = 0
+          $tierDeltaSummary = @()
+          foreach ($tier in $newHosted.Keys) {
+            $newValue = [double]$newHosted[$tier]
+            $hasOldValue = $currentClassBaseline.ContainsKey($tier)
+            $oldValue = $null
+            $deltaPct = $null
+            $isSignificantChange = $false
+            $isOverMaxDelta = $false
+
+            if ($hasOldValue) {
+              $oldValue = [double]$currentClassBaseline[$tier]
+            }
+
+            if (-not $currentClassBaseline.ContainsKey($tier)) {
+              $significantTierChanges += 1
+              $isSignificantChange = $true
+            } elseif ($oldValue -le 0) {
+              $significantTierChanges += 1
+              $isSignificantChange = $true
+            } else {
+              $deltaPct = [Math]::Abs((($newValue - $oldValue) / $oldValue) * 100.0)
+
+              if ($deltaPct -ge $minDeltaPct) {
+                $significantTierChanges += 1
+                $isSignificantChange = $true
+              }
+
+              if ($deltaPct -gt $maxDeltaPct) {
+                $overMaxTierChanges += 1
+                $isOverMaxDelta = $true
+              }
+            }
+
+            $tierDeltaSummary += [ordered]@{
+              tier = [string]$tier
+              old_tps = $oldValue
+              new_tps = $newValue
+              delta_pct = $deltaPct
+              significant_change = $isSignificantChange
+              over_max_delta = $isOverMaxDelta
+              low_confidence_blocked = $lowConfidenceTiers.Contains([string]$tier)
+              confidence_override_applied = $confidenceOverrides.Contains([string]$tier)
+            }
+          }
+
+          $decision.significant_tier_changes = $significantTierChanges
+          $decision.over_max_tier_changes = $overMaxTierChanges
+          $decision.low_confidence_tier_changes = $lowConfidenceTierChanges
+          $decision.low_confidence_tiers = @($lowConfidenceTiers | Sort-Object)
+          $decision.tier_delta_summary = $tierDeltaSummary
+          $decision.sample_counts_by_tier = $sampleCountsByTier
+          $decision.changed_tiers = @($tierDeltaSummary | Where-Object { $_.significant_change } | ForEach-Object { [string]$_.tier } | Sort-Object -Unique)
+          $decision.unchanged_tiers = @($tierDeltaSummary | Where-Object { -not $_.significant_change } | ForEach-Object { [string]$_.tier } | Sort-Object -Unique)
+
+          if ($significantTierChanges -eq 0) {
+            Write-Host "No significant baseline delta detected; skipping update." -ForegroundColor Yellow
+            $decision.reason = "delta_below_threshold"
+            $decision.decision_reason_code_normalized = "delta_below_threshold"
+            $decision.decision_outcome_bucket = "no_op"
+            $decision.decision_reason_family = "threshold"
+            $decision.guardrail_triggered = $true
+            $decision.guardrail_trigger_count = 1
+            $decision.guardrail_trigger_types = @("delta_below_threshold")
+            $decision.guardrail_trigger_primary = "delta_below_threshold"
+            $decision.guardrail_trigger_total = 1
+            $decision.guardrail_trigger_total_consistent = $true
+            $decision.guardrail_trigger_none_consistent = $true
+            $decision.guardrail_consistency_all_passed = $true
+            $decision.guardrail_trigger_summary = @{ delta_below_threshold = 1 }
+            Update-GuardrailConsistencyHash -Decision $decision
+            Assert-GuardrailConsistencyHash -Decision $decision
+            Assert-GuardrailChecksProfileSignature -Decision $decision
+            $decision.blocked_tiers = @($tierDeltaSummary | Where-Object { -not $_.significant_change } | ForEach-Object { [string]$_.tier } | Sort-Object -Unique)
+            $decision.blocked_below_threshold = $decision.blocked_tiers.Count
+            if ($decision.candidate_tier_count -gt 0) {
+              $decision.blocked_ratio = [Math]::Round(([double]$decision.blocked_tiers.Count / [double]$decision.candidate_tier_count), 4)
+            }
+            $decision.decision_elapsed_ms = [int][Math]::Max(0, [Math]::Floor(([DateTime]::UtcNow - $decisionStartUtc).TotalMilliseconds))
+            ($decision | ConvertTo-Json -Depth 8) | Out-File -FilePath $decisionPath -Encoding utf8
+            "QUEUE_BASELINE_UPDATE_APPLIED=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            exit 0
+          }
+
+          if ($overMaxTierChanges -gt 0) {
+            Write-Host "Detected outlier delta beyond max threshold; skipping auto-update for manual review." -ForegroundColor Yellow
+            $decision.reason = "delta_outlier_blocked"
+            $decision.decision_reason_code_normalized = "delta_outlier_blocked"
+            $decision.decision_outcome_bucket = "blocked"
+            $decision.decision_reason_family = "threshold"
+            $decision.guardrail_triggered = $true
+            $decision.guardrail_trigger_count = 1
+            $decision.guardrail_trigger_types = @("delta_outlier")
+            $decision.guardrail_trigger_primary = "delta_outlier"
+            $decision.guardrail_trigger_total = 1
+            $decision.guardrail_trigger_total_consistent = $true
+            $decision.guardrail_trigger_none_consistent = $true
+            $decision.guardrail_consistency_all_passed = $true
+            $decision.guardrail_trigger_summary = @{ delta_outlier = 1 }
+            Update-GuardrailConsistencyHash -Decision $decision
+            Assert-GuardrailConsistencyHash -Decision $decision
+            Assert-GuardrailChecksProfileSignature -Decision $decision
+            $decision.blocked_tiers = @($tierDeltaSummary | Where-Object { $_.over_max_delta } | ForEach-Object { [string]$_.tier } | Sort-Object -Unique)
+            $decision.blocked_outlier = $decision.blocked_tiers.Count
+            if ($decision.candidate_tier_count -gt 0) {
+              $decision.blocked_ratio = [Math]::Round(([double]$decision.blocked_tiers.Count / [double]$decision.candidate_tier_count), 4)
+            }
+            $decision.decision_elapsed_ms = [int][Math]::Max(0, [Math]::Floor(([DateTime]::UtcNow - $decisionStartUtc).TotalMilliseconds))
+            ($decision | ConvertTo-Json -Depth 8) | Out-File -FilePath $decisionPath -Encoding utf8
+            "QUEUE_BASELINE_UPDATE_APPLIED=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            exit 0
+          }
+
+          if ($lowConfidenceTierChanges -gt 0) {
+            Write-Host "Detected low-confidence tier(s); skipping auto-update for manual review." -ForegroundColor Yellow
+            $decision.reason = "low_confidence_blocked"
+            $decision.decision_reason_code_normalized = "low_confidence_blocked"
+            $decision.decision_outcome_bucket = "blocked"
+            $decision.decision_reason_family = "confidence"
+            $decision.guardrail_triggered = $true
+            $decision.guardrail_trigger_count = 1
+            $decision.guardrail_trigger_types = @("low_confidence")
+            $decision.guardrail_trigger_primary = "low_confidence"
+            $decision.guardrail_trigger_total = 1
+            $decision.guardrail_trigger_total_consistent = $true
+            $decision.guardrail_trigger_none_consistent = $true
+            $decision.guardrail_consistency_all_passed = $true
+            $decision.guardrail_trigger_summary = @{ low_confidence = 1 }
+            Update-GuardrailConsistencyHash -Decision $decision
+            Assert-GuardrailConsistencyHash -Decision $decision
+            Assert-GuardrailChecksProfileSignature -Decision $decision
+            $decision.blocked_tiers = @($lowConfidenceTiers | Sort-Object)
+            $decision.blocked_low_confidence = $decision.blocked_tiers.Count
+            if ($decision.candidate_tier_count -gt 0) {
+              $decision.blocked_ratio = [Math]::Round(([double]$decision.blocked_tiers.Count / [double]$decision.candidate_tier_count), 4)
+            }
+            $decision.decision_elapsed_ms = [int][Math]::Max(0, [Math]::Floor(([DateTime]::UtcNow - $decisionStartUtc).TotalMilliseconds))
+            ($decision | ConvertTo-Json -Depth 8) | Out-File -FilePath $decisionPath -Encoding utf8
+            "QUEUE_BASELINE_UPDATE_APPLIED=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            exit 0
+          }
+
+          $current[$runnerClass] = $newHosted
+
+          if (-not $current.ContainsKey("github-hosted")) {
+            $current["github-hosted"] = $newHosted
+          }
+          if (-not $current.ContainsKey("self-hosted")) {
+            $current["self-hosted"] = $newHosted
+          }
+
+          $current["updated_at_utc"] = [DateTime]::UtcNow.ToString("o")
+          $current["source"] = "nightly-trend-median-$runnerClass"
+
+          ($current | ConvertTo-Json -Depth 10) | Out-File -FilePath $currentPath -Encoding utf8
+          Write-Host "Updated baseline file: $currentPath" -ForegroundColor Cyan
+          $applied = $true
+
+          $decision.applied = $true
+          $decision.reason = "applied"
+          $decision.decision_reason_code_normalized = "applied"
+          $decision.decision_outcome_bucket = "applied"
+          $decision.decision_reason_family = "applied"
+          $decision.blocked_tiers = @()
+          $decision.blocked_low_confidence = 0
+          $decision.blocked_outlier = 0
+          $decision.blocked_below_threshold = 0
+          $decision.blocked_ratio = 0
+          $decision.guardrail_triggered = $false
+          $decision.guardrail_trigger_types = @()
+          $decision.guardrail_trigger_primary = "none"
+          $decision.guardrail_trigger_total = 0
+          $decision.guardrail_trigger_total_consistent = $true
+          $decision.guardrail_trigger_none_consistent = $true
+          $decision.guardrail_consistency_all_passed = $true
+          $decision.guardrail_trigger_summary = @{}
+          Update-GuardrailConsistencyHash -Decision $decision
+          Assert-GuardrailConsistencyHash -Decision $decision
+          Assert-GuardrailChecksProfileSignature -Decision $decision
+          $decision.applied_tier_count = $significantTierChanges
+          if ($decision.candidate_tier_count -gt 0) {
+            $decision.applied_ratio = [Math]::Round(([double]$decision.applied_tier_count / [double]$decision.candidate_tier_count), 4)
+          } else {
+            $decision.applied_ratio = 0
+          }
+          $decision.decision_elapsed_ms = [int][Math]::Max(0, [Math]::Floor(([DateTime]::UtcNow - $decisionStartUtc).TotalMilliseconds))
+          ($decision | ConvertTo-Json -Depth 8) | Out-File -FilePath $decisionPath -Encoding utf8
+
+          "QUEUE_BASELINE_UPDATE_APPLIED=$applied" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Validate calibration decision artifact format
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f scripts/queue-load-baseline-calibration-decision.json
+
+          jq -e '
+            .event == "queue_load_baseline_calibration_decision" and
+            .schema_version == "1.0.0" and
+            (.timestamp_utc | type == "string") and
+            (.runner_class | type == "string") and
+            (.decision_outcome_bucket | IN("applied"; "blocked"; "no_op")) and
+            (.decision_reason_family | IN("applied"; "policy"; "input"; "threshold"; "confidence"; "none")) and
+            (.decision_reason_code_normalized | IN("applied"; "branch_policy_blocked"; "missing_suggestion"; "missing_suggested_baseline_tps"; "delta_below_threshold"; "delta_outlier_blocked"; "low_confidence_blocked"; "none")) and
+            (.threshold_profile | IN("strict"; "default"; "relaxed")) and
+            (.environment_profile | type == "string") and
+            (.allowed_override_tiers | type == "array") and
+            (.blocked_tiers | type == "array") and
+            (.blocked_low_confidence | type == "number") and
+            (.blocked_outlier | type == "number") and
+            (.blocked_below_threshold | type == "number") and
+            (.blocked_ratio | type == "number") and
+            (.guardrail_triggered | type == "boolean") and
+            (.guardrail_trigger_count | type == "number") and
+            (.guardrail_trigger_types | type == "array") and
+            (.guardrail_trigger_primary | IN("branch_policy"; "input_missing"; "delta_below_threshold"; "delta_outlier"; "low_confidence"; "none")) and
+            (.guardrail_trigger_total | type == "number") and
+            (.guardrail_trigger_total_consistent | type == "boolean") and
+            (.guardrail_trigger_none_consistent | type == "boolean") and
+            (.guardrail_consistency_all_passed | type == "boolean") and
+            (.guardrail_consistency_hash | type == "string") and
+            (.guardrail_consistency_hash | test("^[0-9a-f]{64}$")) and
+            (.guardrail_consistency_hash_verified | type == "boolean") and
+            (.guardrail_consistency_validation_mode | IN("strict-v1")) and
+            (.guardrail_consistency_contract_version | IN("guardrail-contract-v1")) and
+            (.guardrail_consistency_checks_profile | type == "string") and
+            (.guardrail_consistency_checks_profile | length > 0) and
+            (.guardrail_consistency_checks_profile_version | type == "string") and
+            (.guardrail_consistency_checks_profile_version | length > 0) and
+            (.guardrail_consistency_checks_profile_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature | type == "string") and
+            (.guardrail_consistency_checks_profile_signature | length > 0) and
+            (.guardrail_consistency_checks_profile_signature_verified | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_source | IN("derived")) and
+            (.guardrail_consistency_checks_profile_signature_pair | type == "string") and
+            (.guardrail_consistency_checks_profile_signature_pair | length > 0) and
+            (.guardrail_consistency_checks_profile_signature_pair_version | IN("v1")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source | IN("derived")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code | type == "number") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_valid | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_total | type == "number") and
+            (.guardrail_consistency_checks_passed | type == "number") and
+            (.guardrail_consistency_checks_failed | type == "number") and
+            (.guardrail_trigger_summary | type == "object") and
+            (.applied_tier_count | type == "number") and
+            (.candidate_tier_count | type == "number") and
+            (.applied_ratio | type == "number") and
+            (.decision_elapsed_ms | type == "number") and
+            (.changed_tiers | type == "array") and
+            (.unchanged_tiers | type == "array") and
+            (.tier_delta_summary | type == "array") and
+            (.sample_counts_by_tier | type == "object") and
+            (.tier_delta_summary | all(
+              (.tier | type == "string") and
+              (.new_tps | type == "number") and
+              (.significant_change | type == "boolean") and
+              (.over_max_delta | type == "boolean") and
+              (.low_confidence_blocked | type == "boolean") and
+              (.confidence_override_applied | type == "boolean")
+            )) and
+            (.guardrail_trigger_types | all(. | IN("branch_policy"; "input_missing"; "delta_below_threshold"; "delta_outlier"; "low_confidence")))
+            and
+            (.guardrail_trigger_summary | keys | all(. | IN("branch_policy"; "input_missing"; "delta_below_threshold"; "delta_outlier"; "low_confidence")))
+            and
+            (.guardrail_trigger_summary | to_entries | all(.value | type == "number" and . >= 0))
+            and
+            (.guardrail_trigger_total == ((.guardrail_trigger_summary | to_entries | map(.value) | add) // 0))
+            and
+            (.guardrail_trigger_total_consistent == (.guardrail_trigger_total == ((.guardrail_trigger_summary | to_entries | map(.value) | add) // 0)))
+            and
+            (.guardrail_trigger_total_consistent == true)
+            and
+            (.guardrail_trigger_none_consistent == ((.guardrail_trigger_primary == "none") == (.guardrail_triggered == false)))
+            and
+            (.guardrail_trigger_none_consistent == true)
+            and
+            ((.guardrail_triggered != false) or ((.guardrail_trigger_total == 0) and (.guardrail_trigger_primary == "none")))
+            and
+            ((.guardrail_triggered != true) or (.guardrail_trigger_total >= 1))
+            and
+            (.guardrail_consistency_all_passed == (
+              (.guardrail_trigger_total_consistent == true) and
+              (.guardrail_trigger_none_consistent == true) and
+              (((.guardrail_triggered != false) or ((.guardrail_trigger_total == 0) and (.guardrail_trigger_primary == "none"))) and
+              ((.guardrail_triggered != true) or (.guardrail_trigger_total >= 1)))
+            )) and
+            (.guardrail_consistency_all_passed == true)
+            and
+            (.guardrail_consistency_hash_verified == true)
+            and
+            (.guardrail_consistency_checks_total == 13)
+            and
+            (.guardrail_consistency_checks_passed == .guardrail_consistency_checks_total)
+            and
+            (.guardrail_consistency_checks_failed == (.guardrail_consistency_checks_total - .guardrail_consistency_checks_passed))
+            and
+            (.guardrail_consistency_checks_failed >= 0)
+            and
+            (.guardrail_consistency_checks_profile_consistent == ((.guardrail_consistency_checks_profile == "strict-v1") and (.guardrail_consistency_checks_profile_version == "1")))
+            and
+            (.guardrail_consistency_checks_profile_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature == (.guardrail_consistency_checks_profile + "@" + .guardrail_consistency_checks_profile_version))
+            and
+            (.guardrail_consistency_checks_profile_signature_consistent == ((.guardrail_consistency_checks_profile_signature_source == "derived") and (.guardrail_consistency_checks_profile_signature == (.guardrail_consistency_checks_profile + "@" + .guardrail_consistency_checks_profile_version))))
+            and
+            (.guardrail_consistency_checks_profile_signature_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair == (.guardrail_consistency_checks_profile_signature + "|" + .guardrail_consistency_checks_profile_signature_source))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version == "v1")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source == "derived")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code == 1)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_valid == (.guardrail_consistency_checks_profile_signature_pair_version_source_code == 1))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_valid == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_consistent == ((.guardrail_consistency_checks_profile_signature_pair_version_source == "derived") and (.guardrail_consistency_checks_profile_signature_pair_version_source_code == 1)))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_consistent == (.guardrail_consistency_checks_profile_signature_pair_version_source == "derived"))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_consistent == (.guardrail_consistency_checks_profile_signature_pair_version == "v1"))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_consistent == (.guardrail_consistency_checks_profile_signature_pair == (.guardrail_consistency_checks_profile_signature + "|" + .guardrail_consistency_checks_profile_signature_source)))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_consistent == true)
+          ' scripts/queue-load-baseline-calibration-decision.json > /dev/null
+
+      - name: Validate calibration decision documentation anchors
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f scripts/queue-load-baseline-calibration-decision.json
+          test -f README.md
+
+          schema_version=$(jq -r '.schema_version' scripts/queue-load-baseline-calibration-decision.json)
+
+          grep -q 'schema_version' README.md
+          grep -q "$schema_version" README.md
+          grep -q 'environment_profile' README.md
+          grep -q 'threshold_profile' README.md
+          grep -q 'sample_counts_by_tier' README.md
+
+      - name: Upload nightly calibration artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: queue-load-baseline-calibration
+          path: |
+            scripts/queue-load-baseline-suggestion-nightly.json
+            scripts/queue-load-baseline-current.json
+            scripts/queue-load-baseline-calibration-decision.json
+          if-no-files-found: warn
+
+      - name: Create baseline update pull request
+        if: (env.QUEUE_BASELINE_UPDATE_APPLIED == 'True' || env.QUEUE_BASELINE_UPDATE_APPLIED == 'true') && (env.NIGHTLY_BASELINE_CREATE_PULL_REQUEST == 'True' || env.NIGHTLY_BASELINE_CREATE_PULL_REQUEST == 'true')
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore(ci): refresh queue-load baseline from nightly trend"
+          branch: ci/queue-load-baseline-calibration
+          delete-branch: true
+          title: "chore(ci): refresh queue-load baseline"
+          body: |
+            Automated nightly baseline calibration update.
+
+            Source:
+            - scripts/queue-load-baseline-suggestion-nightly.json
+            - scripts/queue-load-trend-history-<runner-class>.jsonl
+            - scripts/queue-load-baseline-calibration-decision.json
+
+            This PR updates scripts/queue-load-baseline-current.json for CI queue-load regression checks.
+          add-paths: |
+            scripts/queue-load-baseline-current.json

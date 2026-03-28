@@ -49,6 +49,7 @@ import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
 import { useLanguage } from '@/lib/context/language-context';
 import { downloadBlobAsFile, openUrlInNewTab, sanitizeFilename } from '@/lib/utils/download';
 import type { RegenerateItemInput } from '@/lib/api/enrichment';
+import { logError } from '@/lib/utils/logger';
 
 type TabId = 'resume' | 'cover-letter' | 'outreach' | 'jd-match';
 
@@ -176,13 +177,21 @@ const ResumeBuilderContent = () => {
           setHasUnsavedChanges(false);
         }
       } catch (error) {
-        console.error('Failed to reload resume after applying regenerated changes:', error);
+        logError(
+          'resume-builder',
+          'Failed to reload resume after applying regenerated changes',
+          error
+        );
         showNotification(t('builder.alerts.reloadFailed'), 'danger');
         throw error;
       }
     },
     onError: (errorMessage) => {
-      console.error('Error during regeneration or applying regenerated changes:', errorMessage);
+      logError(
+        'resume-builder',
+        'Error during regeneration or applying regenerated changes',
+        errorMessage
+      );
 
       if (/network|fetch/i.test(errorMessage) || errorMessage.includes('Failed to fetch')) {
         showNotification(t('builder.regenerate.errors.networkError'), 'danger');
@@ -317,7 +326,7 @@ const ResumeBuilderContent = () => {
             }
           }
         } catch (err) {
-          console.error('Failed to load resume from API:', err);
+          logError('resume-builder', 'Failed to load resume from API', err);
         }
       }
 
@@ -415,7 +424,7 @@ const ResumeBuilderContent = () => {
       setHasUnsavedChanges(false);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(nextData));
     } catch (error) {
-      console.error('Failed to save resume:', error);
+      logError('resume-builder', 'Failed to save resume', error);
       showNotification(t('builder.alerts.saveFailed'), 'danger');
     } finally {
       setIsSaving(false);
@@ -440,7 +449,7 @@ const ResumeBuilderContent = () => {
       downloadBlobAsFile(blob, filename);
       showNotification(t('builder.alerts.downloadSuccess'), 'success');
     } catch (error) {
-      console.error('Failed to download resume:', error);
+      logError('resume-builder', 'Failed to download resume', error);
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
         const fallbackUrl = getResumePdfUrl(resumeId, templateSettings, uiLanguage);
         const didOpen = openUrlInNewTab(fallbackUrl);
@@ -467,7 +476,7 @@ const ResumeBuilderContent = () => {
       await updateCoverLetter(resumeId, coverLetter);
       showNotification(t('builder.alerts.coverLetterSaveSuccess'), 'success');
     } catch (error) {
-      console.error('Failed to save cover letter:', error);
+      logError('resume-builder', 'Failed to save cover letter', error);
       showNotification(t('builder.alerts.coverLetterSaveFailed'), 'danger');
     } finally {
       setIsCoverLetterSaving(false);
@@ -489,7 +498,7 @@ const ResumeBuilderContent = () => {
       const filename = sanitizeFilename(resumeTitle, resumeId, 'cover-letter');
       downloadBlobAsFile(blob, filename);
     } catch (error) {
-      console.error('Failed to download cover letter:', error);
+      logError('resume-builder', 'Failed to download cover letter', error);
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
         const fallbackUrl = getCoverLetterPdfUrl(resumeId, templateSettings.pageSize, uiLanguage);
         const didOpen = openUrlInNewTab(fallbackUrl);
@@ -516,7 +525,7 @@ const ResumeBuilderContent = () => {
       await updateOutreachMessage(resumeId, outreachMessage);
       showNotification(t('builder.alerts.outreachSaveSuccess'), 'success');
     } catch (error) {
-      console.error('Failed to save outreach message:', error);
+      logError('resume-builder', 'Failed to save outreach message', error);
       showNotification(t('builder.alerts.outreachSaveFailed'), 'danger');
     } finally {
       setIsOutreachSaving(false);
@@ -529,7 +538,7 @@ const ResumeBuilderContent = () => {
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy:', error);
+      logError('resume-builder', 'Failed to copy outreach message', error);
     }
   };
 
@@ -542,7 +551,7 @@ const ResumeBuilderContent = () => {
       const content = await generateCoverLetter(resumeId);
       setCoverLetter(content);
     } catch (error) {
-      console.error('Failed to generate cover letter:', error);
+      logError('resume-builder', 'Failed to generate cover letter', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       showNotification(
         t('builder.alerts.coverLetterGenerateFailed', { error: errorMessage }),
@@ -571,7 +580,7 @@ const ResumeBuilderContent = () => {
       const content = await generateOutreachMessage(resumeId);
       setOutreachMessage(content);
     } catch (error) {
-      console.error('Failed to generate outreach message:', error);
+      logError('resume-builder', 'Failed to generate outreach message', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       showNotification(
         t('builder.alerts.outreachGenerateFailed', { error: errorMessage }),

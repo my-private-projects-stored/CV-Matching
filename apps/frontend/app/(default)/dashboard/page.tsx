@@ -32,6 +32,7 @@ import {
 } from '@/lib/api/resume';
 import { useStatusCache } from '@/lib/context/status-cache';
 import { useAuth } from '@/lib/context/auth-context';
+import { logError } from '@/lib/utils/logger';
 
 type ProcessingStatus = 'pending' | 'processing' | 'ready' | 'failed' | 'loading';
 
@@ -91,7 +92,7 @@ export default function DashboardPage() {
       setProcessingStatus(status as ProcessingStatus);
       setCandidateId(data.candidate_id || null);
     } catch (err: unknown) {
-      console.error('Failed to check resume status:', err);
+      logError('dashboard-page', 'Failed to check resume status', err);
       // If resume not found (404), clear the stale localStorage
       if (err instanceof Error && err.message.includes('404')) {
         localStorage.removeItem('master_resume_id');
@@ -167,7 +168,7 @@ export default function DashboardPage() {
         );
       }
     } catch (err) {
-      console.error('Failed to load tailored resumes:', err);
+      logError('dashboard-page', 'Failed to load tailored resumes', err);
     }
   }, [checkResumeStatus]);
 
@@ -211,7 +212,7 @@ export default function DashboardPage() {
         setProcessingStatus('failed');
       }
     } catch (err) {
-      console.error('Retry processing failed:', err);
+      logError('dashboard-page', 'Retry processing failed', err);
       setProcessingStatus('failed');
     } finally {
       setIsRetrying(false);
@@ -238,7 +239,7 @@ export default function DashboardPage() {
       await checkResumeStatus(resumeId);
       await loadTailoredResumes();
     } catch (err) {
-      console.error('Failed to set master resume from dashboard:', err);
+      logError('dashboard-page', 'Failed to set master resume from dashboard', err);
     } finally {
       setSettingMasterResumeId(null);
     }
@@ -256,7 +257,7 @@ export default function DashboardPage() {
       setIsUploadDialogOpen(true);
       await loadTailoredResumes();
     } catch (err) {
-      console.error('Failed to delete resume:', err);
+      logError('dashboard-page', 'Failed to delete resume', err);
     }
   };
 
