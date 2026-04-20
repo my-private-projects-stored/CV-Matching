@@ -56,6 +56,12 @@ export const SwissGrid = ({ children }: { children: React.ReactNode }) => {
             <span className="uppercase font-bold">Resume Matcher</span>
           </div>
           <div className="flex items-center gap-4">
+            <Link
+              href="/flow"
+              className="bg-[#D946EF] text-white border border-black px-6 py-2 uppercase font-bold tracking-wide shadow-[2px_2px_0px_0px_#000000] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-none transition-all min-w-[140px] text-center"
+            >
+              {t('nav.flow')}
+            </Link>
             {isRecruiterOrAdmin ? (
               <Link
                 href="/settings"

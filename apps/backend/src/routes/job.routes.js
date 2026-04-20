@@ -11,9 +11,10 @@ import {
 import { requireAuth, requireRoles } from "../middleware/auth.middleware.js";
 
 const router = Router();
+const requireAuthenticatedRole = [requireAuth, requireRoles("candidate", "recruiter", "admin")];
 const requireRecruiterRole = [requireAuth, requireRoles("recruiter", "admin")];
 
-router.post("/upload", ...requireRecruiterRole, uploadJobDescriptionsHandler);
+router.post("/upload", ...requireAuthenticatedRole, uploadJobDescriptionsHandler);
 router.get("/", listJobsHandler);
 router.get("/:id", getJobHandler);
 router.post("/", ...requireRecruiterRole, createJobHandler);

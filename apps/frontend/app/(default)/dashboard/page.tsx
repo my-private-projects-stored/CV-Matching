@@ -610,7 +610,20 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        {/* 7. Fillers */}
+        {/* 7. Guided Product Flow */}
+        <Card className="aspect-square h-full" variant="default">
+          <div className="flex-1 flex flex-col items-center justify-center text-center h-full">
+            <Button
+              onClick={() => router.push('/flow')}
+              className="w-20 h-20 bg-violet-700 text-white border-2 border-black shadow-sw-default hover:bg-violet-800 hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none transition-all rounded-none"
+            >
+              <Plus className="w-8 h-8" />
+            </Button>
+            <p className="text-xs font-mono mt-4 uppercase text-violet-700">{t('nav.flow')}</p>
+          </div>
+        </Card>
+
+        {/* 8. Fillers */}
         {Array.from({ length: fillerCount }).map((_, index) => (
           <Card
             key={`filler-${index}`}

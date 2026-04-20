@@ -1,0 +1,15 @@
+$path = 'd:/Project/CV Matching/CV-Matching/.github/workflows/backend-integration.yml'
+$content = Get-Content -Path $path -Raw
+
+$old1 = '(.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_source_scope_version_source | IN("derived")) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_consistent | type == "boolean")'
+$new1 = '(.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_source_scope_version_source | IN("derived")) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version | IN("v1")) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_consistent | type == "boolean")'
+if (-not $content.Contains($old1)) { throw 'old1 pattern not found'; }
+$content = $content.Replace($old1, $new1)
+
+$old2 = '((.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_consistent != true) or (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_source_scope_version_source == "derived")) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code == (if .webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source == "derived" then 1 else -1 end))'
+$new2 = '((.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version != "v1") or (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_source_scope_version_source == "derived")) and ((.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_consistent != true) or (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_source_scope_version_source == "derived")) and (.webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code == (if .webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source == "derived" then 1 else -1 end))'
+if (-not $content.Contains($old2)) { throw 'old2 pattern not found'; }
+$content = $content.Replace($old2, $new2)
+
+Set-Content -Path $path -Value $content -NoNewline
+Write-Output 'backend-integration.yml updated with scope-version-source-version guard'

@@ -214,16 +214,30 @@ export default function JobsPage() {
     setIsApplyingJobId(jobId);
 
     try {
-      await createApplication({
+      const created = await createApplication({
         job_id: jobId,
         resume_id: masterResumeId,
       });
 
       setApplyMessage({ type: 'success', text: t('jobsPage.submittedRedirecting') });
 
-      const target = masterCandidateId
-        ? `/applications?candidate_id=${encodeURIComponent(masterCandidateId)}`
-        : `/applications?job_id=${encodeURIComponent(jobId)}`;
+      const params = new URLSearchParams();
+      const createdApplicationId = created.data.application_id || '';
+
+      if (masterCandidateId) {
+        params.set('candidate_id', masterCandidateId);
+        if (createdApplicationId) {
+          params.set('application_id', createdApplicationId);
+          params.set('candidate_focus', '1');
+        }
+      } else {
+        params.set('job_id', jobId);
+        if (createdApplicationId) {
+          params.set('application_id', createdApplicationId);
+        }
+      }
+
+      const target = `/applications?${params.toString()}`;
       setTimeout(() => {
         router.push(target);
       }, 600);

@@ -5,9 +5,18 @@ import {
   listJobs,
   updateJobById,
 } from "../services/job.service.js";
+import { getResumeByPublicId } from "../services/resume.service.js";
 import Job from "../models/Job.js";
 
 const DEFAULT_RECRUITER_ID = "000000000000000000000002";
+
+function getAuthRole(req) {
+  return String(req.auth?.role || "").trim().toLowerCase();
+}
+
+function getAuthUserId(req) {
+  return String(req.auth?.userId || "").trim();
+}
 
 function inferJobTitle(description) {
   const firstLine = String(description || "")
@@ -58,9 +67,25 @@ export async function uploadJobDescriptionsHandler(req, res, next) {
   try {
     const descriptions = Array.isArray(req.body?.job_descriptions) ? req.body.job_descriptions : [];
     const resumeId = String(req.body?.resume_id || "").trim();
+    const authRole = getAuthRole(req);
 
     if (!descriptions.length) {
       return res.status(400).json({ message: "No job descriptions provided" });
+    }
+
+    if (authRole === "candidate") {
+      if (!resumeId) {
+        return res.status(400).json({ message: "resume_id is required for candidate uploads" });
+      }
+
+      const resume = await getResumeByPublicId(resumeId);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (String(resume.candidateId || "") !== getAuthUserId(req)) {
+        return res.status(403).json({ message: "You can only upload job descriptions for your own resume" });
+      }
     }
 
     const jobIds = [];

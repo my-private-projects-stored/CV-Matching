@@ -11,6 +11,7 @@ import Job from "../../src/models/Job.js";
 import Resume from "../../src/models/Resume.js";
 import SystemConfig from "../../src/models/SystemConfig.js";
 import User from "../../src/models/User.js";
+import { parseCsvTable } from "../utils/csv-table.mjs";
 
 const RUN_INTEGRATION = process.env.RUN_INTEGRATION_TESTS === "1";
 
@@ -352,6 +353,14 @@ test(
       const exportedCsvText = await exportStatusChangesCsv.text();
       assert.match(exportedCsvText, /application_id,job_id,job_title,candidate_id,candidate_full_name/);
       assert.match(exportedCsvText, /recruiter\.application@example\.com/);
+      const exportedCsvRows = parseCsvTable(exportedCsvText);
+      assert.equal(exportedCsvRows.length >= 2, true);
+      assert.equal(exportedCsvRows[0][0], "application_id");
+      assert.equal(exportedCsvRows[0][9], "changed_by");
+      assert.equal(
+        exportedCsvRows.slice(1).every((columns) => String(columns[9] || "").includes("recruiter")),
+        true
+      );
 
       const rankedAfterStatus = await requestJson(
         baseUrl,

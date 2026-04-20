@@ -1,0 +1,77 @@
+{
+    "schema_version":  "1.0.0",
+    "generated_at_utc":  "2026-04-14T11:41:10.8143176Z",
+    "overall_status":  "passed",
+    "totals":  {
+                   "checks":  34,
+                   "passed":  3,
+                   "failed":  0
+               },
+    "context":  {
+                    "repository":  "CV-Matching",
+                    "branch":  "unknown",
+                    "commit_sha":  "unknown",
+                    "runner_user":  "PC",
+                    "machine":  "LAPTOP-TCT252A6"
+                },
+    "checks":  [
+                   {
+                       "id":  "qdrant_health",
+                       "title":  "Qdrant dependency and health endpoint",
+                       "status":  "passed",
+                       "details":  "ok",
+                       "started_at_utc":  "2026-04-14T11:41:02.8154315Z",
+                       "ended_at_utc":  "2026-04-14T11:41:03.1440095Z",
+                       "duration_ms":  329
+                   },
+                   {
+                       "id":  "flow_entrypoint",
+                       "title":  "Guided flow entrypoint is linked from dashboard",
+                       "status":  "passed",
+                       "details":  "ok",
+                       "started_at_utc":  "2026-04-14T11:41:03.1440095Z",
+                       "ended_at_utc":  "2026-04-14T11:41:03.1472009Z",
+                       "duration_ms":  3
+                   },
+                   "",
+                   "\u003e cv-matching-backend@1.0.0 test:integration:e2e-product",
+                   "\u003e node --test --test-concurrency=1 tests/integration/product-e2e-candidate-flow.test.mjs",
+                   "",
+                   "\u001b[32mG£ö product e2e flow: candidate upload -\u003e job ingest -\u003e tailor -\u003e preview -\u003e confirm -\u003e pdf export \u001b[90m(532.0928ms)\u001b[39m\u001b[39m",
+                   "\u001b[32mG£ö product e2e guardrails: candidate job ingest requires own resume_id \u001b[90m(285.1701ms)\u001b[39m\u001b[39m",
+                   "\u001b[34mGä¦ tests 2\u001b[39m",
+                   "\u001b[34mGä¦ suites 0\u001b[39m",
+                   "\u001b[34mGä¦ pass 2\u001b[39m",
+                   "\u001b[34mGä¦ fail 0\u001b[39m",
+                   "\u001b[34mGä¦ cancelled 0\u001b[39m",
+                   "\u001b[34mGä¦ skipped 0\u001b[39m",
+                   "\u001b[34mGä¦ todo 0\u001b[39m",
+                   "\u001b[34mGä¦ duration_ms 1700.6749\u001b[39m",
+                   "",
+                   "\u003e resume-matcher-ui@1.1.0 test",
+                   "\u003e vitest run tests/product-flow-page.test.tsx",
+                   "",
+                   "",
+                   "\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.1.0 \u001b[39m\u001b[90mD:/Project/CV Matching/CV-Matching/apps/frontend\u001b[39m",
+                   "",
+                   " \u001b[32mG£ô\u001b[39m tests/product-flow-page.test.tsx \u001b[2m(\u001b[22m\u001b[2m5 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 1455\u001b[2mms\u001b[22m\u001b[39m",
+                   "     \u001b[33m\u001b[2mG£ô\u001b[22m\u001b[39m runs generate preview flow after upload \u001b[33m 395\u001b[2mms\u001b[22m\u001b[39m",
+                   "     \u001b[33m\u001b[2mG£ô\u001b[22m\u001b[39m confirms tailored resume and opens pdf/viewer actions \u001b[33m 316\u001b[2mms\u001b[22m\u001b[39m",
+                   "     \u001b[33m\u001b[2mG£ô\u001b[22m\u001b[39m resets stale preview when job description changes after preview generation \u001b[33m 324\u001b[2mms\u001b[22m\u001b[39m",
+                   "",
+                   "\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m",
+                   "\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m5 passed\u001b[39m\u001b[22m\u001b[90m (5)\u001b[39m",
+                   "\u001b[2m   Start at \u001b[22m 18:41:07",
+                   "\u001b[2m   Duration \u001b[22m 3.54s\u001b[2m (transform 125ms, setup 331ms, import 131ms, tests 1.45s, environment 1.37s)\u001b[22m",
+                   "",
+                   {
+                       "id":  "product_e2e_verify",
+                       "title":  "Unified product E2E verify script",
+                       "status":  "passed",
+                       "details":  "ok",
+                       "started_at_utc":  "2026-04-14T11:41:03.1472009Z",
+                       "ended_at_utc":  "2026-04-14T11:41:10.8110681Z",
+                       "duration_ms":  7664
+                   }
+               ]
+}

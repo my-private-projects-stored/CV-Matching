@@ -6,10 +6,16 @@ function getQueueName() {
 
 function createRedisClient() {
   const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-  return new Redis(redisUrl, {
+  const client = new Redis(redisUrl, {
+    lazyConnect: true,
     maxRetriesPerRequest: 2,
     enableReadyCheck: true,
+    retryStrategy: () => null,
   });
+
+  // Keep enqueue path non-disruptive when Redis is unavailable in local/integration runs.
+  client.on("error", () => undefined);
+  return client;
 }
 
 export async function enqueueApplicationScoring(applicationId) {
@@ -26,6 +32,7 @@ export async function enqueueApplicationScoring(applicationId) {
 
   const client = createRedisClient();
   try {
+    await client.connect();
     await client.lpush(getQueueName(), payload);
   } finally {
     client.disconnect();

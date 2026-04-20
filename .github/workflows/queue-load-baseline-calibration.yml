@@ -183,13 +183,41 @@ jobs:
             guardrail_consistency_checks_profile_signature_pair_version_source = "derived"
             guardrail_consistency_checks_profile_signature_pair_version_source_code = 1
             guardrail_consistency_checks_profile_signature_pair_version_source_code_valid = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistent = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version = "v1"
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source = "derived"
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_consistent = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope = "source_only"
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_consistent = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version = "v1"
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_consistent = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source = "derived"
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version = "v1"
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source = "derived"
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version = "v1"
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source = "derived"
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version = "v1"
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source = "derived"
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version = "v1"
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_source = "derived"
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_source_version = "v1"
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_source_consistent = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_consistent = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_consistent = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_consistent = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_consistent = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_consistent = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_consistent = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_consistent = $true
+            guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_consistent = $true
             guardrail_consistency_checks_profile_signature_pair_version_source_code_consistent = $true
             guardrail_consistency_checks_profile_signature_pair_version_source_consistent = $true
             guardrail_consistency_checks_profile_signature_pair_version_consistent = $true
             guardrail_consistency_checks_profile_signature_pair_consistent = $true
             guardrail_consistency_checks_profile_signature_consistent = $true
-            guardrail_consistency_checks_total = 13
-            guardrail_consistency_checks_passed = 13
+            guardrail_consistency_checks_total = 41
+            guardrail_consistency_checks_passed = 41
             guardrail_consistency_checks_failed = 0
             guardrail_trigger_summary = @{}
             applied_tier_count = 0
@@ -276,6 +304,65 @@ jobs:
             $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code = 1
             $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_valid = (
               $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code -in @(1)
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source = (
+              (($Decision.guardrail_consistency_checks_profile_signature_pair_version_source -eq "derived") -and
+              ($Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code -eq 1))
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source -eq
+              (($Decision.guardrail_consistency_checks_profile_signature_pair_version_source -eq "derived") -and
+              ($Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code -eq 1))
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version = "v1"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source = "derived"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source -eq "derived"
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope = "source_only"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope -eq "source_only"
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version = "v1"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version -eq "v1"
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source = "derived"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version = "v1"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source = "derived"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version = "v1"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source = "derived"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version = "v1"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source = "derived"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version = "v1"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_source = "derived"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_source_version = "v1"
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_source_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_source -eq "derived"
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version -eq "v1"
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source -eq "derived"
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version -eq "v1"
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source -eq "derived"
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version -eq "v1"
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source -eq "derived"
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version -eq "v1"
+            )
+            $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_consistent = (
+              $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source -eq "derived"
             )
             $Decision.guardrail_consistency_checks_profile_signature_pair_version_source_code_consistent = (
               (($Decision.guardrail_consistency_checks_profile_signature_pair_version_source -eq "derived") -and
@@ -674,6 +761,34 @@ jobs:
             (.guardrail_consistency_checks_profile_signature_pair_version_source | IN("derived")) and
             (.guardrail_consistency_checks_profile_signature_pair_version_source_code | type == "number") and
             (.guardrail_consistency_checks_profile_signature_pair_version_source_code_valid | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version | IN("v1")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source | IN("derived")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope | IN("source_only")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version | IN("v1")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source | IN("derived")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version | IN("v1")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source | IN("derived")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version | IN("v1")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source | IN("derived")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version | IN("v1")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source | IN("derived")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version | IN("v1")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_source | IN("derived")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_source_version | IN("v1")) and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_source_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_consistent | type == "boolean") and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_consistent | type == "boolean") and
             (.guardrail_consistency_checks_profile_signature_pair_version_source_code_consistent | type == "boolean") and
             (.guardrail_consistency_checks_profile_signature_pair_version_source_consistent | type == "boolean") and
             (.guardrail_consistency_checks_profile_signature_pair_version_consistent | type == "boolean") and
@@ -729,7 +844,7 @@ jobs:
             and
             (.guardrail_consistency_hash_verified == true)
             and
-            (.guardrail_consistency_checks_total == 13)
+            (.guardrail_consistency_checks_total == 41)
             and
             (.guardrail_consistency_checks_passed == .guardrail_consistency_checks_total)
             and
@@ -758,6 +873,90 @@ jobs:
             (.guardrail_consistency_checks_profile_signature_pair_version_source_code_valid == (.guardrail_consistency_checks_profile_signature_pair_version_source_code == 1))
             and
             (.guardrail_consistency_checks_profile_signature_pair_version_source_code_valid == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source == ((.guardrail_consistency_checks_profile_signature_pair_version_source == "derived") and (.guardrail_consistency_checks_profile_signature_pair_version_source_code == 1)))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistent == (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source == ((.guardrail_consistency_checks_profile_signature_pair_version_source == "derived") and (.guardrail_consistency_checks_profile_signature_pair_version_source_code == 1))) )
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version == "v1")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source == "derived")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_consistent == (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source == "derived"))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope == "source_only")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_consistent == (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope == "source_only"))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version == "v1")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_consistent == (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version == "v1"))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source == "derived")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version == "v1")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source == "derived")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version == "v1")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source == "derived")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version == "v1")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source == "derived")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version == "v1")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_source == "derived")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_source_version == "v1")
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_source_consistent == (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_source == "derived"))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_source_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_consistent == (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version == "v1"))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_version_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_consistent == (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source == "derived"))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_source_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_consistent == (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version == "v1"))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_version_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_consistent == (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source == "derived"))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_source_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_consistent == (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version == "v1"))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_version_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_consistent == (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source == "derived"))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_source_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_consistent == (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version == "v1"))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_version_consistent == true)
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_consistent == (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source == "derived"))
+            and
+            (.guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_source_scope_version_source_consistent == true)
             and
             (.guardrail_consistency_checks_profile_signature_pair_version_source_code_consistent == ((.guardrail_consistency_checks_profile_signature_pair_version_source == "derived") and (.guardrail_consistency_checks_profile_signature_pair_version_source_code == 1)))
             and

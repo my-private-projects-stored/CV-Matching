@@ -1,0 +1,790 @@
+'use client';
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+
+import { ResumeUploadDialog } from '@/components/dashboard/resume-upload-dialog';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { createApplication } from '@/lib/api/applications';
+import type { ApiClientError } from '@/lib/api/error';
+import {
+  confirmImproveResume,
+  getResumePdfUrl,
+  previewImproveResume,
+  uploadJobDescriptions,
+} from '@/lib/api/resume';
+import { useTranslations } from '@/lib/i18n';
+import { downloadBlobAsFile } from '@/lib/utils/download';
+import { logError } from '@/lib/utils/logger';
+
+const APPLY_SESSION_HISTORY_STORAGE_KEY = 'flow_apply_session_history_v1';
+
+type ApplySessionHistoryItem = {
+  applicationId: string | null;
+  jobId: string;
+  resumeId: string;
+  outcome: 'created' | 'duplicate';
+  createdAt: string;
+};
+
+type ApplySessionHistoryFilter = 'all' | 'created' | 'duplicate';
+
+function isValidApplySessionHistoryItem(value: unknown): value is ApplySessionHistoryItem {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as ApplySessionHistoryItem;
+  return (
+    (candidate.applicationId === null || typeof candidate.applicationId === 'string') &&
+    typeof candidate.jobId === 'string' &&
+    typeof candidate.resumeId === 'string' &&
+    (candidate.outcome === 'created' || candidate.outcome === 'duplicate') &&
+    typeof candidate.createdAt === 'string'
+  );
+}
+
+export default function ProductFlowPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { t } = useTranslations();
+  const flowReturnJobId = (searchParams.get('flow_return_job_id') || '').trim();
+  const flowReturnApplicationId = (searchParams.get('flow_return_application_id') || '').trim();
+  const flowReturnQuery = (searchParams.get('flow_return_query') || '').trim();
+
+  const parseFlowReturnPanel = (
+    value: string | null
+  ): 'status-history' | 'status-changes' | 'feedback' | null => {
+    if (value === 'status-history' || value === 'status-changes' || value === 'feedback') {
+      return value;
+    }
+    return null;
+  };
+
+  const [masterResumeId, setMasterResumeId] = useState<string | null>(null);
+  const [jobDescription, setJobDescription] = useState('');
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [tailoredResumeId, setTailoredResumeId] = useState<string | null>(null);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+  const [applicationId, setApplicationId] = useState<string | null>(null);
+  const [applySessionHistory, setApplySessionHistory] = useState<ApplySessionHistoryItem[]>([]);
+  const [historyFilter, setHistoryFilter] = useState<ApplySessionHistoryFilter>('all');
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const flowReturnTargetRef = useRef<HTMLLIElement | null>(null);
+
+  const [previewResult, setPreviewResult] = useState<Awaited<
+    ReturnType<typeof previewImproveResume>
+  > | null>(null);
+
+  useEffect(() => {
+    const storedId = localStorage.getItem('master_resume_id');
+    if (storedId) {
+      setMasterResumeId(storedId);
+    }
+
+    const rawHistory = localStorage.getItem(APPLY_SESSION_HISTORY_STORAGE_KEY);
+    if (!rawHistory) return;
+
+    try {
+      const parsed = JSON.parse(rawHistory);
+      if (!Array.isArray(parsed)) return;
+      const normalized = parsed.filter(isValidApplySessionHistoryItem).slice(0, 20);
+      setApplySessionHistory(normalized);
+    } catch {
+      localStorage.removeItem(APPLY_SESSION_HISTORY_STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(APPLY_SESSION_HISTORY_STORAGE_KEY, JSON.stringify(applySessionHistory));
+  }, [applySessionHistory]);
+
+  const formatRelativeSessionTime = (createdAt: string) => {
+    const createdAtMs = new Date(createdAt).getTime();
+    if (!Number.isFinite(createdAtMs)) {
+      return t('flow.sessionHistory.justNow');
+    }
+
+    const diffSeconds = Math.max(0, Math.floor((Date.now() - createdAtMs) / 1000));
+    if (diffSeconds < 60) {
+      return t('flow.sessionHistory.justNow');
+    }
+
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    if (diffMinutes < 60) {
+      return t('flow.sessionHistory.minutesAgo', { count: diffMinutes });
+    }
+
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) {
+      return t('flow.sessionHistory.hoursAgo', { count: diffHours });
+    }
+
+    return t('flow.sessionHistory.daysAgo', { count: Math.floor(diffHours / 24) });
+  };
+
+  const stepState = useMemo(() => {
+    return {
+      hasMasterResume: Boolean(masterResumeId),
+      hasJobDescription: jobDescription.trim().length >= 50,
+      hasPreview: Boolean(previewResult),
+      hasConfirmedTailoredResume: Boolean(tailoredResumeId),
+      hasApplication: Boolean(applicationId),
+      canStartNextJob: Boolean(
+        jobDescription.trim() || jobId || previewResult || tailoredResumeId || applicationId
+      ),
+    };
+  }, [applicationId, jobDescription, jobId, masterResumeId, previewResult, tailoredResumeId]);
+
+  const filteredSessionHistory = useMemo(() => {
+    if (historyFilter === 'all') return applySessionHistory;
+    return applySessionHistory.filter((item) => item.outcome === historyFilter);
+  }, [applySessionHistory, historyFilter]);
+
+  const isFlowReturnTarget = (item: ApplySessionHistoryItem) => {
+    if (flowReturnApplicationId) {
+      return item.applicationId === flowReturnApplicationId;
+    }
+    if (flowReturnJobId) {
+      return item.jobId === flowReturnJobId;
+    }
+    return false;
+  };
+
+  const prioritizedSessionHistory = useMemo(() => {
+    if (!flowReturnJobId && !flowReturnApplicationId) {
+      return filteredSessionHistory;
+    }
+
+    const targetIndex = filteredSessionHistory.findIndex((item) => isFlowReturnTarget(item));
+    if (targetIndex <= 0) {
+      return filteredSessionHistory;
+    }
+
+    return [
+      filteredSessionHistory[targetIndex],
+      ...filteredSessionHistory.slice(0, targetIndex),
+      ...filteredSessionHistory.slice(targetIndex + 1),
+    ];
+  }, [filteredSessionHistory, flowReturnJobId, flowReturnApplicationId]);
+
+  useEffect(() => {
+    if (!flowReturnJobId && !flowReturnApplicationId) return;
+    if (historyFilter !== 'all') {
+      setHistoryFilter('all');
+    }
+  }, [flowReturnJobId, flowReturnApplicationId, historyFilter]);
+
+  useEffect(() => {
+    if (!flowReturnJobId && !flowReturnApplicationId) return;
+
+    const timeoutId = window.setTimeout(() => {
+      flowReturnTargetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [flowReturnJobId, flowReturnApplicationId, prioritizedSessionHistory]);
+
+  const setOrDeleteQueryParam = (params: URLSearchParams, key: string, value: string) => {
+    if (value) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+  };
+
+  const buildApplicationsHref = ({
+    nextJobId,
+    nextApplicationId,
+    openPanel,
+  }: {
+    nextJobId: string;
+    nextApplicationId: string;
+    openPanel?: 'status-history' | 'status-changes' | 'feedback';
+  }) => {
+    const params = flowReturnQuery ? new URLSearchParams(flowReturnQuery) : new URLSearchParams();
+    const snapshotPanel = parseFlowReturnPanel(params.get('flow_panel'));
+    params.delete('flow_panel');
+
+    setOrDeleteQueryParam(params, 'job_id', nextJobId.trim());
+    setOrDeleteQueryParam(params, 'application_id', nextApplicationId.trim());
+
+    params.delete('sh_open');
+    params.delete('sc_open');
+    params.delete('fb_open');
+
+    const resolvedPanel = openPanel || snapshotPanel;
+    const canOpenPanel = Boolean(nextApplicationId.trim());
+
+    if (resolvedPanel === 'status-history' && canOpenPanel) {
+      params.set('sh_open', '1');
+    }
+    if (resolvedPanel === 'status-changes' && canOpenPanel) {
+      params.set('sc_open', '1');
+    }
+    if (resolvedPanel === 'feedback' && canOpenPanel) {
+      params.set('fb_open', '1');
+    }
+
+    params.set('flow_ctx', '1');
+    return `/applications?${params.toString()}`;
+  };
+
+  const handleUploadComplete = (resumeId: string) => {
+    localStorage.setItem('master_resume_id', resumeId);
+    setMasterResumeId(resumeId);
+    setJobId(null);
+    setPreviewResult(null);
+    setTailoredResumeId(null);
+    setApplicationId(null);
+    setError(null);
+    setMessage(t('flow.messages.masterUploaded'));
+  };
+
+  const handleJobDescriptionChange = (nextValue: string) => {
+    setJobDescription(nextValue);
+
+    if (previewResult || tailoredResumeId || jobId) {
+      setPreviewResult(null);
+      setTailoredResumeId(null);
+      setApplicationId(null);
+      setJobId(null);
+      setError(null);
+      setMessage(t('flow.messages.previewResetByInputChange'));
+    }
+  };
+
+  const handleGeneratePreview = async () => {
+    if (!masterResumeId) {
+      setError(t('flow.errors.masterRequired'));
+      return;
+    }
+
+    const trimmedDescription = jobDescription.trim();
+    if (trimmedDescription.length < 50) {
+      setError(t('flow.errors.jobDescriptionTooShort'));
+      return;
+    }
+
+    setIsGenerating(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const uploadedJobId = await uploadJobDescriptions([trimmedDescription], masterResumeId);
+      setJobId(uploadedJobId);
+
+      const preview = await previewImproveResume(masterResumeId, uploadedJobId);
+      setPreviewResult(preview);
+      setTailoredResumeId(null);
+      setApplicationId(null);
+      setMessage(t('flow.messages.previewGenerated'));
+    } catch (err) {
+      logError('product-flow-page', 'Failed to generate preview', err);
+      setError(t('flow.errors.previewFailed'));
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!masterResumeId || !previewResult?.data?.job_id || !previewResult?.data?.resume_preview) {
+      setError(t('flow.errors.missingPreviewData'));
+      return;
+    }
+
+    setIsConfirming(true);
+    setError(null);
+
+    try {
+      const confirmed = await confirmImproveResume({
+        resume_id: masterResumeId,
+        job_id: previewResult.data.job_id,
+        improved_data: previewResult.data.resume_preview,
+        improvements:
+          previewResult.data.improvements?.map((item) => ({
+            suggestion: item.suggestion,
+            lineNumber: typeof item.lineNumber === 'number' ? item.lineNumber : null,
+          })) || [],
+      });
+
+      const newResumeId = confirmed?.data?.resume_id;
+      if (!newResumeId) {
+        throw new Error('Tailored resume id missing in confirm response');
+      }
+
+      setTailoredResumeId(newResumeId);
+      setApplicationId(null);
+      setMessage(t('flow.messages.tailoredCreated'));
+    } catch (err) {
+      logError('product-flow-page', 'Failed to confirm tailored resume', err);
+      setError(t('flow.errors.confirmFailed'));
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const openPdfPreview = () => {
+    if (!tailoredResumeId) return;
+    const url = getResumePdfUrl(tailoredResumeId);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleApplyNow = async () => {
+    if (!tailoredResumeId || !jobId) {
+      setError(t('flow.errors.applicationMissingData'));
+      return;
+    }
+
+    setIsApplying(true);
+    setError(null);
+
+    try {
+      const created = await createApplication({
+        job_id: jobId,
+        resume_id: tailoredResumeId,
+      });
+
+      const createdApplicationId = created?.data?.application_id || null;
+
+      setApplicationId(createdApplicationId);
+      const createdEvent: ApplySessionHistoryItem = {
+        applicationId: createdApplicationId,
+        jobId,
+        resumeId: tailoredResumeId,
+        outcome: 'created',
+        createdAt: new Date().toISOString(),
+      };
+      setApplySessionHistory((prev) => [createdEvent, ...prev].slice(0, 20));
+      setMessage(t('flow.messages.applicationCreated'));
+    } catch (err) {
+      const statusCode = (err as ApiClientError | undefined)?.statusCode;
+      if (statusCode === 409) {
+        const duplicateEvent: ApplySessionHistoryItem = {
+          applicationId: null,
+          jobId,
+          resumeId: tailoredResumeId,
+          outcome: 'duplicate',
+          createdAt: new Date().toISOString(),
+        };
+        setApplySessionHistory((prev) => [duplicateEvent, ...prev].slice(0, 20));
+        setMessage(t('flow.messages.applicationDuplicate'));
+        return;
+      }
+
+      logError('product-flow-page', 'Failed to create application from flow', err);
+      setError(t('flow.errors.applicationFailed'));
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const handleStartNextJob = () => {
+    setJobDescription('');
+    setJobId(null);
+    setPreviewResult(null);
+    setTailoredResumeId(null);
+    setApplicationId(null);
+    setError(null);
+    setMessage(t('flow.messages.readyForNextJob'));
+  };
+
+  const handleClearSessionHistory = () => {
+    setApplySessionHistory([]);
+    setHistoryFilter('all');
+    setError(null);
+    setMessage(t('flow.messages.sessionHistoryCleared'));
+  };
+
+  const handleExportSessionHistory = () => {
+    if (applySessionHistory.length === 0) return;
+
+    const payload = {
+      exported_at: new Date().toISOString(),
+      total: applySessionHistory.length,
+      entries: applySessionHistory,
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json;charset=utf-8',
+    });
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    downloadBlobAsFile(blob, `flow-apply-session-history-${stamp}.json`);
+    setError(null);
+    setMessage(t('flow.messages.sessionHistoryExported'));
+  };
+
+  const summaryChanges = previewResult?.data?.diff_summary?.total_changes ?? 0;
+
+  return (
+    <div className="min-h-screen bg-[#F6F5EE] p-4 md:p-8">
+      <div className="mx-auto max-w-5xl border border-black bg-white p-6 md:p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)]">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="font-serif text-3xl font-bold uppercase tracking-tight text-black">
+              {t('flow.title')}
+            </h1>
+            <p className="mt-2 font-mono text-xs uppercase text-gray-600">
+              {t('flow.subtitle')}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Link href="/dashboard">
+              <Button variant="outline">{t('nav.backToDashboard')}</Button>
+            </Link>
+            {tailoredResumeId && (
+              <Button onClick={() => router.push(`/resumes/${tailoredResumeId}`)}>
+                {t('flow.actions.openTailoredResume')}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-3 md:grid-cols-4">
+          <StepCard
+            title={t('flow.steps.masterCv')}
+            done={stepState.hasMasterResume}
+            doneLabel={t('flow.status.done')}
+            pendingLabel={t('flow.status.pending')}
+          />
+          <StepCard
+            title={t('flow.steps.jobDescription')}
+            done={stepState.hasJobDescription}
+            doneLabel={t('flow.status.done')}
+            pendingLabel={t('flow.status.pending')}
+          />
+          <StepCard
+            title={t('flow.steps.previewReady')}
+            done={stepState.hasPreview}
+            doneLabel={t('flow.status.done')}
+            pendingLabel={t('flow.status.pending')}
+          />
+          <StepCard
+            title={t('flow.steps.pdfReady')}
+            done={stepState.hasConfirmedTailoredResume}
+            doneLabel={t('flow.status.done')}
+            pendingLabel={t('flow.status.pending')}
+          />
+        </div>
+
+        <div className="mt-2 font-mono text-xs uppercase text-gray-600">
+          {stepState.hasApplication
+            ? t('flow.sections.applicationStatusReady')
+            : t('flow.sections.applicationStatusPending')}
+        </div>
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <section className="border border-black bg-[#F8F7F1] p-4">
+            <h2 className="font-mono text-sm font-bold uppercase">{t('flow.sections.stepA')}</h2>
+            <p className="mt-2 text-sm text-gray-700">
+              {t('flow.sections.stepADescription')}
+            </p>
+            <div className="mt-4">
+              <ResumeUploadDialog
+                open={isUploadDialogOpen}
+                onOpenChange={setIsUploadDialogOpen}
+                onUploadComplete={handleUploadComplete}
+                trigger={<Button>{t('flow.actions.uploadMasterCv')}</Button>}
+              />
+            </div>
+            <p className="mt-3 font-mono text-xs text-gray-600">
+              {t('flow.sections.currentMasterResume', {
+                value: masterResumeId || t('flow.sections.notSet'),
+              })}
+            </p>
+          </section>
+
+          <section className="border border-black bg-[#F8F7F1] p-4">
+            <h2 className="font-mono text-sm font-bold uppercase">{t('flow.sections.stepB')}</h2>
+            <Textarea
+              value={jobDescription}
+              onChange={(e) => handleJobDescriptionChange(e.target.value)}
+              rows={10}
+              placeholder={t('flow.sections.jobDescriptionPlaceholder')}
+              className="mt-3"
+            />
+            <div className="mt-3 flex items-center gap-3">
+              <Button onClick={handleGeneratePreview} disabled={isGenerating || !masterResumeId}>
+                {isGenerating ? t('common.generating') : t('flow.actions.generatePreview')}
+              </Button>
+              <span className="font-mono text-xs text-gray-600">
+                {jobId
+                  ? t('flow.sections.jobIdLabelReady', { jobId })
+                  : t('flow.sections.jobIdLabelPending')}
+              </span>
+            </div>
+          </section>
+        </div>
+
+        <section className="mt-6 border border-black bg-[#EEF6FF] p-4">
+          <h2 className="font-mono text-sm font-bold uppercase">{t('flow.sections.stepC')}</h2>
+          <p className="mt-2 text-sm text-gray-700">
+            {t('flow.sections.previewSummaryPrefix')}{' '}
+            <strong>{summaryChanges}</strong> {t('flow.sections.previewSummarySuffix')}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <Button onClick={handleConfirm} disabled={!previewResult || isConfirming}>
+              {isConfirming ? t('flow.actions.confirming') : t('flow.actions.confirmAndCreate')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={openPdfPreview}
+              disabled={!tailoredResumeId}
+            >
+              {t('flow.actions.openPdf')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => tailoredResumeId && router.push(`/resumes/${tailoredResumeId}`)}
+              disabled={!tailoredResumeId}
+            >
+              {t('flow.actions.openResumeViewer')}
+            </Button>
+            <Button onClick={handleApplyNow} disabled={!tailoredResumeId || !jobId || isApplying}>
+              {isApplying ? t('flow.actions.applying') : t('flow.actions.applyNow')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                router.push(
+                  buildApplicationsHref({
+                    nextJobId: jobId || '',
+                    nextApplicationId: applicationId || '',
+                  })
+                );
+              }}
+            >
+              {t('flow.actions.openApplications')}
+            </Button>
+            <Button variant="outline" onClick={handleStartNextJob} disabled={!stepState.canStartNextJob}>
+              {t('flow.actions.startNextJob')}
+            </Button>
+          </div>
+
+          <div className="mt-4 border border-black bg-white p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-mono text-xs font-bold uppercase">{t('flow.sessionHistory.title')}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleExportSessionHistory}
+                  disabled={applySessionHistory.length === 0}
+                >
+                  {t('flow.sessionHistory.exportAction')}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleClearSessionHistory}
+                  disabled={applySessionHistory.length === 0}
+                >
+                  {t('flow.sessionHistory.clearAction')}
+                </Button>
+              </div>
+            </div>
+            <p className="mt-1 font-mono text-xs text-gray-600">
+              {t('flow.sessionHistory.count', { count: filteredSessionHistory.length })}
+            </p>
+            {historyFilter !== 'all' && (
+              <p className="mt-1 font-mono text-xs text-gray-600">
+                {t('flow.sessionHistory.filteredFromTotal', { count: applySessionHistory.length })}
+              </p>
+            )}
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant={historyFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setHistoryFilter('all')}
+              >
+                {t('flow.sessionHistory.filterAll')}
+              </Button>
+              <Button
+                size="sm"
+                variant={historyFilter === 'created' ? 'default' : 'outline'}
+                onClick={() => setHistoryFilter('created')}
+              >
+                {t('flow.sessionHistory.filterCreated')}
+              </Button>
+              <Button
+                size="sm"
+                variant={historyFilter === 'duplicate' ? 'default' : 'outline'}
+                onClick={() => setHistoryFilter('duplicate')}
+              >
+                {t('flow.sessionHistory.filterDuplicate')}
+              </Button>
+            </div>
+            {filteredSessionHistory.length === 0 ? (
+              <p className="mt-2 text-xs text-gray-600">{t('flow.sessionHistory.empty')}</p>
+            ) : (
+              <ul className="mt-2 space-y-2">
+                {prioritizedSessionHistory.slice(0, 5).map((item, index) => {
+                  const isTarget = isFlowReturnTarget(item);
+
+                  return (
+                    <li
+                      key={`${item.createdAt}-${item.jobId}-${index}`}
+                      ref={isTarget ? flowReturnTargetRef : null}
+                      data-flow-return-target={isTarget ? 'true' : 'false'}
+                      className={`border p-2 ${
+                        isTarget ? 'border-blue-700 bg-blue-50 ring-1 ring-blue-300' : 'border-black/20'
+                      }`}
+                    >
+                      {isTarget ? (
+                        <p className="mb-1 font-mono text-[10px] uppercase text-blue-800">
+                          {t('flow.sessionHistory.returnFocusBadge')}
+                        </p>
+                      ) : null}
+                      <p className="font-mono text-xs">
+                        {t(
+                          item.outcome === 'created'
+                            ? 'flow.sessionHistory.statusCreated'
+                            : 'flow.sessionHistory.statusDuplicate'
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-700">
+                        {t('flow.sessionHistory.jobId', { jobId: item.jobId })}
+                      </p>
+                      <p className="text-xs text-gray-700">
+                        {t('flow.sessionHistory.resumeId', { resumeId: item.resumeId })}
+                      </p>
+                      <p className="text-xs text-gray-700">
+                        {item.applicationId
+                          ? t('flow.sessionHistory.applicationId', {
+                              applicationId: item.applicationId,
+                            })
+                          : t('flow.sessionHistory.applicationIdPending')}
+                      </p>
+                      <p className="text-xs text-gray-700">
+                        {t('flow.sessionHistory.when', {
+                          value: formatRelativeSessionTime(item.createdAt),
+                        })}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            router.push(
+                              buildApplicationsHref({
+                                nextJobId: item.jobId,
+                                nextApplicationId: item.applicationId || '',
+                              })
+                            );
+                          }}
+                        >
+                          {t('flow.sessionHistory.openApplicationsForItem')}
+                        </Button>
+                      {item.applicationId ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const applicationId = item.applicationId;
+                            if (!applicationId) return;
+                            router.push(
+                              buildApplicationsHref({
+                                nextJobId: item.jobId,
+                                nextApplicationId: applicationId,
+                                openPanel: 'status-history',
+                              })
+                            );
+                          }}
+                        >
+                          {t('flow.sessionHistory.openStatusHistoryForItem')}
+                        </Button>
+                      ) : null}
+                      {item.applicationId ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const applicationId = item.applicationId;
+                            if (!applicationId) return;
+                            router.push(
+                              buildApplicationsHref({
+                                nextJobId: item.jobId,
+                                nextApplicationId: applicationId,
+                                openPanel: 'status-changes',
+                              })
+                            );
+                          }}
+                        >
+                          {t('flow.sessionHistory.openStatusChangesForItem')}
+                        </Button>
+                      ) : null}
+                      {item.applicationId ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const applicationId = item.applicationId;
+                            if (!applicationId) return;
+                            router.push(
+                              buildApplicationsHref({
+                                nextJobId: item.jobId,
+                                nextApplicationId: applicationId,
+                                openPanel: 'feedback',
+                              })
+                            );
+                          }}
+                        >
+                          {t('flow.sessionHistory.openFeedbackForItem')}
+                        </Button>
+                      ) : null}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => router.push(`/resumes/${item.resumeId}`)}
+                      >
+                        {t('flow.sessionHistory.openResumeForItem')}
+                      </Button>
+                    </div>
+                  </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        {message && (
+          <div className="mt-4 border border-green-700 bg-green-50 p-3 text-sm text-green-900">
+            {message}
+          </div>
+        )}
+        {error && (
+          <div className="mt-4 border border-red-700 bg-red-50 p-3 text-sm text-red-900">{error}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StepCard({
+  title,
+  done,
+  doneLabel,
+  pendingLabel,
+}: {
+  title: string;
+  done: boolean;
+  doneLabel: string;
+  pendingLabel: string;
+}) {
+  return (
+    <div
+      className={`border p-3 ${done ? 'border-green-800 bg-green-50' : 'border-black bg-[#F3F2EA]'}`}
+    >
+      <p className="font-mono text-xs font-bold uppercase">{title}</p>
+      <p className={`mt-1 text-xs ${done ? 'text-green-800' : 'text-gray-600'}`}>
+        {done ? doneLabel : pendingLabel}
+      </p>
+    </div>
+  );
+}

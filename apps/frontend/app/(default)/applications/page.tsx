@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from '@/lib/i18n';
@@ -43,6 +43,14 @@ const STATUS_CHANGES_PRESETS = [
 type StatusChangesPreset = (typeof STATUS_CHANGES_PRESETS)[number];
 const RANKED_DATE_PRESETS = ['all-time', '7d', 'this-month', 'qtd'] as const;
 type RankedDatePreset = (typeof RANKED_DATE_PRESETS)[number];
+const STATUS_CHANGES_FOCUS_SEEK_DEBOUNCE_MS = 180;
+type FocusMode = 'focus' | 'all';
+type FlowReturnPanel = '' | 'status-history' | 'status-changes' | 'feedback';
+
+function parseBooleanQueryFlag(value: string | null): boolean {
+  if (!value) return false;
+  return value === '1' || value.toLowerCase() === 'true';
+}
 
 function parseStatusFilter(value: string | null): ApplicationStatus | '' {
   if (!value) return '';
@@ -59,6 +67,18 @@ function parseStatusChangesPreset(value: string | null): StatusChangesPreset | '
 function parseRankedDatePreset(value: string | null): RankedDatePreset | '' {
   if (!value) return '';
   return RANKED_DATE_PRESETS.includes(value as RankedDatePreset) ? (value as RankedDatePreset) : '';
+}
+
+function parseFocusMode(value: string | null): FocusMode | '' {
+  if (!value) return '';
+  return value === 'focus' || value === 'all' ? value : '';
+}
+
+function formatLocalDateInput(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function resolvePresetDateRange(preset: Exclude<RankedDatePreset, 'all-time'>): {
@@ -78,8 +98,8 @@ function resolvePresetDateRange(preset: Exclude<RankedDatePreset, 'all-time'>): 
   }
 
   return {
-    changedAfter: from.toISOString().slice(0, 10),
-    changedBefore: today.toISOString().slice(0, 10),
+    changedAfter: formatLocalDateInput(from),
+    changedBefore: formatLocalDateInput(today),
   };
 }
 
@@ -114,6 +134,7 @@ export default function ApplicationsPage() {
   const isRecruiterOrAdmin = user?.role === 'recruiter' || user?.role === 'admin';
   const isCandidateOnly = user?.role === 'candidate';
   const defaultJobId = searchParams.get('job_id') || '';
+  const defaultApplicationId = searchParams.get('application_id') || '';
   const defaultCandidateId = searchParams.get('candidate_id') || '';
   const defaultStatusChangesFilter = parseStatusFilter(searchParams.get('sc_status'));
   const defaultStatusChangesChangedBy = searchParams.get('sc_changed_by') || '';
@@ -136,8 +157,28 @@ export default function ApplicationsPage() {
     defaultRankedChangedAfterRaw || defaultRankedDateRange?.changedAfter || '';
   const defaultRankedChangedBefore =
     defaultRankedChangedBeforeRaw || defaultRankedDateRange?.changedBefore || '';
+  const defaultFocusMode = parseFocusMode(searchParams.get('rc_focus'));
+  const defaultOpenStatusHistory = parseBooleanQueryFlag(searchParams.get('sh_open'));
+  const defaultOpenStatusChanges = parseBooleanQueryFlag(searchParams.get('sc_open'));
+  const defaultOpenFeedback = parseBooleanQueryFlag(searchParams.get('fb_open'));
+  const defaultCandidateFocus = parseBooleanQueryFlag(searchParams.get('candidate_focus'));
+  const defaultFlowReturnPanel: FlowReturnPanel = defaultOpenStatusHistory
+    ? 'status-history'
+    : defaultOpenStatusChanges
+      ? 'status-changes'
+      : defaultOpenFeedback
+        ? 'feedback'
+        : '';
+  const isFlowContext = parseBooleanQueryFlag(searchParams.get('flow_ctx'));
 
   const [jobId, setJobId] = useState(defaultJobId);
+  const [focusApplicationId, setFocusApplicationId] = useState(defaultApplicationId);
+  const [focusOnlyMode, setFocusOnlyMode] = useState(
+    Boolean(defaultApplicationId) && defaultFocusMode !== 'all'
+  );
+  const [candidateFocusEnabled, setCandidateFocusEnabled] = useState(
+    Boolean(defaultApplicationId) && defaultCandidateFocus
+  );
   const [candidateId, setCandidateId] = useState(defaultCandidateId);
   const [rankedStatusFilter, setRankedStatusFilter] = useState<ApplicationStatus | ''>('');
   const [rankedChangedByFilter, setRankedChangedByFilter] = useState(defaultRankedChangedByFilter);
@@ -186,6 +227,9 @@ export default function ApplicationsPage() {
   const [historyTotalPages, setHistoryTotalPages] = useState(1);
   const [rankedActivated, setRankedActivated] = useState(Boolean(defaultJobId));
   const [historyActivated, setHistoryActivated] = useState(Boolean(defaultCandidateId));
+  const [isSeekingFocusedApplication, setIsSeekingFocusedApplication] = useState(false);
+  const [isSeekingFocusedHistoryItem, setIsSeekingFocusedHistoryItem] = useState(false);
+  const [isSeekingFocusedStatusChanges, setIsSeekingFocusedStatusChanges] = useState(false);
   const [isLoadingRanked, setIsLoadingRanked] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isLoadingStatusChanges, setIsLoadingStatusChanges] = useState(false);
@@ -223,7 +267,28 @@ export default function ApplicationsPage() {
   const [statusChangesActivated, setStatusChangesActivated] = useState(Boolean(defaultJobId));
   const [isStatusChangesSummaryAnimating, setIsStatusChangesSummaryAnimating] = useState(false);
   const [isExportingStatusChanges, setIsExportingStatusChanges] = useState(false);
+  const [pendingStatusHistoryApplicationId, setPendingStatusHistoryApplicationId] = useState(
+    defaultOpenStatusHistory ? defaultApplicationId : ''
+  );
+  const [statusChangesFocusApplicationId, setStatusChangesFocusApplicationId] = useState(
+    defaultOpenStatusChanges ? defaultApplicationId : ''
+  );
+  const [pendingFeedbackApplicationId, setPendingFeedbackApplicationId] = useState(
+    defaultOpenFeedback ? defaultApplicationId : ''
+  );
+  const [flowReturnPanel, setFlowReturnPanel] = useState<FlowReturnPanel>(defaultFlowReturnPanel);
   const [error, setError] = useState<string | null>(null);
+  const focusSeekAttemptedKeyRef = useRef<string>('');
+  const focusSeekRunIdRef = useRef(0);
+  const candidateFocusSeekAttemptedKeyRef = useRef<string>('');
+  const candidateFocusSeekRunIdRef = useRef(0);
+  const statusChangesFocusSeekAttemptedKeyRef = useRef<string>('');
+  const statusChangesFocusSeekRunIdRef = useRef(0);
+  const focusedCardRef = useRef<HTMLDivElement | null>(null);
+  const candidateFocusedHistoryRef = useRef<HTMLDivElement | null>(null);
+  const statusChangesCardRef = useRef<HTMLDivElement | null>(null);
+  const statusChangesFocusedRowRef = useRef<HTMLDivElement | null>(null);
+  const statusChangesDeepLinkHandledRef = useRef(false);
 
   useEffect(() => {
     if (!isCandidateOnly || !user?.id) return;
@@ -236,6 +301,117 @@ export default function ApplicationsPage() {
     if (!rankedItems.length) return null;
     return rankedItems[0].scores.hybrid_score;
   }, [rankedItems]);
+
+  const focusedRankedItem = useMemo(() => {
+    if (!focusApplicationId.trim()) return null;
+    return rankedItems.find((item) => item.application_id === focusApplicationId.trim()) || null;
+  }, [focusApplicationId, rankedItems]);
+
+  const displayedRankedItems = useMemo(() => {
+    if (focusOnlyMode && focusedRankedItem) {
+      return rankedItems.filter((item) => item.application_id === focusedRankedItem.application_id);
+    }
+    return rankedItems;
+  }, [focusOnlyMode, focusedRankedItem, rankedItems]);
+
+  const focusedHistoryItem = useMemo(() => {
+    if (!candidateFocusEnabled || !focusApplicationId.trim()) return null;
+    return (
+      historyItems.find((item) => item.application_id === focusApplicationId.trim()) || null
+    );
+  }, [candidateFocusEnabled, focusApplicationId, historyItems]);
+
+  const statusChangesFocusedVisible = useMemo(() => {
+    if (!statusChangesFocusApplicationId.trim()) return false;
+    return statusChanges.some(
+      (item) => item.application_id === statusChangesFocusApplicationId.trim()
+    );
+  }, [statusChanges, statusChangesFocusApplicationId]);
+
+  const flowReturnQuerySnapshot = useMemo(() => {
+    const next = new URLSearchParams(searchParams.toString());
+    // Keep only recruiter view state; volatile deep-link params are restored from dedicated flow keys.
+    next.delete('flow_ctx');
+    next.delete('job_id');
+    next.delete('application_id');
+    next.delete('candidate_id');
+    next.delete('sh_open');
+    next.delete('sc_open');
+    next.delete('fb_open');
+
+    if (flowReturnPanel) {
+      next.set('flow_panel', flowReturnPanel);
+    } else {
+      next.delete('flow_panel');
+    }
+
+    return next.toString();
+  }, [searchParams, flowReturnPanel]);
+
+  const flowReturnHref = useMemo(() => {
+    if (!isFlowContext) return '/flow';
+
+    const params = new URLSearchParams();
+    if (jobId.trim()) {
+      params.set('flow_return_job_id', jobId.trim());
+    }
+
+    const returnApplicationId = focusApplicationId.trim() || defaultApplicationId.trim();
+    if (returnApplicationId) {
+      params.set('flow_return_application_id', returnApplicationId);
+    }
+
+    if (flowReturnQuerySnapshot) {
+      params.set('flow_return_query', flowReturnQuerySnapshot);
+    }
+
+    const query = params.toString();
+    return query ? `/flow?${query}` : '/flow';
+  }, [isFlowContext, jobId, focusApplicationId, defaultApplicationId, flowReturnQuerySnapshot]);
+
+  const focusSeekKey = useMemo(() => {
+    return JSON.stringify({
+      focusApplicationId: focusApplicationId.trim(),
+      jobId: jobId.trim(),
+      rankedStatusFilter,
+      rankedChangedByFilter: rankedChangedByFilter.trim(),
+      rankedChangedAfter,
+      rankedChangedBefore,
+    });
+  }, [
+    focusApplicationId,
+    jobId,
+    rankedStatusFilter,
+    rankedChangedByFilter,
+    rankedChangedAfter,
+    rankedChangedBefore,
+  ]);
+
+  const candidateFocusSeekKey = useMemo(() => {
+    return JSON.stringify({
+      focusApplicationId: focusApplicationId.trim(),
+      candidateId: candidateId.trim(),
+      historyStatusFilter,
+    });
+  }, [focusApplicationId, candidateId, historyStatusFilter]);
+
+  const statusChangesFocusSeekKey = useMemo(() => {
+    return JSON.stringify({
+      focusApplicationId: statusChangesFocusApplicationId.trim(),
+      jobId: jobId.trim(),
+      statusChangesFilter,
+      statusChangesChangedBy: statusChangesChangedBy.trim(),
+      statusChangesChangedAfter,
+      statusChangesChangedBefore,
+    });
+  }, [
+    statusChangesFocusApplicationId,
+    jobId,
+    statusChangesFilter,
+    statusChangesChangedBy,
+    statusChangesChangedAfter,
+    statusChangesChangedBefore,
+  ]);
 
   const statusLabel = useCallback(
     (status: ApplicationStatus) => t(`applicationsPage.status.${status}`),
@@ -272,8 +448,8 @@ export default function ApplicationsPage() {
     }
 
     setStatusChangesPreset(preset);
-    setStatusChangesChangedAfter(from.toISOString().slice(0, 10));
-    setStatusChangesChangedBefore(today.toISOString().slice(0, 10));
+    setStatusChangesChangedAfter(formatLocalDateInput(from));
+    setStatusChangesChangedBefore(formatLocalDateInput(today));
     setStatusChangesPage(1);
     },
     []
@@ -306,14 +482,14 @@ export default function ApplicationsPage() {
     }
 
     setRankedDatePreset(preset);
-    setRankedChangedAfter(from.toISOString().slice(0, 10));
-    setRankedChangedBefore(today.toISOString().slice(0, 10));
+    setRankedChangedAfter(formatLocalDateInput(from));
+    setRankedChangedBefore(formatLocalDateInput(today));
     setRankedPage(1);
   }, []);
 
   const rankedFilterSummary = useMemo(() => {
     const tokens: Array<{
-      id: 'preset' | 'status' | 'changedBy' | 'from' | 'to';
+      id: 'preset' | 'status' | 'changedBy' | 'from' | 'to' | 'focus';
       label: string;
     }> = [];
 
@@ -351,11 +527,28 @@ export default function ApplicationsPage() {
         label: t('applicationsPage.recruiterView.summaryTo', { date: rankedChangedBefore }),
       });
     }
+    if (focusApplicationId.trim()) {
+      tokens.push({
+        id: 'focus',
+        label: t('applicationsPage.recruiterView.summaryFocusedApplication', {
+          applicationId: focusApplicationId.trim(),
+        }),
+      });
+    }
 
     return tokens;
-  }, [rankedDatePreset, rankedStatusFilter, rankedChangedByFilter, rankedChangedAfter, rankedChangedBefore, statusLabel, t]);
+  }, [
+    rankedDatePreset,
+    rankedStatusFilter,
+    rankedChangedByFilter,
+    rankedChangedAfter,
+    rankedChangedBefore,
+    focusApplicationId,
+    statusLabel,
+    t,
+  ]);
 
-  const removeRankedFilterChip = useCallback((chipId: 'preset' | 'status' | 'changedBy' | 'from' | 'to') => {
+  const removeRankedFilterChip = useCallback((chipId: 'preset' | 'status' | 'changedBy' | 'from' | 'to' | 'focus') => {
     switch (chipId) {
       case 'preset':
         setRankedDatePreset('');
@@ -376,6 +569,10 @@ export default function ApplicationsPage() {
         setRankedDatePreset('');
         setRankedChangedBefore('');
         break;
+      case 'focus':
+        setFocusApplicationId('');
+        setFocusOnlyMode(false);
+        break;
     }
     setRankedPage(1);
     setIsRankedSummaryAnimating(true);
@@ -387,6 +584,8 @@ export default function ApplicationsPage() {
     setRankedChangedByFilter('');
     setRankedChangedAfter('');
     setRankedChangedBefore('');
+    setFocusApplicationId('');
+    setFocusOnlyMode(false);
     setRankedPage(1);
     setRankedActivated(true);
     setIsRankedSummaryAnimating(true);
@@ -501,6 +700,284 @@ export default function ApplicationsPage() {
   }, [isStatusChangesSummaryAnimating]);
 
   useEffect(() => {
+    if (focusApplicationId.trim()) return;
+    setFocusOnlyMode(false);
+    setCandidateFocusEnabled(false);
+    setFlowReturnPanel('');
+    setStatusChangesFocusApplicationId('');
+  }, [focusApplicationId]);
+
+  useEffect(() => {
+    if (!isCandidateOnly || !focusedHistoryItem) return;
+
+    const timer = window.setTimeout(() => {
+      candidateFocusedHistoryRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [isCandidateOnly, focusedHistoryItem?.application_id, historyPage]);
+
+  useEffect(() => {
+    if (!isCandidateOnly || !candidateFocusEnabled || !focusApplicationId.trim()) {
+      candidateFocusSeekRunIdRef.current += 1;
+      candidateFocusSeekAttemptedKeyRef.current = '';
+      setIsSeekingFocusedHistoryItem(false);
+      return;
+    }
+
+    if (!historyActivated || !candidateId.trim()) return;
+    if (isLoadingHistory) return;
+    if (focusedHistoryItem) return;
+    if (historyTotalPages <= 1) return;
+
+    if (candidateFocusSeekAttemptedKeyRef.current === candidateFocusSeekKey) {
+      return;
+    }
+
+    candidateFocusSeekAttemptedKeyRef.current = candidateFocusSeekKey;
+    const runId = candidateFocusSeekRunIdRef.current + 1;
+    candidateFocusSeekRunIdRef.current = runId;
+
+    let cancelled = false;
+    const seekFocusedHistoryItem = async () => {
+      if (cancelled || candidateFocusSeekRunIdRef.current !== runId) return;
+      setIsSeekingFocusedHistoryItem(true);
+      try {
+        for (let page = 1; page <= historyTotalPages; page += 1) {
+          if (page === historyPage) continue;
+
+          const result = await fetchCandidateApplicationHistory({
+            candidateId: candidateId.trim(),
+            limit: 20,
+            page,
+            status: historyStatusFilter,
+          });
+
+          if (cancelled || candidateFocusSeekRunIdRef.current !== runId) return;
+
+          const isMatch = result.data.applications.some(
+            (item) => item.application_id === focusApplicationId.trim()
+          );
+          if (isMatch) {
+            setHistoryPage(page);
+            return;
+          }
+        }
+      } catch {
+        // Keep current history view and focus hints if background seek fails.
+      } finally {
+        if (!cancelled && candidateFocusSeekRunIdRef.current === runId) {
+          setIsSeekingFocusedHistoryItem(false);
+        }
+      }
+    };
+
+    void seekFocusedHistoryItem();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    candidateFocusEnabled,
+    candidateFocusSeekKey,
+    candidateId,
+    focusApplicationId,
+    focusedHistoryItem,
+    historyActivated,
+    historyPage,
+    historyStatusFilter,
+    historyTotalPages,
+    isCandidateOnly,
+    isLoadingHistory,
+  ]);
+
+  useEffect(() => {
+    if (!isRecruiterOrAdmin || !statusChangesFocusApplicationId.trim()) {
+      statusChangesFocusSeekRunIdRef.current += 1;
+      statusChangesFocusSeekAttemptedKeyRef.current = '';
+      setIsSeekingFocusedStatusChanges(false);
+      return;
+    }
+
+    if (!statusChangesActivated || !jobId.trim()) return;
+    if (isLoadingStatusChanges) return;
+    if (statusChangesFocusedVisible) return;
+    if (statusChangesTotalPages <= 1) return;
+
+    if (statusChangesFocusSeekAttemptedKeyRef.current === statusChangesFocusSeekKey) {
+      return;
+    }
+
+    statusChangesFocusSeekAttemptedKeyRef.current = statusChangesFocusSeekKey;
+    const runId = statusChangesFocusSeekRunIdRef.current + 1;
+    statusChangesFocusSeekRunIdRef.current = runId;
+
+    let cancelled = false;
+    let debounceTimer: ReturnType<typeof window.setTimeout> | null = null;
+    const seekFocusedStatusChange = async () => {
+      if (cancelled || statusChangesFocusSeekRunIdRef.current !== runId) return;
+      setIsSeekingFocusedStatusChanges(true);
+      try {
+        for (let page = 1; page <= statusChangesTotalPages; page += 1) {
+          if (page === statusChangesPage) continue;
+
+          const result = await fetchRecentStatusChanges({
+            jobId: jobId.trim(),
+            page,
+            limit: 20,
+            status: statusChangesFilter,
+            changedBy: statusChangesChangedBy,
+            changedAfter: statusChangesChangedAfter,
+            changedBefore: statusChangesChangedBefore,
+          });
+
+          if (cancelled || statusChangesFocusSeekRunIdRef.current !== runId) return;
+
+          const isMatch = result.data.changes.some(
+            (item) => item.application_id === statusChangesFocusApplicationId.trim()
+          );
+          if (isMatch) {
+            setStatusChangesPage(page);
+            return;
+          }
+        }
+      } catch {
+        // Keep current status-changes page and focus hint when background seek fails.
+      } finally {
+        if (!cancelled && statusChangesFocusSeekRunIdRef.current === runId) {
+          setIsSeekingFocusedStatusChanges(false);
+        }
+      }
+    };
+
+    debounceTimer = window.setTimeout(() => {
+      void seekFocusedStatusChange();
+    }, STATUS_CHANGES_FOCUS_SEEK_DEBOUNCE_MS);
+
+    return () => {
+      cancelled = true;
+      if (debounceTimer !== null) {
+        window.clearTimeout(debounceTimer);
+      }
+    };
+  }, [
+    isRecruiterOrAdmin,
+    statusChangesFocusApplicationId,
+    statusChangesActivated,
+    jobId,
+    isLoadingStatusChanges,
+    statusChangesFocusedVisible,
+    statusChangesTotalPages,
+    statusChangesFocusSeekKey,
+    statusChangesPage,
+    statusChangesFilter,
+    statusChangesChangedBy,
+    statusChangesChangedAfter,
+    statusChangesChangedBefore,
+  ]);
+
+  useEffect(() => {
+    if (!isRecruiterOrAdmin || !statusChangesFocusedVisible) return;
+
+    const timer = window.setTimeout(() => {
+      statusChangesFocusedRowRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    isRecruiterOrAdmin,
+    statusChangesFocusedVisible,
+    statusChangesFocusApplicationId,
+    statusChangesPage,
+  ]);
+
+  useEffect(() => {
+    if (!focusedRankedItem) return;
+
+    const timer = window.setTimeout(() => {
+      focusedCardRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [focusedRankedItem?.application_id, rankedPage]);
+
+  useEffect(() => {
+    if (!focusApplicationId.trim()) {
+      focusSeekRunIdRef.current += 1;
+      focusSeekAttemptedKeyRef.current = '';
+      setIsSeekingFocusedApplication(false);
+      return;
+    }
+
+    if (!rankedActivated || !jobId.trim()) return;
+    if (isLoadingRanked) return;
+    if (focusedRankedItem) return;
+    if (rankedTotalPages <= 1) return;
+
+    if (focusSeekAttemptedKeyRef.current === focusSeekKey) {
+      return;
+    }
+
+    focusSeekAttemptedKeyRef.current = focusSeekKey;
+    const runId = focusSeekRunIdRef.current + 1;
+    focusSeekRunIdRef.current = runId;
+
+    let cancelled = false;
+    const seekFocusedApplication = async () => {
+      if (cancelled || focusSeekRunIdRef.current !== runId) return;
+      setIsSeekingFocusedApplication(true);
+      try {
+        for (let page = 1; page <= rankedTotalPages; page += 1) {
+          if (page === rankedPage) continue;
+
+          const result = await fetchRankedApplications({
+            jobId: jobId.trim(),
+            limit: 20,
+            page,
+            status: rankedStatusFilter,
+            changedBy: rankedChangedByFilter,
+            changedAfter: rankedChangedAfter,
+            changedBefore: rankedChangedBefore,
+          });
+
+          if (cancelled || focusSeekRunIdRef.current !== runId) return;
+
+          const isMatch = result.data.candidates.some(
+            (item) => item.application_id === focusApplicationId.trim()
+          );
+          if (isMatch) {
+            setRankedPage(page);
+            return;
+          }
+        }
+      } catch {
+        // Keep focus fallback message in UI when seek fails.
+      } finally {
+        if (!cancelled && focusSeekRunIdRef.current === runId) {
+          setIsSeekingFocusedApplication(false);
+        }
+      }
+    };
+
+    void seekFocusedApplication();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    focusApplicationId,
+    focusedRankedItem,
+    focusSeekKey,
+    isLoadingRanked,
+    jobId,
+    rankedActivated,
+    rankedChangedAfter,
+    rankedChangedBefore,
+    rankedChangedByFilter,
+    rankedPage,
+    rankedStatusFilter,
+    rankedTotalPages,
+  ]);
+
+  useEffect(() => {
     const next = new URLSearchParams(searchParams.toString());
     const setOrDelete = (key: string, value: string) => {
       if (value) {
@@ -511,11 +988,30 @@ export default function ApplicationsPage() {
     };
 
     setOrDelete('job_id', jobId.trim());
+    setOrDelete('application_id', focusApplicationId.trim());
+    setOrDelete(
+      'rc_focus',
+      isRecruiterOrAdmin && focusApplicationId.trim() ? (focusOnlyMode ? 'focus' : 'all') : ''
+    );
     setOrDelete('candidate_id', candidateId.trim());
+    setOrDelete(
+      'candidate_focus',
+      isCandidateOnly && candidateFocusEnabled && focusApplicationId.trim() ? '1' : ''
+    );
     setOrDelete('rc_changed_by', rankedChangedByFilter.trim());
     setOrDelete('rc_after', rankedChangedAfter);
     setOrDelete('rc_before', rankedChangedBefore);
     setOrDelete('rc_preset', rankedDatePreset);
+    const canShareFocusedPanel = Boolean(focusApplicationId.trim());
+    setOrDelete(
+      'sh_open',
+      canShareFocusedPanel && flowReturnPanel === 'status-history' ? '1' : ''
+    );
+    setOrDelete(
+      'sc_open',
+      canShareFocusedPanel && flowReturnPanel === 'status-changes' ? '1' : ''
+    );
+    setOrDelete('fb_open', canShareFocusedPanel && flowReturnPanel === 'feedback' ? '1' : '');
     setOrDelete('sc_status', statusChangesFilter);
     setOrDelete('sc_changed_by', statusChangesChangedBy.trim());
     setOrDelete('sc_after', statusChangesChangedAfter);
@@ -539,11 +1035,17 @@ export default function ApplicationsPage() {
     pathname,
     searchParams,
     jobId,
+    focusApplicationId,
+    focusOnlyMode,
+    isRecruiterOrAdmin,
     candidateId,
+    isCandidateOnly,
+    candidateFocusEnabled,
     rankedChangedByFilter,
     rankedChangedAfter,
     rankedChangedBefore,
     rankedDatePreset,
+    flowReturnPanel,
     statusChangesFilter,
     statusChangesChangedBy,
     statusChangesChangedAfter,
@@ -800,20 +1302,38 @@ export default function ApplicationsPage() {
   }
 
   useEffect(() => {
-    const visibleIds = new Set(rankedItems.map((item) => item.application_id));
+    const visibleIds = new Set(displayedRankedItems.map((item) => item.application_id));
     setSelectedRankedApplicationIds((prev) => prev.filter((id) => visibleIds.has(id)));
-  }, [rankedItems]);
+  }, [displayedRankedItems]);
 
-  async function openFeedback(applicationId: string) {
+  const openFeedback = useCallback(
+    async (applicationId: string) => {
+      setError(null);
+
+      try {
+        const result = await fetchApplicationFeedback(applicationId);
+        setFeedback(result.data);
+        setFocusApplicationId(applicationId);
+        setFlowReturnPanel('feedback');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t('applicationsPage.errors.loadFeedbackFailed'));
+      }
+    },
+    [t]
+  );
+
+  const openStatusChanges = useCallback((applicationId: string) => {
     setError(null);
+    setFocusApplicationId(applicationId);
+    setStatusChangesFocusApplicationId(applicationId);
+    setFlowReturnPanel('status-changes');
+    setStatusChangesPage(1);
+    setStatusChangesActivated(true);
 
-    try {
-      const result = await fetchApplicationFeedback(applicationId);
-      setFeedback(result.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('applicationsPage.errors.loadFeedbackFailed'));
-    }
-  }
+    window.setTimeout(() => {
+      statusChangesCardRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    }, 0);
+  }, []);
 
   const handleExportStatusChanges = useCallback(async () => {
     if (!jobId.trim()) {
@@ -884,21 +1404,87 @@ export default function ApplicationsPage() {
     t,
   ]);
 
-  async function openStatusHistory(applicationId: string, candidateName: string) {
-    setError(null);
+  const openStatusHistory = useCallback(
+    async (applicationId: string, candidateName?: string) => {
+      setError(null);
 
-    try {
-      const result = await fetchApplicationStatusHistory(applicationId);
-      setSelectedStatusHistory({
-        applicationId,
-        candidateName,
-        currentStatus: result.data.current_status,
-        entries: result.data.history,
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('applicationsPage.errors.loadStatusHistoryFailed'));
+      try {
+        const result = await fetchApplicationStatusHistory(applicationId);
+        const resolvedCandidateName =
+          candidateName ||
+          rankedItems.find((item) => item.application_id === applicationId)?.candidate.full_name ||
+          applicationId;
+        setSelectedStatusHistory({
+          applicationId,
+          candidateName: resolvedCandidateName,
+          currentStatus: result.data.current_status,
+          entries: result.data.history,
+        });
+        setFocusApplicationId(applicationId);
+        setFlowReturnPanel('status-history');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t('applicationsPage.errors.loadStatusHistoryFailed'));
+      }
+    },
+    [rankedItems, t]
+  );
+
+  useEffect(() => {
+    if (!pendingStatusHistoryApplicationId.trim()) return;
+
+    let cancelled = false;
+    const openFromDeepLink = async () => {
+      try {
+        await openStatusHistory(pendingStatusHistoryApplicationId.trim());
+      } finally {
+        if (!cancelled) {
+          setPendingStatusHistoryApplicationId('');
+        }
+      }
+    };
+
+    void openFromDeepLink();
+    return () => {
+      cancelled = true;
+    };
+  }, [openStatusHistory, pendingStatusHistoryApplicationId]);
+
+  useEffect(() => {
+    if (!pendingFeedbackApplicationId.trim()) return;
+
+    let cancelled = false;
+    const openFeedbackFromDeepLink = async () => {
+      try {
+        await openFeedback(pendingFeedbackApplicationId.trim());
+      } finally {
+        if (!cancelled) {
+          setPendingFeedbackApplicationId('');
+        }
+      }
+    };
+
+    void openFeedbackFromDeepLink();
+    return () => {
+      cancelled = true;
+    };
+  }, [openFeedback, pendingFeedbackApplicationId]);
+
+  useEffect(() => {
+    if (!defaultOpenStatusChanges) return;
+    if (statusChangesDeepLinkHandledRef.current) return;
+    if (!jobId.trim() || !statusChangesActivated || isLoadingStatusChanges) return;
+
+    statusChangesDeepLinkHandledRef.current = true;
+    if (defaultApplicationId.trim()) {
+      setStatusChangesFocusApplicationId(defaultApplicationId.trim());
     }
-  }
+    setFlowReturnPanel('status-changes');
+    const timer = window.setTimeout(() => {
+      statusChangesCardRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [defaultOpenStatusChanges, jobId, statusChangesActivated, isLoadingStatusChanges]);
 
   function openOriginalResume(resumeId: string | null) {
     setError(null);
@@ -949,9 +1535,16 @@ export default function ApplicationsPage() {
             <h1 className="font-serif text-4xl uppercase tracking-tight">{t('applicationsPage.title')}</h1>
             <p className="font-mono text-xs uppercase text-blue-700">{t('applicationsPage.subtitle')}</p>
           </div>
-          <Link href="/dashboard">
-            <Button variant="outline">{t('nav.backToDashboard')}</Button>
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {isFlowContext ? (
+              <Link href={flowReturnHref}>
+                <Button variant="outline">{t('applicationsPage.returnToFlow')}</Button>
+              </Link>
+            ) : null}
+            <Link href="/dashboard">
+              <Button variant="outline">{t('nav.backToDashboard')}</Button>
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -967,6 +1560,10 @@ export default function ApplicationsPage() {
                 value={jobId}
                 onChange={(e) => {
                   setJobId(e.target.value);
+                  if (focusApplicationId) {
+                    setFocusApplicationId('');
+                    setFocusOnlyMode(false);
+                  }
                   setRankedPage(1);
                   setStatusChangesPage(1);
                 }}
@@ -1170,7 +1767,7 @@ export default function ApplicationsPage() {
         {isRecruiterOrAdmin ? renderSummary() : null}
 
         {isRecruiterOrAdmin ? (
-          <Card variant="outline" className="space-y-4">
+          <Card ref={statusChangesCardRef} variant="outline" className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="text-2xl">{t('applicationsPage.statusChanges.title')}</CardTitle>
             <div className="flex items-center gap-2">
@@ -1206,6 +1803,28 @@ export default function ApplicationsPage() {
               </Button>
             </div>
           </div>
+          {statusChangesFocusApplicationId.trim() ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-mono text-[11px] uppercase text-blue-900">
+                {statusChangesFocusedVisible
+                  ? t('applicationsPage.statusChanges.focusedApplicationVisible')
+                  : isSeekingFocusedStatusChanges
+                    ? t('applicationsPage.statusChanges.focusedApplicationSeeking')
+                    : t('applicationsPage.statusChanges.focusedApplicationNotVisible')}
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStatusChangesFocusApplicationId('');
+                  if (flowReturnPanel === 'status-changes') {
+                    setFlowReturnPanel('');
+                  }
+                }}
+              >
+                {t('applicationsPage.statusChanges.clearFocusedApplication')}
+              </Button>
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             <select
               className="h-10 border border-black bg-transparent px-2 text-xs uppercase rounded-none"
@@ -1342,7 +1961,27 @@ export default function ApplicationsPage() {
           <div className="space-y-2">
             {statusChanges.length ? (
               statusChanges.map((item) => (
-                <div key={`${item.application_id}-${item.changed_at}`} className="border border-black bg-white p-3">
+                <div
+                  key={`${item.application_id}-${item.changed_at}`}
+                  ref={
+                    item.application_id === statusChangesFocusApplicationId
+                      ? statusChangesFocusedRowRef
+                      : null
+                  }
+                  data-status-change-focused={
+                    item.application_id === statusChangesFocusApplicationId ? 'true' : 'false'
+                  }
+                  className={`border p-3 ${
+                    item.application_id === statusChangesFocusApplicationId
+                      ? 'border-blue-700 bg-blue-50 ring-1 ring-blue-300'
+                      : 'border-black bg-white'
+                  }`}
+                >
+                  {item.application_id === statusChangesFocusApplicationId ? (
+                    <p className="font-mono text-[10px] uppercase text-blue-800 mb-1">
+                      {t('applicationsPage.statusChanges.focusBadge')}
+                    </p>
+                  ) : null}
                   <p className="font-bold">{item.candidate.full_name}</p>
                   <p className="font-mono text-[11px] uppercase text-gray-600">
                     {item.candidate.email || t('applicationsPage.rankedCandidates.notAvailable')}
@@ -1383,20 +2022,68 @@ export default function ApplicationsPage() {
 
         {isRecruiterOrAdmin ? (
           <Card variant="outline" className="space-y-4">
-          <CardTitle className="text-2xl">{t('applicationsPage.rankedCandidates.title')}</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-2xl">{t('applicationsPage.rankedCandidates.title')}</CardTitle>
+            {focusApplicationId ? (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={focusOnlyMode ? 'default' : 'outline'}
+                  disabled={!focusedRankedItem}
+                  onClick={() => setFocusOnlyMode((prev) => !prev)}
+                >
+                  {focusOnlyMode
+                    ? t('applicationsPage.rankedCandidates.focusOnlyDisable')
+                    : t('applicationsPage.rankedCandidates.focusOnlyEnable')}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setFocusApplicationId('');
+                    setFocusOnlyMode(false);
+                  }}
+                >
+                  {t('applicationsPage.rankedCandidates.clearFocusedApplication')}
+                </Button>
+              </div>
+            ) : null}
+          </div>
+          {focusApplicationId ? (
+            <p className="font-mono text-[11px] uppercase text-blue-900">
+              {focusedRankedItem
+                ? t('applicationsPage.rankedCandidates.focusedApplication')
+                : isSeekingFocusedApplication
+                  ? t('applicationsPage.rankedCandidates.focusedApplicationSeeking')
+                  : t('applicationsPage.rankedCandidates.focusedApplicationNotVisible')}
+            </p>
+          ) : null}
+          {focusOnlyMode && focusedRankedItem ? (
+            <p className="font-mono text-[11px] uppercase text-blue-900">
+              {t('applicationsPage.rankedCandidates.focusedApplicationOnlyMode')}
+            </p>
+          ) : null}
           <div className="flex flex-wrap items-center gap-2 border border-black bg-[#E7EEF9] p-2">
             <label className="inline-flex items-center gap-2 font-mono text-[11px] uppercase">
               <input
                 type="checkbox"
-                checked={Boolean(rankedItems.length) && selectedRankedApplicationIds.length === rankedItems.length}
+                checked={
+                  Boolean(displayedRankedItems.length) &&
+                  selectedRankedApplicationIds.length === displayedRankedItems.length
+                }
                 onChange={(e) => {
                   if (e.target.checked) {
-                    setSelectedRankedApplicationIds(rankedItems.map((item) => item.application_id));
+                    setSelectedRankedApplicationIds(
+                      displayedRankedItems.map((item) => item.application_id)
+                    );
                   } else {
                     setSelectedRankedApplicationIds([]);
                   }
                 }}
-                disabled={!rankedItems.length || isLoadingRanked || isApplyingBulkStatus || isUndoingBulkStatus}
+                disabled={
+                  !displayedRankedItems.length ||
+                  isLoadingRanked ||
+                  isApplyingBulkStatus ||
+                  isUndoingBulkStatus
+                }
               />
               {t('applicationsPage.rankedCandidates.selectAllCurrentPage')}
             </label>
@@ -1461,12 +2148,23 @@ export default function ApplicationsPage() {
             ) : null}
           </div>
           <div className="space-y-2">
-            {rankedItems.map((item) => (
+            {displayedRankedItems.map((item) => (
               <div
                 key={item.application_id}
-                className="border border-black bg-white p-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
+                ref={item.application_id === focusApplicationId ? focusedCardRef : null}
+                data-focused={item.application_id === focusApplicationId ? 'true' : 'false'}
+                className={`border p-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between ${
+                  item.application_id === focusApplicationId
+                    ? 'border-blue-700 bg-blue-50 ring-2 ring-blue-300'
+                    : 'border-black bg-white'
+                }`}
               >
                 <div>
+                  {item.application_id === focusApplicationId ? (
+                    <p className="font-mono text-[10px] uppercase text-blue-800 mb-1">
+                      {t('applicationsPage.rankedCandidates.focusBadge')}
+                    </p>
+                  ) : null}
                   <label className="inline-flex items-center gap-2 font-mono text-[11px] uppercase text-gray-600 mb-2">
                     <input
                       type="checkbox"
@@ -1534,6 +2232,12 @@ export default function ApplicationsPage() {
                   </Button>
                   <Button
                     variant="outline"
+                    onClick={() => openStatusChanges(item.application_id)}
+                  >
+                    {t('applicationsPage.rankedCandidates.statusChangesButton')}
+                  </Button>
+                  <Button
+                    variant="outline"
                     disabled={!item.resume.id}
                     onClick={() => openOriginalResume(item.resume.id)}
                   >
@@ -1543,7 +2247,7 @@ export default function ApplicationsPage() {
               </div>
             ))}
 
-            {!rankedItems.length ? (
+            {!displayedRankedItems.length ? (
               <p className="font-mono text-xs uppercase text-gray-500">
                 {t('applicationsPage.rankedCandidates.empty')}
               </p>
@@ -1555,9 +2259,49 @@ export default function ApplicationsPage() {
         {isCandidateOnly ? (
           <Card variant="outline" className="space-y-4">
           <CardTitle className="text-2xl">{t('applicationsPage.candidateHistory.title')}</CardTitle>
+          {candidateFocusEnabled && focusApplicationId.trim() ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-mono text-[11px] uppercase text-blue-900">
+                {focusedHistoryItem
+                  ? t('applicationsPage.candidateHistory.focusedApplicationVisible')
+                  : isSeekingFocusedHistoryItem
+                    ? t('applicationsPage.candidateHistory.focusedApplicationSeeking')
+                    : t('applicationsPage.candidateHistory.focusedApplicationNotVisible')}
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCandidateFocusEnabled(false);
+                  setFocusApplicationId('');
+                }}
+              >
+                {t('applicationsPage.candidateHistory.clearFocusedApplication')}
+              </Button>
+            </div>
+          ) : null}
           <div className="space-y-2">
             {historyItems.map((item) => (
-              <div key={item.application_id} className="border border-black bg-white p-3">
+              <div
+                key={item.application_id}
+                ref={
+                  candidateFocusEnabled && item.application_id === focusApplicationId
+                    ? candidateFocusedHistoryRef
+                    : null
+                }
+                data-candidate-history-focused={
+                  candidateFocusEnabled && item.application_id === focusApplicationId ? 'true' : 'false'
+                }
+                className={`border p-3 ${
+                  candidateFocusEnabled && item.application_id === focusApplicationId
+                    ? 'border-blue-700 bg-blue-50 ring-1 ring-blue-300'
+                    : 'border-black bg-white'
+                }`}
+              >
+                {candidateFocusEnabled && item.application_id === focusApplicationId ? (
+                  <p className="font-mono text-[10px] uppercase text-blue-800 mb-1">
+                    {t('applicationsPage.candidateHistory.focusBadge')}
+                  </p>
+                ) : null}
                 <p className="font-bold">{item.job.title}</p>
                 <p className="text-xs uppercase text-gray-600">
                   {item.job.location || t('applicationsPage.candidateHistory.notAvailable')} |{' '}
@@ -1583,7 +2327,20 @@ export default function ApplicationsPage() {
 
         {feedback ? (
           <Card variant="outline" className="space-y-3">
-            <CardTitle className="text-2xl">{t('applicationsPage.feedback.title')}</CardTitle>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="text-2xl">{t('applicationsPage.feedback.title')}</CardTitle>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFeedback(null);
+                  if (flowReturnPanel === 'feedback') {
+                    setFlowReturnPanel('');
+                  }
+                }}
+              >
+                {t('common.close')}
+              </Button>
+            </div>
             <CardDescription className="text-xs uppercase">
               {t('applicationsPage.feedback.statusLine', {
                 status: statusLabel(feedback.status),
@@ -1633,7 +2390,15 @@ export default function ApplicationsPage() {
                   name: selectedStatusHistory.candidateName,
                 })}
               </CardTitle>
-              <Button variant="outline" onClick={() => setSelectedStatusHistory(null)}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedStatusHistory(null);
+                  if (flowReturnPanel === 'status-history') {
+                    setFlowReturnPanel('');
+                  }
+                }}
+              >
                 {t('common.close')}
               </Button>
             </div>

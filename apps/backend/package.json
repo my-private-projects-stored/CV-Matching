@@ -18,7 +18,10 @@
     "test:integration:queue": "node --test --test-concurrency=1 tests/integration/application-queue-observability.test.mjs",
     "test:integration:queue-load": "node --test --test-concurrency=1 tests/integration/application-queue-synthetic-load.test.mjs",
     "test:integration:queue-variants": "node --test --test-concurrency=1 tests/integration/application-queue-synthetic-failure-variants.test.mjs",
-    "test:integration:dlq": "node --test --test-concurrency=1 tests/integration/worker-dlq-flow.test.mjs"
+    "test:integration:dlq": "node --test --test-concurrency=1 tests/integration/worker-dlq-flow.test.mjs",
+    "test:integration:e2e-product": "node --test --test-concurrency=1 tests/integration/product-e2e-candidate-flow.test.mjs",
+    "test:integration:csv": "node --test --test-concurrency=1 tests/integration/application-authorization.test.mjs tests/integration/application-endpoints.test.mjs",
+    "test:utils:csv": "node --test tests/utils/csv-table.test.mjs"
   },
   "dependencies": {
     "@qdrant/js-client-rest": "^1.17.0",

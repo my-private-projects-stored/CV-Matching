@@ -1,6 +1,6 @@
 # Plan Implementation Log
 
-Last updated: 2026-03-27
+Last updated: 2026-04-20
 
 ## Scope
 This file tracks concrete implementation work executed from the project plan, focused on the critical-path Phase B slice (UC-CORE-02/03 parsing + vector readiness) and immediate validation.
@@ -2338,6 +2338,128 @@ This file tracks concrete implementation work executed from the project plan, fo
 - Outcome:
 	- blocks replay records with inconsistent alias-integrity metadata for compact source-code parity.
 
+### 236) Replay Alias-Consistency Version Field
+- Added replay webhook alias-integrity version metadata:
+	- `scripts/queue-replay-dlq.ps1`
+- New field:
+	- `webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version`
+- Behavior:
+	- emitted as `v1` for initialized and finalized replay payload paths
+- Outcome:
+	- versions alias-integrity semantics for explicit downstream contract evolution.
+
+### 237) Calibration Source-Code Parity Alias Field
+- Added calibration artifact compact source/code parity alias field:
+	- `.github/workflows/queue-load-baseline-calibration.yml`
+- New field:
+	- `guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source`
+- Behavior:
+	- derived as `(pair_version_source == "derived") and (pair_version_source_code == 1)` and enforced by artifact contract checks
+	- check-accounting totals updated to include this additional alias invariant
+- Outcome:
+	- improves calibration compact parity readability while preserving strict consistency contracts.
+
+### 238) Replay Alias-Consistency Version CI Guard
+- Tightened replay-audit CI consistency checks:
+	- `.github/workflows/backend-integration.yml`
+- New behavior:
+	- validation enforces `attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version == "v1"` whenever `..._matches_source_consistent == true`
+- Outcome:
+	- blocks replay records asserting alias-consistency without the expected alias-integrity contract version.
+
+### 239) Replay Alias-Consistency Version-Label Parity Field
+- Added replay webhook alias-integrity version-label parity boolean:
+	- `scripts/queue-replay-dlq.ps1`
+- New field:
+	- `webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_consistent`
+- Behavior:
+	- derived as `matches_source_consistency_version == "v1"`
+	- emitted in initialized and finalized replay payload paths
+- Outcome:
+	- provides explicit attestation that emitted alias-integrity version labels remain contract-aligned.
+
+### 240) Calibration Source-Code Alias-Consistency Field
+- Added calibration artifact alias/canonical parity consistency boolean:
+	- `.github/workflows/queue-load-baseline-calibration.yml`
+- New field:
+	- `guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistent`
+- Behavior:
+	- derived as equality between `source_code_matches_source` and canonical source/code parity expression
+	- enforced by artifact contract checks
+	- check-accounting totals updated to include this additional alias-consistency invariant
+- Outcome:
+	- strengthens compact parity governance by attesting alias/canonical equivalence explicitly.
+
+### 241) Replay Version-Label Parity CI Guard
+- Tightened replay-audit CI consistency checks:
+	- `.github/workflows/backend-integration.yml`
+- New behavior:
+	- validation enforces `attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_consistent == true`
+	- validation enforces parity with emitted version label via `..._consistency_version == "v1"`
+- Outcome:
+	- blocks replay records with inconsistent alias-integrity version-label parity metadata.
+
+### 242) Replay Alias-Version Provenance Source Field
+- Added replay webhook alias-version provenance source metadata:
+	- `scripts/queue-replay-dlq.ps1`
+- New field:
+	- `webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_source`
+- Behavior:
+	- emitted as `derived` for initialized and finalized replay payload paths
+- Outcome:
+	- makes alias-version provenance explicit for downstream contract governance checks.
+
+### 243) Calibration Alias-Consistency Version Field
+- Added calibration artifact alias-consistency version field:
+	- `.github/workflows/queue-load-baseline-calibration.yml`
+- New field:
+	- `guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version`
+- Behavior:
+	- emitted as `v1` and enforced by artifact contract checks
+	- check-accounting totals updated to include this additional alias-version invariant
+- Outcome:
+	- versions calibration alias-consistency semantics for explicit contract evolution.
+
+### 244) Replay Alias-Version Provenance CI Guard
+- Tightened replay-audit CI consistency checks:
+	- `.github/workflows/backend-integration.yml`
+- New behavior:
+	- validation enforces `attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_source == "derived"` whenever `..._consistency_version_consistent == true`
+- Outcome:
+	- blocks replay records that assert alias-version consistency without provenance-source conformance.
+
+### 245) Replay Alias-Version Provenance Source Parity Field
+- Added replay webhook alias-version provenance source parity boolean:
+	- `scripts/queue-replay-dlq.ps1`
+- New field:
+	- `webhook_delivery.attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_source_consistent`
+- Behavior:
+	- derived as `matches_source_consistency_version_source == "derived"`
+	- emitted in initialized and finalized replay payload paths
+- Outcome:
+	- provides explicit attestation that alias-version provenance source remains contract-aligned.
+
+### 246) Calibration Alias-Version Label Parity Field
+- Added calibration artifact alias-version label parity consistency boolean:
+	- `.github/workflows/queue-load-baseline-calibration.yml`
+- New field:
+	- `guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source_consistency_version_consistent`
+- Behavior:
+	- derived as `source_code_matches_source_consistency_version == "v1"`
+	- enforced by artifact contract checks
+	- check-accounting totals updated to include this additional alias-version parity invariant
+- Outcome:
+	- strengthens calibration alias-version governance with explicit version-label parity attestation.
+
+### 247) Replay Alias-Version Source Parity CI Guard
+- Tightened replay-audit CI consistency checks:
+	- `.github/workflows/backend-integration.yml`
+- New behavior:
+	- validation enforces `attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version_source_consistent == true`
+	- validation enforces parity with emitted alias-version provenance source via `..._consistency_version_source == "derived"`
+- Outcome:
+	- blocks replay records that assert alias-version provenance integrity without source-label parity conformance.
+
 ## Verification Performed
 - Compose validation:
 	- `docker compose -f docker-compose.yml config` -> valid
@@ -2496,6 +2618,56 @@ This file tracks concrete implementation work executed from the project plan, fo
 	- workflow/script diagnostics clean and new replay/calibration consistency signals and scope-pair integrity checks parse correctly
 - Re-validation after scope-pair source + profile-signature pair + scope-pair source guard:
 	- workflow/script diagnostics clean and new provenance/pair-token/source-guard checks parse correctly
+- Re-validation after source-version tag + calibration source-tag + source-version conditional guard:
+	- workflow/script diagnostics clean and new provenance-source version checks parse correctly
+- Re-validation after source-version parity boolean + calibration source parity boolean + source-derived conditional guard:
+	- workflow/script diagnostics clean and new source-version/source-parity checks parse correctly
+- Re-validation after source-scope metadata + calibration scope mirror + source-scope conditional guard:
+	- workflow/script diagnostics clean and new source-scope semantics checks parse correctly
+- Re-validation after source-scope parity booleans + calibration scope-parity booleans + scope-consistent conditional guard:
+	- workflow/script diagnostics clean and new source-scope parity checks parse correctly
+- Re-validation after source-scope version fields + calibration scope-version fields + scope-version conditional guard:
+	- workflow/script diagnostics clean and new source-scope version checks parse correctly
+- Re-validation after source-scope-version parity booleans + calibration scope-version parity booleans + scope-version-consistent conditional guard:
+	- workflow/script diagnostics clean and new source-scope-version parity checks parse correctly
+- Re-validation after source-scope-version source fields + calibration scope-version source fields + source-derived conditional guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance checks parse correctly
+- Re-validation after source-scope-version source consistency booleans + calibration source consistency booleans + source-consistent conditional guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-parity checks parse correctly
+- Re-validation after source-scope-version provenance-version fields + calibration provenance-version fields + version-implies-derived guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version checks parse correctly
+- Re-validation after source-scope-version provenance-version consistency booleans + calibration provenance-version consistency booleans + version-consistent conditional guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version parity checks parse correctly
+- Re-validation after source-scope-version provenance-version source fields + calibration provenance-version source fields + source-implies-version guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version source checks parse correctly
+- Re-validation after source-scope-version provenance-version source consistency booleans + calibration provenance-version source consistency booleans + source-consistent conditional guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version source-parity checks parse correctly
+- Re-validation after source-scope-version provenance-version source version fields + calibration provenance-version source version fields + version-implies-derived guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version source-version checks parse correctly
+- Re-validation after source-scope-version provenance-version source-version consistency booleans + calibration source-version consistency booleans + version-consistent conditional guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version source-version parity checks parse correctly
+- Re-validation after source-scope-version provenance-version source-version source fields + calibration source-version source fields + source-implies-version guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version source-version source checks parse correctly
+- Re-validation after source-scope-version provenance-version source-version source consistency booleans + calibration source-version source consistency booleans + source-consistent conditional guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version source-version source parity checks parse correctly
+- Re-validation after source-scope-version provenance-version source-version source version fields + calibration source-version source version fields + version-implies-derived guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version source-version source-version checks parse correctly
+- Re-validation after source-scope-version provenance-version source-version source-version consistency booleans + calibration source-version source-version consistency booleans + version-consistent conditional guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version source-version source-version parity checks parse correctly
+- Re-validation after source-scope-version provenance-version source-version source-version source fields + calibration source-version source-version source fields + source-implies-version guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version source-version source-version source checks parse correctly
+- Re-validation after source-scope-version provenance-version source-version source-version source consistency booleans + calibration source-version source-version source consistency booleans + source-consistent conditional guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version source-version source-version source parity checks parse correctly
+- Re-validation after source-scope-version provenance-version source-version source-version source version fields + calibration source-version source-version source version fields + version-implies-derived guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version source-version source-version source-version checks parse correctly
+- Re-validation after source-scope-version provenance-version source-version source-version source-version consistency booleans + calibration source-version source-version source-version consistency booleans + version-consistent conditional guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version source-version source-version source-version parity checks parse correctly
+- Re-validation after source-scope-version provenance-version source-version source-version source-version source fields + calibration source-version source-version source-version source fields + source-implies-version guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version source-version source-version source-version source checks parse correctly
+- Re-validation after source-scope-version provenance-version source-version source-version source-version source consistency booleans + calibration source-version source-version source-version source consistency booleans + source-consistent conditional guard:
+	- workflow/script diagnostics clean and new source-scope-version provenance-version source-version source-version source-version source parity checks parse correctly
+- Re-validation after source-scope-version provenance-version source-version source-version source-version source version fields + calibration source-version source-version source-version source version fields + version-implies-derived guard (final hardening round):
+	- workflow/script diagnostics clean and closure round checks parse correctly; chain hardening scope frozen to unblock product end-to-end implementation
 
 ## Files Changed
 - `workers/parsing/app.py`
@@ -2531,8 +2703,1313 @@ This file tracks concrete implementation work executed from the project plan, fo
 - `.github/workflows/queue-load-baseline-calibration.yml`
 - `plan-implementation.md`
 
-## Remaining Recommended Next Steps
-1. Add replay webhook metadata field `attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version` (for example, `v1`) to version alias-integrity semantics.
-2. Add calibration artifact field `guardrail_consistency_checks_profile_signature_pair_version_source_code_matches_source` boolean alias for compact source/code parity readability.
-3. Add CI replay-audit guard requiring `attempt_status_sequence_tail_status_consistency_reason_scope_pair_version_source_code_matches_source_consistency_version == "v1"` whenever `..._matches_source_consistent == true`.
+## Hardening Closure Note (2026-04-12)
+- Final hardening round executed for replay/calibration/CI/docs parity.
+- Scope freeze applied for the metadata-chain hardening track: no further depth expansion beyond the current finalized fields.
+- Purpose of freeze: redirect implementation capacity to product end-to-end delivery.
+
+## Next End-to-End Product Focus
+1. Implement vertical slice: CV upload + JD ingest + AI tailor + preview + PDF export.
+2. Add acceptance tests covering full user flow and error handling for this slice.
+3. Execute release-readiness checks on this slice before expanding to secondary product features.
+
+## E2E Execution Log (2026-04-14)
+- Started vertical-slice implementation by unblocking candidate-driven JD ingest in backend:
+	- `apps/backend/src/routes/job.routes.js`
+	- `apps/backend/src/controllers/job.controller.js`
+- Added ownership guard for candidate job-description upload:
+	- candidate must provide `resume_id`
+	- candidate can only upload JD for their own resume
+- Added end-to-end integration flow test covering:
+	- candidate resume upload
+	- candidate JD ingest
+	- tailor preview and confirm
+	- tailored resume PDF export
+	- `apps/backend/tests/integration/product-e2e-candidate-flow.test.mjs`
+- Added focused execution script:
+	- `apps/backend/package.json` -> `test:integration:e2e-product`
+- Extended backend acceptance coverage with candidate-ingest guardrail checks:
+	- missing `resume_id` for candidate upload -> `400`
+	- candidate uploading JD for another candidate resume -> `403`
+	- candidate uploading JD for own resume -> `200`
+	- `apps/backend/tests/integration/product-e2e-candidate-flow.test.mjs`
+- Added guided frontend orchestration page for product vertical slice:
+	- `apps/frontend/app/(default)/flow/page.tsx`
+	- flow supports: upload CV -> paste JD -> generate preview -> confirm tailored resume -> open PDF/viewer
+- Added dashboard entry-point card to launch guided flow:
+	- `apps/frontend/app/(default)/dashboard/page.tsx` routes to `/flow`
+- Added explicit vector collection bootstrap in E2E test setup to mirror server bootstrap behavior when tests run via `app.listen`:
+	- `ensureVectorCollections()` call in `apps/backend/tests/integration/product-e2e-candidate-flow.test.mjs`
+- Runtime validation:
+	- command: `npm run test:integration:e2e-product` with `RUN_INTEGRATION_TESTS=1`
+	- result: `2 passed, 0 failed` (after provisioning `qdrant` and resolving reachable local Mongo URI)
+- Localized guided E2E flow page content for bilingual UI parity:
+	- added `flow` translation namespace in `apps/frontend/messages/en.json` and `apps/frontend/messages/vi.json`
+	- added `nav.flow` label and updated flow/dashboard UI to consume i18n keys
+- Added persistent navigation entry for guided E2E flow in dashboard shell footer:
+	- `apps/frontend/components/home/swiss-grid.tsx` links to `/flow`
+- Added frontend test coverage for guided E2E flow orchestration page:
+	- new test file `apps/frontend/tests/product-flow-page.test.tsx`
+	- verifies upload -> JD preview generation call chain
+	- verifies confirm -> open PDF -> open resume viewer actions
+- Frontend runtime validation:
+	- command: `npm run test -- tests/product-flow-page.test.tsx`
+	- result: `2 passed, 0 failed`
+- Step-lock hardening for guided flow consistency:
+	- changing JD after preview now invalidates stale preview/job/tailored state before confirm
+	- flow emits explicit operator message when preview is reset by input change
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+- Added additional frontend acceptance/error-path coverage for guided flow:
+	- short JD validation blocks API calls and shows error
+	- confirm API failure surfaces error state
+	- stale preview reset on JD edit disables confirm until preview regenerated
+	- updated file: `apps/frontend/tests/product-flow-page.test.tsx`
+- Added single-command product verification script:
+	- `scripts/verify-e2e-product.ps1`
+	- script runs: dependency bring-up (`qdrant`) -> Mongo URI resolution -> backend product E2E tests -> frontend flow tests
+- End-to-end verification via unified script:
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `5 passed, 0 failed`
+- Added automated release-readiness checklist script with report generation:
+	- new script: `scripts/release-readiness-product-e2e.ps1`
+	- checklist gates:
+		- qdrant dependency + `/healthz`
+		- dashboard entrypoint includes `/flow`
+		- unified product verification script execution
+	- report artifacts:
+		- `scripts/reports/product-e2e-readiness-<timestamp>.json`
+		- `scripts/reports/product-e2e-readiness-<timestamp>.md`
+		- `scripts/reports/product-e2e-readiness-history.jsonl`
+- Added runbook usage for product E2E verification/readiness scripts:
+	- `README.md` updated in daily script list and run-with-docker verification section
+- Re-validation after readiness automation hardening:
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- result: `PASSED` with checklist totals `3/3`
+	- evidence artifact: `scripts/reports/product-e2e-readiness-20260414-114426.json`
+	- history artifact: `scripts/reports/product-e2e-readiness-history.jsonl`
+- Minimal-test-focused readiness policy hardening (to prioritize E2E feature velocity):
+	- `scripts/release-readiness-product-e2e.ps1` now supports lightweight policy gates without expanding test suite:
+		- `-ExpectedMinimumChecks` (default `3`)
+		- `-MaxHistoryLines` (default `2000`)
+		- `-SkipHistoryRetention` switch for emergency bypass
+	- report schema retains compact policy block (`policy`, `policy_violations`) for machine-readable CI gating
+	- history JSONL auto-retention added to prevent unbounded report growth in local/CI loops
+- Runbook update for policy/retention tuning:
+	- `README.md` includes optional command with policy flags for release-readiness execution
+- Re-validation after policy/retention extension:
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- result: `PASSED` with `policy_violations = 0`
+	- evidence artifact: `scripts/reports/product-e2e-readiness-20260414-114754.json`
+	- evidence summary: `scripts/reports/product-e2e-readiness-20260414-114754.md`
+- Extended guided frontend flow to support direct in-flow application submission after tailored resume creation:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- added states/actions: `isApplying`, `applicationId`, `handleApplyNow`, and post-create navigation to applications list
+	- UX behavior:
+		- blocks apply step when `resume_id` or `job_id` is missing
+		- surfaces duplicate application response (`409`) as a non-fatal guidance message
+		- preserves existing open-PDF/open-viewer actions while adding apply-now CTA
+- Added i18n coverage for direct-apply step messaging and controls:
+	- updated files:
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- added keys for:
+		- application status labels (`ready` / `pending`)
+		- apply actions (`applyNow`, `applying`, `openApplications`)
+		- apply result/error messages (`applicationCreated`, `applicationDuplicate`, `applicationFailed`, `applicationMissingData`)
+- Re-validation after direct-apply flow integration:
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed` (`product-e2e-candidate-flow.test.mjs`)
+	- frontend result: `5 passed, 0 failed` (`product-flow-page.test.tsx`)
+	- outcome: product E2E verification completed successfully with direct-apply UI changes in place
+- Hardened direct-apply conflict handling to use structured API error status instead of string matching:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- behavior change: duplicate detection now checks `statusCode === 409` from API client error object
+- Expanded minimal frontend acceptance coverage for direct-apply path:
+	- updated file: `apps/frontend/tests/product-flow-page.test.tsx`
+	- added tests:
+		- apply-now happy path submits `{ job_id, resume_id }` and shows `applicationCreated`
+		- apply-now duplicate path (`409`) shows `applicationDuplicate` and avoids generic failure message
+- Re-validation after direct-apply test expansion:
+	- command: `npm run test -- tests/product-flow-page.test.tsx`
+	- frontend result: `7 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `7 passed, 0 failed`
+	- outcome: product E2E verification remains fully green after apply-now hardening and test additions
+- Extended guided-flow frontend assertions for post-apply state and navigation behavior:
+	- updated file: `apps/frontend/tests/product-flow-page.test.tsx`
+	- added assertions in apply-success path:
+		- `flow.sections.applicationStatusReady` is visible after application creation
+		- `flow.actions.openApplications` routes to `/applications`
+- Extended backend product E2E candidate flow to include application creation contract:
+	- updated file: `apps/backend/tests/integration/product-e2e-candidate-flow.test.mjs`
+	- added API assertions in full-flow test:
+		- first `POST /applications` with candidate token and tailored resume -> `201`
+		- second identical `POST /applications` -> `409` duplicate contract
+- Re-validation after guided-flow state + backend duplicate-contract expansion:
+	- command: `npm run test -- tests/product-flow-page.test.tsx`
+	- frontend result: `7 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `7 passed, 0 failed`
+	- note: transient Redis connection-refused warnings were logged by ioredis during integration run, but did not affect test pass/fail outcome
+	- outcome: full product flow remains green with stronger application-contract coverage in the vertical slice
+- Added multi-job in-session continuation action for guided flow:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- new action: `flow.actions.startNextJob`
+	- behavior:
+		- keeps `masterResumeId`
+		- resets job-specific state (`jobDescription`, `jobId`, `previewResult`, `tailoredResumeId`, `applicationId`)
+		- emits operator message `flow.messages.readyForNextJob`
+		- button is disabled when no job-specific state exists to reset
+- Added i18n keys for multi-job continuation action:
+	- updated files:
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- added keys:
+		- `flow.actions.startNextJob`
+		- `flow.messages.readyForNextJob`
+- Expanded frontend acceptance coverage for multi-job continuation:
+	- updated file: `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertions:
+		- after apply success, `flow.sections.applicationStatusReady` remains visible
+		- `flow.actions.openApplications` routes to `/applications`
+		- `flow.actions.startNextJob` resets job flow to pending state while retaining master resume context
+- Re-validation after multi-job continuation implementation:
+	- command: `npm run test -- tests/product-flow-page.test.tsx`
+	- frontend result: `8 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `8 passed, 0 failed`
+	- note: transient ioredis `ECONNREFUSED` warnings persisted during backend integration run but did not impact pass/fail outcome
+	- outcome: guided flow now supports repeat apply cycles for multiple jobs in one session without re-uploading master resume
+- Hardened queue enqueue client behavior to reduce noisy Redis error logs in integration/local runs:
+	- updated file: `apps/backend/src/services/application-queue.service.js`
+	- changes:
+		- enabled `lazyConnect` with explicit `connect()` before `LPUSH`
+		- disabled reconnect churn via `retryStrategy: () => null`
+		- attached no-op `error` listener to prevent unhandled ioredis error event warnings
+- Expanded backend product E2E ownership guardrails for application creation:
+	- updated file: `apps/backend/tests/integration/product-e2e-candidate-flow.test.mjs`
+	- added assertions in candidate full-flow test:
+		- candidate A creates application with own tailored resume -> `201`
+		- candidate A tries to apply using candidate B resume -> `403`
+		- duplicate create with same own resume/job payload -> `409`
+- Re-validation after queue-log cleanup + ownership-guardrail extension:
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `8 passed, 0 failed`
+	- outcome: product flow remains green and previous transient ioredis `ECONNREFUSED` warning lines no longer appeared in verification output
+- Added mini in-session apply history panel to guided flow:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- new in-memory session state:
+		- tracks latest apply events (`created` / `duplicate`) with `jobId`, `resumeId`, `applicationId`
+		- prepends new events and renders top 5 events in panel
+	- UX behavior:
+		- successful apply adds `created` event with application id
+		- duplicate (`409`) apply adds `duplicate` event with `application: n/a`
+		- `Start Next Job` resets job-specific workflow state but keeps session history for continuity
+- Added i18n coverage for session history panel:
+	- updated files:
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new keys under `flow.sessionHistory`:
+		- title/count/empty
+		- status labels (`created`, `duplicate`)
+		- item fields (`jobId`, `resumeId`, `applicationId`, `applicationIdPending`)
+- Expanded frontend acceptance assertions for session history:
+	- updated file: `apps/frontend/tests/product-flow-page.test.tsx`
+	- assertions added:
+		- apply success renders `flow.sessionHistory.statusCreated` and id fields
+		- apply duplicate renders `flow.sessionHistory.statusDuplicate` and pending application marker
+		- session history persists after `flow.actions.startNextJob`
+- Re-validation after session-history implementation:
+	- command: `npm run test -- tests/product-flow-page.test.tsx`
+	- frontend result: `8 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `8 passed, 0 failed`
+	- outcome: guided flow now surfaces in-session apply traceability while preserving green product E2E verification
+- Extended session history with persistence + quick actions:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- new behaviors:
+		- persists apply session history to `localStorage` (`flow_apply_session_history_v1`)
+		- restores prior session history on page mount (validated with shape checks)
+		- keeps only recent bounded history entries (max 20)
+		- shows relative event timestamp (`just now`, `minutes/hours/days ago`)
+		- adds per-item quick actions:
+			- open applications list
+			- open related resume
+- Added i18n keys for persisted history UX and relative time labels:
+	- updated files:
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new key groups:
+		- `flow.sessionHistory.when`
+		- `flow.sessionHistory.justNow|minutesAgo|hoursAgo|daysAgo`
+		- `flow.sessionHistory.openApplicationsForItem|openResumeForItem`
+- Expanded frontend acceptance coverage for persistence and quick actions:
+	- updated file: `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertions:
+		- history item quick actions route correctly (`/applications`, `/resumes/:id`)
+		- duplicate apply history row includes pending application id marker and timestamp line
+		- history survives page remount (localStorage restore path)
+- Re-validation after persistence + quick-action enhancement:
+	- command: `npm run test -- tests/product-flow-page.test.tsx`
+	- frontend result: `9 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `9 passed, 0 failed`
+	- outcome: guided flow now supports resilient in-session apply traceability with post-event navigation shortcuts and still remains fully green end-to-end
+- Type-safety hardening for session-history insertion paths:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- fixed TypeScript literal widening in history event insertion by using explicit `ApplySessionHistoryItem` objects before `setApplySessionHistory`
+	- result: removed editor compile diagnostics for `outcome` type mismatch (`created|duplicate`)
+- Final re-validation after type-safety hardening:
+	- command: `npm run test -- tests/product-flow-page.test.tsx`
+	- frontend result: `9 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `9 passed, 0 failed`
+	- outcome: compile diagnostics clear and end-to-end verification remains fully green
+- Added session-history filter + clear controls for faster operator triage:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- new controls in history panel:
+		- filter chips: `All`, `Created`, `Duplicate`
+		- clear action: `Clear History` (disabled when empty)
+	- behavior:
+		- history list now renders filtered results while preserving full event store in memory/localStorage
+		- filtered mode shows context line `filtered from {count} total event(s)`
+		- clear action resets history store, resets filter to `All`, and emits `sessionHistoryCleared` operator message
+- Added i18n coverage for history filtering/clearing UX:
+	- updated files:
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- added keys:
+		- `flow.messages.sessionHistoryCleared`
+		- `flow.sessionHistory.clearAction`
+		- `flow.sessionHistory.filterAll|filterCreated|filterDuplicate`
+		- `flow.sessionHistory.filteredFromTotal`
+- Expanded frontend acceptance tests for filter + clear paths:
+	- updated file: `apps/frontend/tests/product-flow-page.test.tsx`
+	- new scenario:
+		- creates mixed history (`created` + `duplicate`)
+		- validates created-only and duplicate-only filters
+		- clears history and validates empty state + cleared message
+- Re-validation after filter/clear enhancement:
+	- command: `npm run test -- tests/product-flow-page.test.tsx`
+	- frontend result: `10 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: guided flow now supports richer in-session apply history triage while product E2E verification remains fully green
+- Added session-history JSON export for QA/debug trace portability:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- new behavior:
+		- exports persisted apply-session history as `flow-apply-session-history-<timestamp>.json`
+		- payload includes `exported_at`, `total`, and `entries`
+		- emits `sessionHistoryExported` operator message after export
+- Improved history item deep-link context for Applications view:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- behavior change:
+		- per-item "Open Applications" now routes with query context `job_id=<id>`
+		- includes `application_id=<id>` when available for future focused filtering/selection support
+- Added i18n coverage for history export action/message:
+	- updated files:
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new keys:
+		- `flow.sessionHistory.exportAction`
+		- `flow.messages.sessionHistoryExported`
+- Expanded frontend acceptance assertions for export/deep-link behavior:
+	- updated file: `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertions:
+		- export action triggers `downloadBlobAsFile` with JSON filename pattern
+		- export success message is shown
+		- item-level applications navigation uses query route `/applications?job_id=...&application_id=...`
+- Re-validation after export/deep-link enhancement:
+	- command: `npm run test -- tests/product-flow-page.test.tsx`
+	- frontend result: `10 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: guided flow history now supports exportable artifacts and context-aware navigation while full product verification remains green
+- Implemented `application_id` deep-link focus handling in Applications page:
+	- updated file: `apps/frontend/app/(default)/applications/page.tsx`
+	- behavior:
+		- reads `application_id` from query and keeps it synchronized in URL state
+		- highlights matching ranked candidate card when present on current page/filter
+		- shows focus badge and focus-state summary line in ranked candidates section
+		- adds clear-focus action to remove focused application context
+		- clears stale focus when recruiter manually changes `job_id`
+- Added i18n coverage for focused-application UX in ranked candidates section:
+	- updated files:
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new keys:
+		- `applicationsPage.rankedCandidates.focusBadge`
+		- `applicationsPage.rankedCandidates.focusedApplication`
+		- `applicationsPage.rankedCandidates.focusedApplicationNotVisible`
+		- `applicationsPage.rankedCandidates.clearFocusedApplication`
+- Expanded Applications page test coverage for deep-link focus:
+	- updated file: `apps/frontend/tests/applications-page.test.tsx`
+	- new assertions:
+		- `application_id` query focuses the expected ranked card
+		- focus badge + focused summary text are rendered
+		- clear-focus action removes `application_id` from synchronized query URL
+- Re-validation after Applications page focus integration:
+	- command: `npm run test -- tests/applications-page.test.tsx`
+	- frontend result: `28 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: Flow -> Applications deep-link now lands with focused candidate context while product E2E verification remains fully green
+- Added auto-seek behavior for focused application across ranked pages:
+	- updated file: `apps/frontend/app/(default)/applications/page.tsx`
+	- behavior:
+		- when `application_id` is focused but not found on current ranked page, page logic now probes other ranked pages under current filters
+		- when found, UI auto-switches to the matched ranked page and keeps focused highlight context
+		- while probing, focus summary state shows dedicated seeking message
+		- seek attempts are key-scoped (job + focus + filters) to avoid repeated fetch loops
+- Added i18n coverage for focused-application seeking state:
+	- updated files:
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new key:
+		- `applicationsPage.rankedCandidates.focusedApplicationSeeking`
+- Expanded Applications page test coverage for cross-page focus seek:
+	- updated file: `apps/frontend/tests/applications-page.test.tsx`
+	- new assertions:
+		- focused `application_id` absent on page 1 triggers fetch probe for page 2
+		- auto-seek lands on page containing target application and renders focus badge on matched candidate
+	- note:
+		- stabilized test by asserting page-probe + focused end-state rather than transient seeking label timing
+- Re-validation after cross-page focus-seek enhancement:
+	- command: `npm run test -- tests/applications-page.test.tsx`
+	- frontend result: `29 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: Flow -> Applications deep-link now supports automatic cross-page focus recovery while product E2E verification remains fully green
+- Added focused-application productivity polish in Applications page:
+	- updated file: `apps/frontend/app/(default)/applications/page.tsx`
+	- behavior:
+		- deep-link focus now enables focus-only mode by default
+		- ranked section supports toggle between focused-only and full list
+		- recruiter active-filter summary includes focused-application chip with clear action
+		- focused ranked card auto-scrolls into view after focus is resolved
+		- select-all and bulk-selection behavior uses currently displayed subset in focus-only mode
+- Added i18n coverage for focus-only mode and focused-chip summary:
+	- updated files:
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- added keys:
+		- `applicationsPage.rankedCandidates.focusOnly`
+		- `applicationsPage.rankedCandidates.showAll`
+		- `applicationsPage.rankedCandidates.focusedOnlyMode`
+		- `applicationsPage.activeFilters.focusedApplication`
+- Expanded Applications page acceptance tests for focus-only and chip-clear paths:
+	- updated file: `apps/frontend/tests/applications-page.test.tsx`
+	- new assertions:
+		- focus-only mode is enabled by default for `application_id` deep-link and can toggle back to full list
+		- recruiter summary focused-application chip clears focus context and URL state
+- Re-validation after focus-only/chip-clear UX enhancement:
+	- command: `npm run test -- tests/applications-page.test.tsx`
+	- frontend result: `31 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: focused-application workflow polish shipped with green product verification
+
+- Added shareable URL-state support for focus-mode in Applications deep-link flow:
+	- updated file: `apps/frontend/app/(default)/applications/page.tsx`
+	- behavior:
+		- new query parameter `rc_focus` controls focused rendering mode (`focus` or `all`) when `application_id` exists
+		- deep-link hydration now supports explicit full-list mode via `rc_focus=all`
+		- toggling Focus Only / Show All now synchronizes to URL (`rc_focus`) for reproducible links
+		- clearing focused application removes both `application_id` and `rc_focus` context
+- Expanded Applications page acceptance coverage for focus-mode URL state:
+	- updated file: `apps/frontend/tests/applications-page.test.tsx`
+	- new assertions:
+		- `rc_focus=all` hydrates deep-link in full-list mode (not focused-only)
+		- toggling focus mode updates query string to `rc_focus=all|focus`
+- Re-validation after focus-mode URL-state enhancement:
+	- command: `npm run test -- tests/applications-page.test.tsx`
+	- frontend result: `33 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: applications deep-link focus behavior is now fully shareable and remains regression-free in product verification
+
+- Extended backend authorization matrix coverage for bulk status endpoint role/audit contracts:
+	- updated file: `apps/backend/tests/integration/application-authorization.test.mjs`
+	- new assertions:
+		- candidate role cannot call `PATCH /applications/status/bulk` (`403`)
+		- recruiter bulk status update succeeds (`200`) on mixed application ids
+		- spoofed request body `changed_by` is ignored and persisted audit actor uses authenticated recruiter identity
+- Hardened authorization test determinism by removing external resume-processing dependency:
+	- updated file: `apps/backend/tests/integration/application-authorization.test.mjs`
+	- behavior change:
+		- creates candidate resumes directly via model fixture setup instead of `/resumes` API call
+		- keeps authorization matrix focused on role/ownership contracts without embedding/qdrant side-effects
+- Re-validation after backend bulk-authorization contract enhancement:
+	- command: `node --test --test-concurrency=1 tests/integration/application-authorization.test.mjs`
+	- backend result: `1 passed, 0 failed`
+	- command: `npm run test -- tests/applications-page.test.tsx`
+	- frontend result: `33 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: recruiter bulk-status role gate and audit-actor contract are now explicitly guarded while product E2E baseline remains green
+
+- Expanded backend authorization matrix for recruiter/admin analytics endpoints:
+	- updated file: `apps/backend/tests/integration/application-authorization.test.mjs`
+	- new assertions:
+		- candidate access is blocked (`403`) for:
+			- `GET /applications/summary`
+			- `GET /applications/status-changes`
+			- `GET /applications/status-changes/export`
+		- admin access is allowed (`200`) for the same recruiter/admin endpoints
+		- admin CSV export returns `text/csv` payload with expected status-change columns
+- Re-validation after authorization matrix expansion for status-changes/export/summary:
+	- command: `node --test --test-concurrency=1 tests/integration/application-authorization.test.mjs`
+	- backend result: `1 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: role-gated analytics/status-change contracts are now explicitly covered with no product-flow regressions
+
+- Expanded admin status-changes filter contracts in authorization matrix:
+	- updated file: `apps/backend/tests/integration/application-authorization.test.mjs`
+	- new assertions:
+		- admin date-boundary include case: `changed_after=2026-03-10` and `changed_before=2026-03-10` includes known boundary status-change event
+		- admin boundary exclude case: `changed_before=2026-03-09` excludes the same event
+		- admin invalid date query (`changed_after=not-a-date`) returns `400`
+		- changed_by/status filters are validated together with date-window behavior on status-change listing endpoint
+- Re-validation after admin status-change filter contract expansion:
+	- command: `node --test --test-concurrency=1 tests/integration/application-authorization.test.mjs`
+	- backend result: `1 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: role-gated status-change filtering contracts (boundary + invalid-date) are now explicitly protected without E2E regressions
+
+- Expanded status-change anti-spoof and CSV row-level filter contracts in authorization matrix:
+	- updated file: `apps/backend/tests/integration/application-authorization.test.mjs`
+	- new assertions:
+		- admin list endpoint with `changed_by=spoofed-client-actor` returns zero changes, proving request-body spoof identity is not persisted in audit history
+		- admin CSV export with `changed_by=spoofed-client-actor` returns header-only output (no data rows)
+		- admin CSV export with combined filters (`status=offer`, `changed_by=boundary-admin`, `changed_after=2026-03-10`, `changed_before=2026-03-10`) returns exactly one data row
+		- filtered CSV row contract is validated at column level (`application_id`, `to_status`, `changed_by`) to ensure export rows honor the same filter semantics as JSON listing
+- Re-validation after anti-spoof + CSV row-level contract expansion:
+	- command: `node --test tests/integration/application-authorization.test.mjs`
+	- backend result: `1 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: status-change list/export contracts now enforce anti-spoof expectations and row-level filter correctness with product verification still green
+
+- Added JSON-vs-CSV filtered result equivalence assertion for status-changes contracts:
+	- updated file: `apps/backend/tests/integration/application-authorization.test.mjs`
+	- new assertions:
+		- for combined boundary filter (`status=offer`, `changed_by=boundary-admin`, `changed_after=2026-03-10`, `changed_before=2026-03-10`), exported CSV `application_id` set must equal JSON list `application_id` set
+		- contract now verifies not only single-row field values but also endpoint-to-endpoint filtered identity equivalence
+- Re-validation after JSON-vs-CSV filtered identity equivalence hardening:
+	- command: `node --test tests/integration/application-authorization.test.mjs`
+	- backend result: `1 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: list/export filter contracts are now mutually consistent at row-identity level with full product verification still green
+
+- Extended list/export contract to multi-record filtered equivalence + order consistency:
+	- updated file: `apps/backend/tests/integration/application-authorization.test.mjs`
+	- new assertions:
+		- seeded two boundary-matching status-change events (`applicationA`, `applicationB`) under the same filter window (`status=offer`, `changed_by=boundary-admin`, `changed_after=2026-03-10`, `changed_before=2026-03-10`)
+		- list endpoint must return exactly two filtered changes and all rows must satisfy `to_status=offer` + `changed_by=boundary-admin`
+		- CSV export for the same filter must return exactly two data rows (plus header), with all rows satisfying `to_status=offer` + `changed_by=boundary-admin`
+		- list/export equivalence now validates both:
+			- set-equivalence of `application_id`
+			- ordered-equivalence of `application_id` sequence (ensuring sorting consistency between JSON and CSV outputs)
+- Re-validation after multi-record list/export consistency hardening:
+	- command: `node --test tests/integration/application-authorization.test.mjs`
+	- backend result: `1 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: status-change list/export contracts now guard filtered multi-row identity and order consistency with product verification still fully green
+
+- Added tuple-level list/export equivalence checks for filtered multi-row contracts:
+	- updated file: `apps/backend/tests/integration/application-authorization.test.mjs`
+	- new assertions:
+		- for the same boundary filter window, list and CSV outputs must match on tuple set: `application_id|to_status|changed_by`
+		- tuple order must also match between list and CSV outputs to guard serialization ordering drift
+		- complements existing `application_id` set/order checks by validating semantic payload parity at per-row contract level
+- Re-validation after tuple-level list/export contract hardening:
+	- command: `node --test tests/integration/application-authorization.test.mjs`
+	- backend result: `1 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: filtered status-change list/export contracts now enforce row tuple parity and ordering consistency with full product verification still green
+
+- Hardened CSV semantic parity checks for escaped fields and timestamp ordering:
+	- updated file: `apps/backend/tests/integration/application-authorization.test.mjs`
+	- new assertions and test utilities:
+		- added local CSV row parser helper in integration test to correctly decode quoted CSV cells (including embedded commas and escaped quotes)
+		- added special-character actor case (`changed_by` includes quotes + comma) and validated list/export tuple parity under identical filters
+		- changed_at ordering checks now compare normalized timestamps (epoch ms) between list and export outputs to avoid environment-specific date string formatting variance
+		- boundary filter contract now explicitly validates descending changed_at order and list/export changed_at sequence equivalence
+- Re-validation after CSV escaping + timestamp-order hardening:
+	- command: `node --test tests/integration/application-authorization.test.mjs`
+	- backend result: `1 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: status-change list/export contracts now guard escaped CSV semantics and timestamp-order consistency while product verification remains fully green
+
+- Extended escaped-text CSV parity coverage for additional exported columns:
+	- updated file: `apps/backend/tests/integration/application-authorization.test.mjs`
+	- new assertions:
+		- injected special text payloads with quotes + comma into `job_title` and `candidate_full_name`
+		- for filtered special-actor rows, JSON list output must preserve injected `job.title` and `candidate.full_name`
+		- CSV export for the same filter must decode to identical `job_title` and `candidate_full_name` values (validated via CSV parser helper)
+		- complements prior `changed_by` escaping checks by expanding semantic parity to multiple textual CSV columns
+- Re-validation after escaped job/candidate text parity expansion:
+	- command: `node --test tests/integration/application-authorization.test.mjs`
+	- backend result: `1 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: list/export contracts now explicitly guard escaped semantic parity across `changed_by`, `job_title`, and `candidate_full_name` with full product verification still green
+
+- Upgraded CSV parser helper to support newline-in-cell semantics and expanded newline parity coverage:
+	- updated file: `apps/backend/tests/integration/application-authorization.test.mjs`
+	- new assertions and parser behavior:
+		- replaced line-based CSV parsing with full-text parser that preserves quoted cells containing embedded newlines, commas, and escaped quotes
+		- injected newline-containing payloads into `job_title` and `candidate_full_name`
+		- validated filtered list/export parity for those newline-bearing fields (decoded CSV values must equal JSON values)
+		- maintained tuple/order/changed_at invariants while parsing via newline-safe CSV table parser
+- Re-validation after newline-safe CSV parsing + newline field parity hardening:
+	- command: `node --test tests/integration/application-authorization.test.mjs`
+	- backend result: `1 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: status-change list/export contracts now explicitly guard newline-safe CSV semantics in addition to escaped text parity, with product verification still fully green
+
+- Extracted reusable CSV parsing utility and adopted it across integration suites:
+	- added file: `apps/backend/tests/utils/csv-table.mjs`
+	- refactored files:
+		- `apps/backend/tests/integration/application-authorization.test.mjs`
+		- `apps/backend/tests/integration/application-endpoints.test.mjs`
+	- changes:
+		- moved newline-safe CSV table parser from authorization test into shared utility
+		- imported shared parser in authorization test without changing existing escaping/newline assertions
+		- added parse-based export assertions in endpoints test (header and `changed_by` column consistency)
+		- establishes a single parser contract for future CSV integration assertions and reduces duplicated parsing logic
+- Re-validation after CSV utility extraction + cross-suite reuse:
+	- command: `node --test --test-concurrency=1 tests/integration/application-authorization.test.mjs tests/integration/application-endpoints.test.mjs`
+	- backend integration result: `2 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: shared CSV parser reuse is validated across authorization/endpoints suites with product verification still fully green
+
+- Added dedicated parser-contract test suite for shared CSV utility:
+	- added file: `apps/backend/tests/utils/csv-table.test.mjs`
+	- covered parser behaviors:
+		- empty input returns empty table
+		- basic row/column parsing
+		- quoted comma handling
+		- escaped double-quote decoding
+		- embedded newline in quoted cell
+		- CRLF + trailing newline handling without phantom empty row
+	- outcome:
+		- parser contract is now validated independently from application integration flows, reducing risk of silent CSV parsing regressions
+- Re-validation after parser utility unit-style coverage:
+	- command: `node --test tests/utils/csv-table.test.mjs`
+	- backend parser test result: `5 passed, 0 failed`
+	- command: `node --test --test-concurrency=1 tests/integration/application-authorization.test.mjs tests/integration/application-endpoints.test.mjs`
+	- backend integration result: `2 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: CSV parser contract and dependent integration/product flows remain fully green after standalone utility test hardening
+
+- Added dedicated backend script for CSV parser utility test execution:
+	- updated file: `apps/backend/package.json`
+	- new script:
+		- `test:utils:csv` -> `node --test tests/utils/csv-table.test.mjs`
+	- outcome:
+		- provides fast, explicit command path for parser-only validation in local and CI-friendly workflows
+
+- Expanded parser-contract edge-case coverage for empty columns and malformed input tolerance:
+	- updated file: `apps/backend/tests/utils/csv-table.test.mjs`
+	- new assertions:
+		- preserves empty intermediate/trailing cells (including explicit empty quoted value)
+		- defines best-effort behavior for unmatched-quote input (non-throw parse with captured trailing value)
+	- outcome:
+		- parser behavior is now explicitly documented by tests for both normal CSV structure and degraded malformed input handling
+
+- Re-validation after script + parser edge-case expansion:
+	- command: `npm run test:utils:csv`
+	- backend parser test result: `7 passed, 0 failed`
+	- command: `node --test --test-concurrency=1 tests/integration/application-authorization.test.mjs tests/integration/application-endpoints.test.mjs`
+	- backend integration result: `2 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: parser utility contract, CSV-dependent integrations, and full product flow remain fully green after edge-case and script-path hardening
+
+- Added parser utility contract check into backend CI workflow:
+	- updated file: `.github/workflows/backend-integration.yml`
+	- new CI step:
+		- `Run CSV parser utility contract tests`
+		- command: `npm run test:utils:csv`
+	- placement:
+		- executed after parsing-focused integration group and before worker-focused integration group
+	- outcome:
+		- CSV parser contract is now enforced in canonical backend integration workflow, reducing risk of parser regressions escaping CI
+
+- Re-validation after backend workflow parser-step integration:
+	- command: `npm run test:utils:csv`
+	- backend parser test result: `7 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: CI workflow hardening is in place and product end-to-end verification remains fully green
+
+- Added CSV-focused backend integration group command for targeted semantic contract checks:
+	- updated file: `apps/backend/package.json`
+	- new script:
+		- `test:integration:csv` -> `node --test --test-concurrency=1 tests/integration/application-authorization.test.mjs tests/integration/application-endpoints.test.mjs`
+	- outcome:
+		- provides explicit, low-noise command path for CSV semantics regressions without running full backend integration matrix
+
+- Extended backend CI workflow with CSV-focused integration stage:
+	- updated file: `.github/workflows/backend-integration.yml`
+	- new CI step:
+		- `Run CSV-focused backend integration group`
+		- command: `npm run test:integration:csv`
+	- placement:
+		- executed after parser utility contract tests and before worker-focused integration group
+	- outcome:
+		- promotes CSV parser + CSV endpoint semantic coverage into earlier CI gate boundary
+
+- Added README runbook guidance for CSV verification chain:
+	- updated file: `README.md`
+	- new documented commands:
+		- quick path: `npm run test:utils:csv` -> `npm run test:integration:csv`
+		- full chain: parser utility tests -> CSV integrations -> `./scripts/verify-e2e-product.ps1`
+	- outcome:
+		- local validation sequence now aligns with CI gating strategy and reduces ad-hoc verification drift
+
+- Re-validation after CSV integration group + runbook alignment:
+	- command: `npm run test:utils:csv`
+	- backend parser test result: `7 passed, 0 failed`
+	- command: `npm run test:integration:csv`
+	- backend CSV integration result: `2 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- backend result: `2 passed, 0 failed`
+	- frontend result: `10 passed, 0 failed`
+	- outcome: CSV-targeted scripts, CI stage, and runbook documentation are synchronized with all downstream validations remaining fully green
+
+- Added dedicated CI diagnostics artifact for CSV-focused backend integration stage:
+	- updated file: `.github/workflows/backend-integration.yml`
+	- updated CI behavior:
+		- `Run CSV-focused backend integration group` now captures output via `tee` into `scripts/csv-focused-integration.log`
+		- added always-on summary step `Summarize CSV-focused integration diagnostics` to publish last 20 log lines to `GITHUB_STEP_SUMMARY`
+		- new always-on artifact upload step `Upload CSV-focused integration log artifact`
+		- new artifact name: `backend-csv-integration-log`
+	- outcome:
+		- CSV-specific failures can be triaged quickly without digging through the larger backend integration log bundle
+
+- Updated CI troubleshooting runbook with CSV artifact retrieval path:
+	- updated file: `README.md`
+	- updated section: `CI Troubleshooting`
+	- new operator guidance:
+		- download `backend-csv-integration-log` when the CSV-focused stage fails
+		- check run summary section `CSV-focused backend integration` for quick-tail diagnostics before downloading artifacts
+	- outcome:
+		- on-call troubleshooting steps now map directly to the new scoped CI diagnostics artifact
+
+- Re-validation after CSV-focused CI diagnostics enhancement:
+	- command: `npm run test:integration:csv`
+	- backend CSV integration result: `2 passed, 0 failed`
+	- command: `./scripts/verify-e2e-product.ps1`
+	- result: blocked by local environment (Docker daemon unavailable at `//./pipe/dockerDesktopLinuxEngine`, qdrant startup failed)
+	- outcome: CSV-focused contract path remains green; full product verification could not complete in this run due to infrastructure state, not code changes
+
+- Enhanced CSV-focused CI run summary with parsed results and reproducibility hint:
+	- updated file: `.github/workflows/backend-integration.yml`
+	- updated CI behavior:
+		- summary step now parses and displays `tests/pass/fail` from `scripts/csv-focused-integration.log`
+		- summary step now includes a copy-ready local reproduce command with the same env contract as CI CSV stage
+	- outcome:
+		- triage is faster directly in GitHub UI without first downloading artifacts or reconstructing env parameters
+
+- Updated runbook wording for CSV summary diagnostics:
+	- updated file: `README.md`
+	- updated section: `CI Troubleshooting`
+	- new operator guidance:
+		- use `CSV-focused backend integration` summary for parsed outcome counters and a copy-ready reproduce command
+	- outcome:
+		- CI troubleshooting path is now more actionable from first glance in failed runs
+
+- Added explicit CSV-focused failure warning marker in CI summary:
+	- updated file: `.github/workflows/backend-integration.yml`
+	- updated CI behavior:
+		- summary step now emits `WARNING` line when parsed CSV-focused `fail` count is greater than zero
+	- outcome:
+		- failing CSV-focused runs are now visually flagged in run summary before artifact download
+
+- Extended guided flow session-history navigation with direct status-history deep-link:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- new behavior:
+		- session-history row now exposes `Open Status History` action when `applicationId` exists
+		- action routes to Applications with deep-link query: `job_id`, `application_id`, `sh_open=1`
+	- outcome:
+		- candidate/reviewer can jump from flow event log to status-history view in one click
+
+- Added Applications deep-link auto-open support for status history:
+	- updated file: `apps/frontend/app/(default)/applications/page.tsx`
+	- new behavior:
+		- reads `sh_open` query flag (`1` or `true`)
+		- auto-fetches and opens application status history card for the deep-linked `application_id`
+		- one-shot consumption guard prevents repeated auto-open loops
+	- outcome:
+		- end-to-end navigation now supports direct status-history landing from flow-generated links
+
+- Added minimal i18n and frontend test coverage for status-history deep-link path:
+	- updated files:
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- coverage added:
+		- flow session-history action asserts route `/applications?job_id=...&application_id=...&sh_open=1`
+		- applications page auto-opens status-history card when deep-link includes `sh_open=1`
+	- outcome:
+		- test scope stays minimal while protecting the new E2E navigation contract
+
+- Updated runbook wording for CSV summary warning semantics:
+	- updated file: `README.md`
+	- updated section: `CI Troubleshooting`
+	- new operator guidance:
+		- summary now includes parsed counters + warning marker when `fail > 0`
+	- outcome:
+		- CI summary interpretation is clearer in first-pass triage
+
+- Re-validation after status-history deep-link E2E + CSV warning marker hardening:
+	- command: `npm run test -- tests/product-flow-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `44 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260419-154202.json`
+	- outcome: new E2E navigation behavior is green with minimal-test strategy preserved and full product readiness gate still passing
+
+- Extended guided flow session-history navigation with direct feedback deep-link:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- new behavior:
+		- session-history row now exposes `Open Feedback` action when `applicationId` exists
+		- action routes to Applications with deep-link query: `job_id`, `application_id`, `fb_open=1`, `flow_ctx=1`
+		- existing `Open Applications` and `Open Status History` actions now carry `flow_ctx=1`
+	- outcome:
+		- users can jump from flow event history directly to contextual feedback/status views and keep flow-return context
+
+- Added Applications deep-link auto-open support for feedback panel:
+	- updated file: `apps/frontend/app/(default)/applications/page.tsx`
+	- new behavior:
+		- reads `fb_open` query flag (`1` or `true`)
+		- auto-fetches and opens application feedback card for deep-linked `application_id`
+		- one-shot consumption guard prevents repeated auto-open loops
+	- outcome:
+		- flow-to-applications handoff now supports direct feedback landing in addition to status-history landing
+
+- Added Applications header return action for flow context:
+	- updated file: `apps/frontend/app/(default)/applications/page.tsx`
+	- new behavior:
+		- reads `flow_ctx` query flag and shows `Back To E2E Flow` action in header
+		- preserves existing dashboard navigation while enabling quick round-trip flow navigation
+	- outcome:
+		- two-way E2E navigation loop (Flow -> Applications -> Flow) is now explicit and low-friction
+
+- Added minimal i18n and targeted frontend test coverage for feedback deep-link and flow-context return:
+	- updated files:
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- coverage added:
+		- flow session-history action asserts route `/applications?...&fb_open=1&flow_ctx=1`
+		- applications page auto-opens feedback panel when deep-link includes `fb_open=1`
+		- applications page shows return-to-flow action when `flow_ctx=1`
+	- outcome:
+		- additional E2E behavior is protected with minimal test expansion focused only on changed paths
+
+- Re-validation after feedback deep-link + flow-context round-trip enhancement:
+	- command: `npm run test -- tests/product-flow-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `46 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260419-154713.json`
+	- outcome: E2E flow-context and deep-link feedback/status navigation remain green while keeping test scope intentionally minimal
+
+- Extended guided flow session-history navigation with direct status-changes deep-link:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- new behavior:
+		- session-history row now exposes `Open Status Changes` action when `applicationId` exists
+		- action routes to Applications with deep-link query: `job_id`, `application_id`, `sc_open=1`, `flow_ctx=1`
+	- outcome:
+		- users can jump from flow event history directly to the status-changes section with focused context
+
+- Added Applications deep-link support for status-changes focus landing:
+	- updated file: `apps/frontend/app/(default)/applications/page.tsx`
+	- new behavior:
+		- reads `sc_open` query flag (`1` or `true`)
+		- captures focused application context from `application_id` for status-changes section
+		- auto-scrolls to status-changes card on first deep-link load
+		- highlights matching status-change row and shows focused visibility indicator (`visible`/`not visible`)
+	- outcome:
+		- flow-to-applications handoff now supports direct focused status-changes triage in one click
+
+- Added minimal i18n and targeted frontend test coverage for status-changes deep-link:
+	- updated files:
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- coverage added:
+		- flow session-history action asserts route `/applications?...&sc_open=1&flow_ctx=1`
+		- applications page test asserts focused status-change deep-link behavior (focused visibility + highlighted row + focus badge)
+	- outcome:
+		- new E2E navigation behavior is protected with minimal test expansion aligned with current strategy
+
+- Re-validation after status-changes deep-link focused-landing enhancement:
+	- command: `npm run test -- tests/product-flow-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `47 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260419-155313.json`
+	- outcome: status-changes deep-link round is fully green, and release-readiness gate remains passing with fresh evidence
+
+- Added flow round-trip return context from Applications to Flow session history:
+	- updated files:
+		- `apps/frontend/app/(default)/applications/page.tsx`
+		- `apps/frontend/app/(default)/flow/page.tsx`
+	- new behavior:
+		- `Back To E2E Flow` now carries return context when available: `flow_return_job_id` + `flow_return_application_id`
+		- Flow page reads return context and prioritizes/highlights matching session-history item
+		- highlighted row shows explicit return-focus badge to speed operator re-orientation after drill-down
+	- outcome:
+		- round-trip navigation now returns users to a concrete event context instead of generic flow landing
+
+- Added minimal i18n and targeted tests for round-trip return context:
+	- updated files:
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- coverage added:
+		- applications return link includes context query when `flow_ctx=1` + current `job_id/application_id`
+		- flow page highlights target history row when return-context query is present
+	- outcome:
+		- round-trip context contract is protected with minimal regression footprint
+
+- Re-validation after flow return-context round-trip enhancement:
+	- command: `npm run test -- tests/product-flow-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `49 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260419-155635.json`
+	- outcome: E2E round-trip continuity is now stronger while preserving the minimal-test strategy and passing release gate
+
+- Added Flow auto-position scroll for return-focused session-history row:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- new behavior:
+		- when return context (`flow_return_job_id` / `flow_return_application_id`) is present, Flow now scrolls the highlighted target history row into view
+		- target row remains prioritized/highlighted and is now auto-positioned with centered viewport placement for faster operator re-orientation
+	- outcome:
+		- round-trip Flow <- Applications navigation now lands at both correct context and visible position, reducing manual scanning
+
+- Added minimal targeted test coverage for return auto-scroll:
+	- updated file: `apps/frontend/tests/product-flow-page.test.tsx`
+	- coverage added:
+		- return-context test now asserts `scrollIntoView({ behavior: 'smooth', block: 'center' })` was triggered for focused history row
+	- outcome:
+		- new auto-position behavior is protected without broad test-scope expansion
+
+- Re-validation after Flow return auto-position enhancement:
+	- command: `npm run test -- tests/product-flow-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `49 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260419-155902.json`
+	- outcome: return-focus UX improvement is fully green and release-readiness evidence remains current
+
+- Added round-trip query snapshot from Applications to Flow for state-preserving return:
+	- updated file: `apps/frontend/app/(default)/applications/page.tsx`
+	- new behavior:
+		- `Back To E2E Flow` now attaches `flow_return_query` containing sanitized recruiter-view state (`rc_*`, `sc_*`, etc.)
+		- volatile deep-link params (`flow_ctx`, `job_id`, `application_id`, panel-open flags) are excluded from snapshot
+	- outcome:
+		- Flow can now restore prior Applications filter/view mode when users round-trip after drill-down
+
+- Reused return-query snapshot when Flow reopens Applications:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- new behavior:
+		- Flow actions to open Applications now merge preserved snapshot query with current `job_id/application_id`
+		- status/feedback/status-changes panel flags are normalized per clicked action while retaining preserved filters
+	- outcome:
+		- round-trip navigation now keeps recruiter context (focus mode + filters) instead of resetting to a generic list
+
+- Added minimal targeted test coverage for query-snapshot round-trip preservation:
+	- updated files:
+		- `apps/frontend/tests/applications-page.test.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- coverage added:
+		- applications return link test asserts `flow_return_query` includes sanitized view/filter state
+		- flow test asserts reopen-applications action preserves snapshot keys while applying current item context
+	- outcome:
+		- state-preserving round-trip contract is now regression-protected with narrow test expansion
+
+- Re-validation after query-snapshot round-trip enhancement:
+	- command: `npm run test -- tests/product-flow-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `51 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260419-161118.json`
+	- outcome: new state-preserving navigation behavior is fully green and readiness evidence is updated
+
+- Added panel-memory snapshot for Flow return context:
+	- updated file: `apps/frontend/app/(default)/applications/page.tsx`
+	- new behavior:
+		- Applications now tracks active drill-down panel context (`status-history` / `status-changes` / `feedback`) for flow round-trip
+		- sanitized `flow_return_query` now includes internal panel hint key `flow_panel` while still excluding volatile deep-link flags
+	- outcome:
+		- round-trip now preserves not only filter/view state but also preferred panel context
+
+- Restored preferred panel when Flow re-opens Applications:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- new behavior:
+		- Flow reads `flow_panel` from `flow_return_query` snapshot and rehydrates matching panel-open flag (`sh_open` / `sc_open` / `fb_open`) on generic reopen actions
+		- explicit panel actions from session-history continue to take precedence over stored panel hint
+	- outcome:
+		- recruiter round-trip continuity is tighter: users return to both prior filter context and prior panel intent
+
+- Added minimal targeted test coverage for panel-memory round-trip:
+	- updated files:
+		- `apps/frontend/tests/applications-page.test.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- coverage added:
+		- applications test asserts `flow_return_query.flow_panel=status-history` after status-history deep-link flow context
+		- flow test asserts reopen-applications action rehydrates `fb_open=1` when snapshot carries `flow_panel=feedback`
+	- outcome:
+		- panel-memory contract is regression-protected without broad suite expansion
+
+- Re-validation after panel-memory round-trip enhancement:
+	- command: `npm run test -- tests/product-flow-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `53 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260419-161420.json`
+	- outcome: panel-memory continuity is fully green with updated readiness evidence
+
+- Added shareable URL sync for manually opened recruiter panels:
+	- updated file: `apps/frontend/app/(default)/applications/page.tsx`
+	- new behavior:
+		- when recruiter opens status history or feedback from ranked candidates, URL now syncs `application_id` + panel flag (`sh_open`/`fb_open`)
+		- closing feedback now clears panel flag from URL while preserving current `job_id/application_id`
+		- panel flags are only emitted when focused application context exists, avoiding stale share links
+	- outcome:
+		- refresh/share links now preserve active panel context even when panel was opened via manual UI actions
+
+- Hardened Flow reopen behavior against snapshot-panel ambiguity:
+	- updated file: `apps/frontend/app/(default)/flow/page.tsx`
+	- new behavior:
+		- explicit session-history actions (e.g. `Open Feedback`) continue to override stored `flow_panel` snapshot hints
+	- outcome:
+		- users get deterministic panel landing for explicit actions without losing panel-memory benefits on generic reopen
+
+- Added minimal targeted tests for panel-flag URL sync and explicit override:
+	- updated files:
+		- `apps/frontend/tests/applications-page.test.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- coverage added:
+		- applications tests assert URL sync/clear for `sh_open` and `fb_open` on manual panel open/close
+		- flow test asserts explicit `Open Feedback` action overrides snapshot `flow_panel=status-history`
+	- outcome:
+		- new shareable-panel and override contracts are regression-protected with minimal suite expansion
+
+- Re-validation after shareable panel-flag URL sync enhancement:
+	- command: `npm run test -- tests/product-flow-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `56 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260419-161827.json`
+	- outcome: panel-open state is now shareable and stable with fresh release-readiness evidence
+
+- Added explicit status-history close cleanup coverage for shareable URL consistency:
+	- updated file: `apps/frontend/tests/applications-page.test.tsx`
+	- coverage added:
+		- after opening status-history from ranked candidate action, closing the panel now verifies URL removes `sh_open=1` while preserving `job_id/application_id`
+	- outcome:
+		- panel lifecycle contract is now fully covered in tests for both open and close transitions
+
+- Re-validation after status-history close cleanup coverage:
+	- command: `npm run test -- tests/product-flow-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `56 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260419-162040.json`
+	- outcome: status-history close cleanup remains green with fresh readiness evidence
+
+- Added clear-focus action for status-changes panel lifecycle:
+	- updated files:
+		- `apps/frontend/app/(default)/applications/page.tsx`
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new behavior:
+		- status-changes focus banner now exposes `Clear Focus` action
+		- clearing focus removes focused highlight state and clears `sc_open` shareable flag while preserving current `job_id/application_id`
+		- when no focused application remains, status-changes focus context is reset to avoid stale focus badges
+	- outcome:
+		- status-changes panel lifecycle now matches open/close hygiene already established for status-history and feedback
+
+- Added targeted regression coverage for status-changes clear-focus lifecycle:
+	- updated file: `apps/frontend/tests/applications-page.test.tsx`
+	- coverage added:
+		- deep-link status-changes test now clears focus and asserts: no focused row, no focused banner, `sc_open` removed from query
+	- outcome:
+		- shareable URL + focused-row cleanup contract for status-changes is now test-protected
+
+- Re-validation after status-changes clear-focus enhancement:
+	- command: `npm run test -- tests/product-flow-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `56 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260419-162824.json`
+	- outcome: status-changes lifecycle cleanup is fully green with updated readiness evidence
+
+- Completed status-changes round-trip symmetry from ranked list actions:
+	- updated files:
+		- `apps/frontend/app/(default)/applications/page.tsx`
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new behavior:
+		- ranked candidate cards now expose direct `Status Changes` action
+		- clicking action sets focused application context, scrolls to status-changes section, and emits `sc_open=1` in shareable URL
+		- `flow_return_query` snapshot now captures `flow_panel=status-changes` for Flow return continuity
+	- outcome:
+		- all three recruiter drill-down panels now support symmetric open/close/query/share lifecycle behavior
+
+- Added consolidated targeted test coverage for status-changes action + round-trip restore:
+	- updated files:
+		- `apps/frontend/tests/applications-page.test.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- coverage added:
+		- applications tests verify manual `Status Changes` action syncs and clears `sc_open` query flag
+		- applications tests verify flow return link snapshot includes `flow_panel=status-changes` and excludes transient `sc_open`
+		- flow test verifies generic reopen uses snapshot panel hint to restore `sc_open=1`
+	- outcome:
+		- status-changes manual and round-trip contracts are now regression-protected end-to-end
+
+- Re-validation after consolidated status-changes symmetry completion:
+	- command: `npm run test -- tests/product-flow-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `59 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260419-163300.json`
+	- outcome: round-trip panel lifecycle proposal set is now complete and fully green, ready to move to a new E2E feature track
+
+- Final readiness refresh after last compile-safety fix in tests:
+	- command: `npm run test -- tests/product-flow-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `59 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260419-163405.json`
+	- outcome: final batch state is fully synchronized and green for handoff to next E2E feature track
+
+- Started and completed candidate-focused E2E continuation track (Jobs -> Applications History focus):
+	- updated files:
+		- `apps/frontend/app/(default)/jobs/page.tsx`
+		- `apps/frontend/app/(default)/applications/page.tsx`
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new behavior:
+		- successful apply on Jobs now redirects candidates with focused context: `candidate_id + application_id + candidate_focus=1`
+		- candidate history on Applications now supports focused highlight badge + visible/not-visible indicator + clear-focus action
+		- clearing candidate focus removes `candidate_focus` and `application_id` while preserving candidate context
+	- outcome:
+		- candidate apply journey now lands users directly on the relevant history item instead of generic history listing
+
+- Hardened preset date generation against timezone drift in Applications filters:
+	- updated file: `apps/frontend/app/(default)/applications/page.tsx`
+	- new behavior:
+		- ranked/status-changes quick presets now use local date formatting (instead of `toISOString`) to avoid off-by-one day shifts in UTC+ timezones
+	- outcome:
+		- quick-date filters and corresponding tests remain stable across timezone environments
+
+- Added targeted tests for candidate-focused apply/history flow and kept recruiter flow guardrails:
+	- updated files:
+		- `apps/frontend/tests/jobs-page.test.tsx`
+		- `apps/frontend/tests/applications-page.test.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- coverage added:
+		- Jobs page tests: success redirect includes focused candidate context; duplicate redirect keeps candidate history fallback
+		- Applications page tests: candidate history focus deep-link highlight + clear-focus query cleanup
+		- Existing Flow/Applications recruiter round-trip tests revalidated alongside new candidate tests
+	- outcome:
+		- candidate track is regression-protected while preserving previously completed recruiter round-trip contracts
+
+- Re-validation after candidate-focused E2E track completion:
+	- command: `npm run test -- tests/jobs-page.test.tsx tests/applications-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `62 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260419-171307.json`
+	- outcome: candidate-focused end-to-end handoff is complete and green; ready to switch to a new feature stream
+
+- Strengthened candidate deep-link reliability with cross-page history auto-seek:
+	- updated files:
+		- `apps/frontend/app/(default)/applications/page.tsx`
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new behavior:
+		- when candidate deep-link includes `candidate_focus=1` + `application_id` and item is not on current history page, Applications now probes remaining history pages and jumps to the page containing the focused application
+		- focus indicator now shows an intermediate seeking state while background page discovery is in progress
+	- outcome:
+		- candidate apply return links remain deterministic even with paginated history datasets
+
+- Added regression coverage for candidate focus auto-seek on paginated history:
+	- updated file:
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- coverage added:
+		- verifies candidate-focused deep-link triggers page-2 fetch and lands with focused history row visible
+	- outcome:
+		- protects deep-link behavior for multi-page candidate history scenarios
+
+- Re-validation after candidate history auto-seek enhancement:
+	- command: `npm run test -- tests/jobs-page.test.tsx tests/applications-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `63 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260420-132801.json`
+	- outcome: enhanced candidate deep-link pagination flow is fully green and release-readiness validated
+
+- Strengthened recruiter status-changes deep-link reliability with cross-page auto-seek:
+	- updated files:
+		- `apps/frontend/app/(default)/applications/page.tsx`
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new behavior:
+		- when status-changes focus (`sc_open=1` + `application_id`) is not on the current status-changes page, Applications now probes remaining status-changes pages and jumps to the matching page
+		- status-changes focus banner now displays an intermediate seeking state while background page discovery runs
+	- outcome:
+		- status-changes deep-link focus remains deterministic for paginated recruiter datasets
+
+- Added regression coverage for status-changes focus auto-seek on paginated status-changes:
+	- updated file:
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- coverage added:
+		- verifies focused status-change deep-link triggers page-2 fetch and lands with focused status-change row visible
+	- outcome:
+		- protects recruiter status-changes deep-link behavior for multi-page scenarios
+
+- Re-validation after status-changes auto-seek enhancement:
+	- command: `npm run test -- tests/jobs-page.test.tsx tests/applications-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `64 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260420-133726.json`
+	- outcome: recruiter status-changes pagination deep-link flow is fully green and release-readiness validated
+
+- Added auto-scroll-to-row for focused status-changes item after deep-link/seek resolution:
+	- updated file:
+		- `apps/frontend/app/(default)/applications/page.tsx`
+	- new behavior:
+		- when focused status-change item becomes visible (from direct deep-link or cross-page seek), UI now scrolls the focused status-change row into center viewport
+	- outcome:
+		- recruiter triage no longer requires manual scanning after status-changes focus is resolved
+
+- Extended regression coverage for focused status-change row auto-scroll:
+	- updated file:
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- coverage added:
+		- verifies focused status-change deep-link now triggers `scrollIntoView({ behavior: 'smooth', block: 'center' })` when target row is visible
+	- outcome:
+		- protects row auto-positioning behavior for future status-changes focus refactors
+
+- Re-validation after status-change row auto-scroll enhancement:
+	- command: `npm run test -- tests/jobs-page.test.tsx tests/applications-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `64 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260420-141206.json`
+	- outcome: status-changes focus seek + auto-position flow is fully green with updated readiness evidence
+
+- Added debounce guard for status-changes focused-application cross-page seek:
+	- updated file:
+		- `apps/frontend/app/(default)/applications/page.tsx`
+	- new behavior:
+		- focused status-changes cross-page seek now waits a short debounce window before probing additional pages
+		- rapid filter edits no longer trigger repeated overlapping seek probes against page 2+
+	- outcome:
+		- status-changes deep-link resolution remains deterministic while reducing redundant API traffic during quick filter typing
+
+- Added regression coverage for debounced status-changes focused seek:
+	- updated file:
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- coverage added:
+		- verifies no early page-2 seek before debounce threshold when `changed_by` filter is edited quickly
+		- verifies seek uses the latest `changed_by` value after debounce window elapses
+	- outcome:
+		- protects debounce behavior and prevents regressions that could reintroduce request bursts
+
+- Re-validation after status-changes seek debounce enhancement:
+	- command: `npm run test -- tests/jobs-page.test.tsx tests/applications-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `65 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260420-141822.json`
+	- outcome: status-changes focus seek remains fully green with reduced probe churn and refreshed readiness evidence
+
+- Hardened status-changes focused seek with latest-run token guard:
+	- updated file:
+		- `apps/frontend/app/(default)/applications/page.tsx`
+	- new behavior:
+		- each focused status-changes seek run now gets a monotonic run id so stale in-flight seeks cannot commit `setStatusChangesPage(...)`
+		- when focus context is cleared, run id is invalidated immediately to cancel stale completion paths and clear seeking state deterministically
+		- active seek guard no longer blocks scheduling of newer seek intents while older runs are being canceled
+	- outcome:
+		- rapid filter changes are now resilient against stale seek side-effects and avoid seek-state lock scenarios
+
+- Re-validation after status-changes latest-run token hardening:
+	- command: `npm run test -- tests/jobs-page.test.tsx tests/applications-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `65 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260420-145013.json`
+	- outcome: status-changes focus seek remains fully green with stale-run commit protection and refreshed readiness evidence
+
+- Extended latest-run token hardening to candidate-history and ranked focused seek flows:
+	- updated file:
+		- `apps/frontend/app/(default)/applications/page.tsx`
+	- new behavior:
+		- candidate history focused seek now uses a monotonic run id so stale in-flight seeks cannot commit `setHistoryPage(...)`
+		- ranked focused seek now uses a monotonic run id so stale in-flight seeks cannot commit `setRankedPage(...)`
+		- both flows invalidate run id when focus context is cleared to cancel stale completion paths and clear seeking state deterministically
+		- both flows now allow newer seek intents to schedule while older runs are being canceled, avoiding seek-state lock on rapid filter edits
+	- outcome:
+		- focused deep-link recovery behavior is now consistently stale-run safe across ranked, candidate-history, and status-changes seek paths
+
+- Re-validation after extending latest-run token guard across seek flows:
+	- command: `npm run test -- tests/jobs-page.test.tsx tests/applications-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `65 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260420-145705.json`
+	- outcome: all focused seek flows remain fully green with broader stale-run commit protection and refreshed readiness evidence
 
