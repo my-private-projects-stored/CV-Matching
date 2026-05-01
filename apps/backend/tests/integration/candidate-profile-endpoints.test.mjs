@@ -64,7 +64,9 @@ test(
       });
       assert.equal(candidateSignup.status, 201);
       const candidateToken = candidateSignup.json?.access_token;
+      const candidateId = candidateSignup.json?.user?.id;
       assert.ok(candidateToken);
+      assert.ok(candidateId);
 
       const recruiterSignup = await requestJson(baseUrl, "POST", "/auth/signup", {
         email: "recruiter.profile@example.com",
@@ -92,15 +94,32 @@ test(
         "/candidate-profile/me",
         {
           headline: "Frontend Engineer",
-          summary: "Build scalable web UI.",
+          summary: "  Build scalable web UI.  ",
           location: "Hanoi",
+          website: "portfolio.example",
           skills: ["React", "TypeScript", "Node.js"],
           portfolio_links: ["portfolio.example"],
+          experience: [
+            {
+              title: "  Senior Engineer  ",
+              company: "Example Co",
+              location: "Remote",
+              start_date: "2022-01",
+              end_date: "2024-01",
+              summary: " Led core UI work. ",
+            },
+          ],
         },
         candidateToken
       );
       assert.equal(updateCandidateProfile.status, 200);
       assert.equal(updateCandidateProfile.json?.data?.profile?.headline, "Frontend Engineer");
+      assert.equal(updateCandidateProfile.json?.data?.profile?.summary, "Build scalable web UI.");
+      assert.equal(updateCandidateProfile.json?.data?.profile?.website, "https://portfolio.example");
+      assert.equal(
+        updateCandidateProfile.json?.data?.profile?.experience?.[0]?.title,
+        "Senior Engineer"
+      );
       assert.deepEqual(updateCandidateProfile.json?.data?.profile?.skills, [
         "React",
         "TypeScript",
@@ -110,6 +129,26 @@ test(
         updateCandidateProfile.json?.data?.profile?.portfolio_links?.[0],
         "portfolio.example"
       );
+
+      const recruiterGetProfile = await requestJson(
+        baseUrl,
+        "GET",
+        `/candidate-profile/${candidateId}`,
+        undefined,
+        recruiterToken
+      );
+      assert.equal(recruiterGetProfile.status, 200);
+      assert.equal(recruiterGetProfile.json?.data?.user_id, candidateId);
+
+      const invalidProfile = await requestJson(
+        baseUrl,
+        "GET",
+        "/candidate-profile/not-a-valid-id",
+        undefined,
+        recruiterToken
+      );
+      assert.equal(invalidProfile.status, 400);
+      assert.equal(invalidProfile.json?.error_code, "candidate_profile_invalid_user_id");
 
       const recruiterForbidden = await requestJson(
         baseUrl,

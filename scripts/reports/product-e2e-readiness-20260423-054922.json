@@ -1,0 +1,55 @@
+{
+    "schema_version":  "1.0.0",
+    "generated_at_utc":  "2026-04-23T05:49:22.0777024Z",
+    "overall_status":  "passed",
+    "totals":  {
+                   "checks":  3,
+                   "passed":  3,
+                   "failed":  0
+               },
+    "policy":  {
+                   "expected_minimum_checks":  3,
+                   "max_history_lines":  2000,
+                   "skip_history_retention":  false,
+                   "violated":  false
+               },
+    "policy_violations":  [
+
+                          ],
+    "context":  {
+                    "repository":  "CV-Matching",
+                    "branch":  "main",
+                    "commit_sha":  "c461b355ef7f7c2b9e8f02edbb3dc8c760aea73c",
+                    "runner_user":  "PC",
+                    "machine":  "LAPTOP-TCT252A6"
+                },
+    "checks":  [
+                   {
+                       "id":  "qdrant_health",
+                       "title":  "Qdrant dependency and health endpoint",
+                       "status":  "passed",
+                       "details":  "ok",
+                       "started_at_utc":  "2026-04-23T05:49:12.1465043Z",
+                       "ended_at_utc":  "2026-04-23T05:49:12.3676951Z",
+                       "duration_ms":  221
+                   },
+                   {
+                       "id":  "flow_entrypoint",
+                       "title":  "Guided flow entrypoint is linked from dashboard",
+                       "status":  "passed",
+                       "details":  "ok",
+                       "started_at_utc":  "2026-04-23T05:49:12.3676951Z",
+                       "ended_at_utc":  "2026-04-23T05:49:12.3687036Z",
+                       "duration_ms":  1
+                   },
+                   {
+                       "id":  "product_e2e_verify",
+                       "title":  "Unified product E2E verify script",
+                       "status":  "passed",
+                       "details":  "ok",
+                       "started_at_utc":  "2026-04-23T05:49:12.3687036Z",
+                       "ended_at_utc":  "2026-04-23T05:49:22.0767019Z",
+                       "duration_ms":  9708
+                   }
+               ]
+}

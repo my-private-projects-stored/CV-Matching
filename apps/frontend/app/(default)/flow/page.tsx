@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { createApplication } from '@/lib/api/applications';
 import type { ApiClientError } from '@/lib/api/error';
+import { useAuth } from '@/lib/context/auth-context';
 import {
   confirmImproveResume,
   getResumePdfUrl,
@@ -18,14 +19,31 @@ import {
 import { useTranslations } from '@/lib/i18n';
 import { downloadBlobAsFile } from '@/lib/utils/download';
 import { logError } from '@/lib/utils/logger';
+import {
+  applyFlowReturnPrecedence,
+  applyJobsFilterPrecedence,
+  buildPathWithQuery,
+  createSearchParams,
+  sanitizeApplicationsReturnSnapshot,
+  sanitizeJobsReturnSnapshot,
+  setOrDeleteQueryParam,
+} from '@/lib/utils/query-params';
 
 const APPLY_SESSION_HISTORY_STORAGE_KEY = 'flow_apply_session_history_v1';
+const FLOW_PREFILL_JOB_STORAGE_KEY = 'flow_prefill_job_v1';
 
 type ApplySessionHistoryItem = {
   applicationId: string | null;
   jobId: string;
   resumeId: string;
   outcome: 'created' | 'duplicate';
+  createdAt: string;
+};
+
+type FlowPrefillJobPayload = {
+  jobId: string;
+  jobDescription: string;
+  source: 'jobs';
   createdAt: string;
 };
 
@@ -43,13 +61,30 @@ function isValidApplySessionHistoryItem(value: unknown): value is ApplySessionHi
   );
 }
 
+function isValidFlowPrefillJobPayload(value: unknown): value is FlowPrefillJobPayload {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as FlowPrefillJobPayload;
+  return (
+    typeof candidate.jobId === 'string' &&
+    typeof candidate.jobDescription === 'string' &&
+    candidate.source === 'jobs' &&
+    typeof candidate.createdAt === 'string'
+  );
+}
+
 export default function ProductFlowPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslations();
+  const { user } = useAuth();
+  const isCandidateOnly = user?.role === 'candidate';
+  const flowCandidateId = isCandidateOnly ? (user?.id || '').trim() : '';
   const flowReturnJobId = (searchParams.get('flow_return_job_id') || '').trim();
   const flowReturnApplicationId = (searchParams.get('flow_return_application_id') || '').trim();
   const flowReturnQuery = (searchParams.get('flow_return_query') || '').trim();
+  const jobsReturnQuery = (searchParams.get('jobs_return_query') || '').trim();
+  const openedFromFocusedJob = searchParams.get('focused_job') === '1';
+  const shouldHydratePrefillJob = searchParams.get('prefill_job') === '1';
 
   const parseFlowReturnPanel = (
     value: string | null
@@ -60,9 +95,20 @@ export default function ProductFlowPage() {
     return null;
   };
 
+  const parsePanelFromOpenFlags = (
+    params: URLSearchParams
+  ): 'status-history' | 'status-changes' | 'feedback' | null => {
+    if (params.get('sh_open') === '1') return 'status-history';
+    if (params.get('sc_open') === '1') return 'status-changes';
+    if (params.get('fb_open') === '1') return 'feedback';
+    return null;
+  };
+
   const [masterResumeId, setMasterResumeId] = useState<string | null>(null);
   const [jobDescription, setJobDescription] = useState('');
   const [jobId, setJobId] = useState<string | null>(null);
+  const [prefilledJobId, setPrefilledJobId] = useState<string | null>(null);
+  const [prefilledJobDescription, setPrefilledJobDescription] = useState('');
   const [tailoredResumeId, setTailoredResumeId] = useState<string | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -97,6 +143,42 @@ export default function ProductFlowPage() {
       localStorage.removeItem(APPLY_SESSION_HISTORY_STORAGE_KEY);
     }
   }, []);
+
+  useEffect(() => {
+    if (!shouldHydratePrefillJob) return;
+
+    const rawPrefill = localStorage.getItem(FLOW_PREFILL_JOB_STORAGE_KEY);
+    if (!rawPrefill) return;
+
+    try {
+      const parsed = JSON.parse(rawPrefill);
+      if (!isValidFlowPrefillJobPayload(parsed)) {
+        localStorage.removeItem(FLOW_PREFILL_JOB_STORAGE_KEY);
+        return;
+      }
+
+      const normalizedDescription = parsed.jobDescription.trim();
+      if (!normalizedDescription) {
+        localStorage.removeItem(FLOW_PREFILL_JOB_STORAGE_KEY);
+        return;
+      }
+
+      setJobDescription(normalizedDescription);
+      setJobId(parsed.jobId);
+      setPrefilledJobId(parsed.jobId);
+      setPrefilledJobDescription(normalizedDescription);
+      setPreviewResult(null);
+      setTailoredResumeId(null);
+      setApplicationId(null);
+      setError(null);
+      setMessage(t('flow.messages.prefilledFromJobs'));
+    } catch {
+      localStorage.removeItem(FLOW_PREFILL_JOB_STORAGE_KEY);
+      return;
+    }
+
+    localStorage.removeItem(FLOW_PREFILL_JOB_STORAGE_KEY);
+  }, [shouldHydratePrefillJob, t]);
 
   useEffect(() => {
     localStorage.setItem(APPLY_SESSION_HISTORY_STORAGE_KEY, JSON.stringify(applySessionHistory));
@@ -154,6 +236,62 @@ export default function ProductFlowPage() {
     return false;
   };
 
+  const jobsReturnHref = useMemo(() => {
+    if (!jobsReturnQuery) {
+      const params = createSearchParams();
+      params.set('status', 'all');
+      params.set('source', 'flow');
+      const resolvedJobId = (jobId || '').trim();
+      if (resolvedJobId) {
+        params.set('focus_job_id', resolvedJobId);
+      }
+      return buildPathWithQuery('/jobs', params);
+    }
+
+    const params = sanitizeJobsReturnSnapshot(jobsReturnQuery, {
+      stripApplicationsReturn: false,
+    });
+    applyJobsFilterPrecedence(params, searchParams);
+    const resolvedJobId = (jobId || '').trim();
+    if (resolvedJobId && !(params.get('focus_job_id') || '').trim()) {
+      params.set('focus_job_id', resolvedJobId);
+    }
+    if (!(params.get('status') || '').trim()) {
+      params.set('status', 'all');
+    }
+    const source = (params.get('source') || '').trim();
+    if (!source || (source !== 'applications' && source !== 'flow')) {
+      params.set('source', 'flow');
+    }
+
+    return buildPathWithQuery('/jobs', params);
+  }, [jobsReturnQuery, searchParams, jobId]);
+
+  const applicationsReturnQueryFromJobs = useMemo(() => {
+    if (!jobsReturnQuery) return '';
+    const params = createSearchParams(jobsReturnQuery);
+    return sanitizeApplicationsReturnSnapshot(params.get('applications_return_query')).toString();
+  }, [jobsReturnQuery]);
+
+  const buildJobBoardHref = (nextJobId: string) => {
+    const params = sanitizeJobsReturnSnapshot(jobsReturnQuery, {
+      stripApplicationsReturn: false,
+    });
+    applyJobsFilterPrecedence(params, searchParams);
+    const resolvedJobId = nextJobId.trim();
+    if (resolvedJobId) {
+      params.set('focus_job_id', resolvedJobId);
+    }
+    if (!(params.get('status') || '').trim()) {
+      params.set('status', 'all');
+    }
+    const source = (params.get('source') || '').trim();
+    if (!source || (source !== 'applications' && source !== 'flow')) {
+      params.set('source', 'flow');
+    }
+    return buildPathWithQuery('/jobs', params);
+  };
+
   const prioritizedSessionHistory = useMemo(() => {
     if (!flowReturnJobId && !flowReturnApplicationId) {
       return filteredSessionHistory;
@@ -190,36 +328,67 @@ export default function ProductFlowPage() {
     };
   }, [flowReturnJobId, flowReturnApplicationId, prioritizedSessionHistory]);
 
-  const setOrDeleteQueryParam = (params: URLSearchParams, key: string, value: string) => {
-    if (value) {
-      params.set(key, value);
-    } else {
-      params.delete(key);
-    }
-  };
-
   const buildApplicationsHref = ({
     nextJobId,
     nextApplicationId,
+    nextCandidateId,
     openPanel,
   }: {
     nextJobId: string;
     nextApplicationId: string;
+    nextCandidateId?: string;
     openPanel?: 'status-history' | 'status-changes' | 'feedback';
   }) => {
-    const params = flowReturnQuery ? new URLSearchParams(flowReturnQuery) : new URLSearchParams();
-    const snapshotPanel = parseFlowReturnPanel(params.get('flow_panel'));
+    const baseReturnQuery = flowReturnQuery || applicationsReturnQueryFromJobs;
+    const params = sanitizeApplicationsReturnSnapshot(baseReturnQuery);
+    if (flowReturnQuery) {
+      applyFlowReturnPrecedence(params, searchParams);
+    }
+    const snapshotPanel =
+      parseFlowReturnPanel(params.get('flow_panel')) || parsePanelFromOpenFlags(params);
     params.delete('flow_panel');
 
-    setOrDeleteQueryParam(params, 'job_id', nextJobId.trim());
-    setOrDeleteQueryParam(params, 'application_id', nextApplicationId.trim());
+    const resolvedCandidateId = (nextCandidateId || '').trim();
+    const resolvedJobId = nextJobId.trim();
+    const resolvedApplicationId = nextApplicationId.trim();
+
+    const jobsReturnParams = sanitizeJobsReturnSnapshot(jobsReturnQuery);
+    if (!resolvedCandidateId) {
+      if (resolvedJobId && !(jobsReturnParams.get('focus_job_id') || '').trim()) {
+        jobsReturnParams.set('focus_job_id', resolvedJobId);
+      }
+      if (!(jobsReturnParams.get('status') || '').trim()) {
+        jobsReturnParams.set('status', 'all');
+      }
+      const jobsSource = (jobsReturnParams.get('source') || '').trim();
+      if (!jobsSource || (jobsSource !== 'applications' && jobsSource !== 'flow')) {
+        jobsReturnParams.set('source', 'flow');
+      }
+    }
+
+    const jobsReturnSnapshot = jobsReturnParams.toString();
+    if (jobsReturnSnapshot) {
+      params.set('jobs_return_query', jobsReturnSnapshot);
+    }
+
+    if (resolvedCandidateId) {
+      setOrDeleteQueryParam(params, 'candidate_id', resolvedCandidateId);
+      setOrDeleteQueryParam(params, 'application_id', resolvedApplicationId);
+      setOrDeleteQueryParam(params, 'candidate_focus', resolvedApplicationId ? '1' : '');
+      params.delete('job_id');
+    } else {
+      setOrDeleteQueryParam(params, 'job_id', resolvedJobId);
+      setOrDeleteQueryParam(params, 'application_id', resolvedApplicationId);
+      params.delete('candidate_id');
+      params.delete('candidate_focus');
+    }
 
     params.delete('sh_open');
     params.delete('sc_open');
     params.delete('fb_open');
 
     const resolvedPanel = openPanel || snapshotPanel;
-    const canOpenPanel = Boolean(nextApplicationId.trim());
+    const canOpenPanel = Boolean(resolvedApplicationId);
 
     if (resolvedPanel === 'status-history' && canOpenPanel) {
       params.set('sh_open', '1');
@@ -232,7 +401,7 @@ export default function ProductFlowPage() {
     }
 
     params.set('flow_ctx', '1');
-    return `/applications?${params.toString()}`;
+    return buildPathWithQuery('/applications', params);
   };
 
   const handleUploadComplete = (resumeId: string) => {
@@ -248,6 +417,10 @@ export default function ProductFlowPage() {
 
   const handleJobDescriptionChange = (nextValue: string) => {
     setJobDescription(nextValue);
+    if (prefilledJobId) {
+      setPrefilledJobId(null);
+      setPrefilledJobDescription('');
+    }
 
     if (previewResult || tailoredResumeId || jobId) {
       setPreviewResult(null);
@@ -266,7 +439,13 @@ export default function ProductFlowPage() {
     }
 
     const trimmedDescription = jobDescription.trim();
-    if (trimmedDescription.length < 50) {
+    const canReusePrefilledJob =
+      Boolean(prefilledJobId) &&
+      Boolean(jobId) &&
+      trimmedDescription === prefilledJobDescription &&
+      jobId === prefilledJobId;
+
+    if (!canReusePrefilledJob && trimmedDescription.length < 50) {
       setError(t('flow.errors.jobDescriptionTooShort'));
       return;
     }
@@ -276,10 +455,18 @@ export default function ProductFlowPage() {
     setMessage(null);
 
     try {
-      const uploadedJobId = await uploadJobDescriptions([trimmedDescription], masterResumeId);
-      setJobId(uploadedJobId);
+      let resolvedJobId = jobId;
+      if (!canReusePrefilledJob) {
+        resolvedJobId = await uploadJobDescriptions([trimmedDescription], masterResumeId);
+      }
 
-      const preview = await previewImproveResume(masterResumeId, uploadedJobId);
+      if (!resolvedJobId) {
+        throw new Error('Job id missing for preview generation');
+      }
+
+      setJobId(resolvedJobId);
+
+      const preview = await previewImproveResume(masterResumeId, resolvedJobId);
       setPreviewResult(preview);
       setTailoredResumeId(null);
       setApplicationId(null);
@@ -432,11 +619,19 @@ export default function ProductFlowPage() {
             <p className="mt-2 font-mono text-xs uppercase text-gray-600">
               {t('flow.subtitle')}
             </p>
+            {openedFromFocusedJob ? (
+              <p className="mt-2 inline-block border border-blue-700 bg-blue-50 px-2 py-1 font-mono text-[10px] uppercase text-blue-800">
+                {t('flow.messages.openedFromFocusedJob')}
+              </p>
+            ) : null}
           </div>
           <div className="flex gap-2">
             <Link href="/dashboard">
               <Button variant="outline">{t('nav.backToDashboard')}</Button>
             </Link>
+            <Button variant="outline" onClick={() => router.push(jobsReturnHref)}>
+              {t('flow.actions.backToJobsContext')}
+            </Button>
             {tailoredResumeId && (
               <Button onClick={() => router.push(`/resumes/${tailoredResumeId}`)}>
                 {t('flow.actions.openTailoredResume')}
@@ -555,6 +750,7 @@ export default function ProductFlowPage() {
                   buildApplicationsHref({
                     nextJobId: jobId || '',
                     nextApplicationId: applicationId || '',
+                    nextCandidateId: flowCandidateId,
                   })
                 );
               }}
@@ -674,12 +870,22 @@ export default function ProductFlowPage() {
                               buildApplicationsHref({
                                 nextJobId: item.jobId,
                                 nextApplicationId: item.applicationId || '',
+                                nextCandidateId: flowCandidateId,
                               })
                             );
                           }}
                         >
                           {t('flow.sessionHistory.openApplicationsForItem')}
                         </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          router.push(buildJobBoardHref(item.jobId));
+                        }}
+                      >
+                        {t('flow.sessionHistory.openJobBoardForItem')}
+                      </Button>
                       {item.applicationId ? (
                         <Button
                           size="sm"
@@ -691,6 +897,7 @@ export default function ProductFlowPage() {
                               buildApplicationsHref({
                                 nextJobId: item.jobId,
                                 nextApplicationId: applicationId,
+                                nextCandidateId: flowCandidateId,
                                 openPanel: 'status-history',
                               })
                             );
@@ -710,6 +917,7 @@ export default function ProductFlowPage() {
                               buildApplicationsHref({
                                 nextJobId: item.jobId,
                                 nextApplicationId: applicationId,
+                                nextCandidateId: flowCandidateId,
                                 openPanel: 'status-changes',
                               })
                             );
@@ -729,6 +937,7 @@ export default function ProductFlowPage() {
                               buildApplicationsHref({
                                 nextJobId: item.jobId,
                                 nextApplicationId: applicationId,
+                                nextCandidateId: flowCandidateId,
                                 openPanel: 'feedback',
                               })
                             );

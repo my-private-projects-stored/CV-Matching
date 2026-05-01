@@ -202,8 +202,8 @@ test(
       assert.equal(Array.isArray(ranked.json?.data?.candidates), true);
       assert.equal(ranked.json.data.candidates.length, 2);
       assert.equal(
-        ranked.json.data.candidates[0].scores.hybrid_score >=
-          ranked.json.data.candidates[1].scores.hybrid_score,
+        ranked.json.data.candidates[0].scores.semantic_score >=
+          ranked.json.data.candidates[1].scores.semantic_score,
         true
       );
 

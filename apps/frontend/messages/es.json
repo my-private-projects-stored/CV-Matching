@@ -109,7 +109,7 @@
       "description": "Load ranked candidates by job",
       "jobIdPlaceholder": "job_id",
       "countCandidates": "{count} candidate(s)",
-      "topHybrid": "| top hybrid {score}"
+      "topSemantic": "| top semantic {score}"
     },
     "candidateView": {
       "title": "Candidate View",

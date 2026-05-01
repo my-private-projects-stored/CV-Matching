@@ -5,7 +5,11 @@ vi.mock('@/lib/api/client', () => ({
   apiPut: vi.fn(),
 }));
 
-import { fetchMyCandidateProfile, updateMyCandidateProfile } from '@/lib/api/candidate-profile';
+import {
+  fetchCandidateProfileById,
+  fetchMyCandidateProfile,
+  updateMyCandidateProfile,
+} from '@/lib/api/candidate-profile';
 import { apiFetch, apiPut } from '@/lib/api/client';
 
 const mockedApiFetch = vi.mocked(apiFetch);
@@ -90,6 +94,38 @@ describe('candidate profile API client', () => {
 
     expect(result.data.profile.headline).toBe('Senior Frontend Engineer');
     expect(mockedApiPut).toHaveBeenCalledWith('/candidate-profile/me', payload);
+  });
+
+  it('fetchCandidateProfileById returns profile payload', async () => {
+    mockedApiFetch.mockResolvedValueOnce(
+      jsonResponse({
+        data: {
+          user_id: 'u-2',
+          email: 'candidate.two@example.com',
+          full_name: 'Candidate Two',
+          role: 'candidate',
+          profile: {
+            headline: 'Platform Engineer',
+            summary: 'Built infrastructure stacks',
+            phone: '',
+            location: '',
+            website: '',
+            portfolio_links: [],
+            skills: ['Go', 'Kubernetes'],
+            experience: [],
+            education: [],
+            portfolio: [],
+          },
+          updated_at: '2026-03-23T02:00:00.000Z',
+        },
+      })
+    );
+
+    const result = await fetchCandidateProfileById('u-2');
+
+    expect(result.data.user_id).toBe('u-2');
+    expect(result.data.profile.skills).toEqual(['Go', 'Kubernetes']);
+    expect(mockedApiFetch).toHaveBeenCalledWith('/candidate-profile/u-2');
   });
 
   it('updateMyCandidateProfile preserves backend error_code on validation failure', async () => {

@@ -22,8 +22,18 @@ import {
   type CandidateHistoryItem,
   type RankedCandidateItem,
 } from '@/lib/api/applications';
+import { fetchCandidateProfileById, type CandidateProfileResponse } from '@/lib/api/candidate-profile';
 import { getOriginalResumeDownloadUrl } from '@/lib/api/resume';
 import { downloadBlobAsFile } from '@/lib/utils/download';
+import {
+  applyJobsFilterPrecedence,
+  buildPathWithQuery,
+  createSearchParams,
+  sanitizeApplicationsReturnSnapshot,
+  sanitizeFlowReturnSnapshot,
+  sanitizeJobsReturnSnapshot,
+  setOrDeleteQueryParam,
+} from '@/lib/utils/query-params';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -45,7 +55,7 @@ const RANKED_DATE_PRESETS = ['all-time', '7d', 'this-month', 'qtd'] as const;
 type RankedDatePreset = (typeof RANKED_DATE_PRESETS)[number];
 const STATUS_CHANGES_FOCUS_SEEK_DEBOUNCE_MS = 180;
 type FocusMode = 'focus' | 'all';
-type FlowReturnPanel = '' | 'status-history' | 'status-changes' | 'feedback';
+type FlowReturnPanel = '' | 'status-history' | 'status-changes' | 'feedback' | 'profile';
 
 function parseBooleanQueryFlag(value: string | null): boolean {
   if (!value) return false;
@@ -170,6 +180,7 @@ export default function ApplicationsPage() {
         ? 'feedback'
         : '';
   const isFlowContext = parseBooleanQueryFlag(searchParams.get('flow_ctx'));
+  const jobsReturnQuery = (searchParams.get('jobs_return_query') || '').trim();
 
   const [jobId, setJobId] = useState(defaultJobId);
   const [focusApplicationId, setFocusApplicationId] = useState(defaultApplicationId);
@@ -205,6 +216,10 @@ export default function ApplicationsPage() {
   const [bulkRankedUndoResult, setBulkRankedUndoResult] = useState<{ revertedCount: number } | null>(null);
   const [historyItems, setHistoryItems] = useState<CandidateHistoryItem[]>([]);
   const [feedback, setFeedback] = useState<ApplicationFeedbackResponse['data'] | null>(null);
+  const [candidateProfile, setCandidateProfile] = useState<CandidateProfileResponse['data'] | null>(
+    null
+  );
+  const [isLoadingCandidateProfile, setIsLoadingCandidateProfile] = useState(false);
   const [selectedStatusHistory, setSelectedStatusHistory] = useState<{
     applicationId: string;
     candidateName: string;
@@ -297,9 +312,9 @@ export default function ApplicationsPage() {
     setHistoryPage(1);
   }, [isCandidateOnly, user?.id]);
 
-  const topHybrid = useMemo(() => {
+  const topSemantic = useMemo(() => {
     if (!rankedItems.length) return null;
-    return rankedItems[0].scores.hybrid_score;
+    return rankedItems[0].scores.semantic_score;
   }, [rankedItems]);
 
   const focusedRankedItem = useMemo(() => {
@@ -329,15 +344,7 @@ export default function ApplicationsPage() {
   }, [statusChanges, statusChangesFocusApplicationId]);
 
   const flowReturnQuerySnapshot = useMemo(() => {
-    const next = new URLSearchParams(searchParams.toString());
-    // Keep only recruiter view state; volatile deep-link params are restored from dedicated flow keys.
-    next.delete('flow_ctx');
-    next.delete('job_id');
-    next.delete('application_id');
-    next.delete('candidate_id');
-    next.delete('sh_open');
-    next.delete('sc_open');
-    next.delete('fb_open');
+    const next = sanitizeFlowReturnSnapshot(searchParams);
 
     if (flowReturnPanel) {
       next.set('flow_panel', flowReturnPanel);
@@ -365,9 +372,39 @@ export default function ApplicationsPage() {
       params.set('flow_return_query', flowReturnQuerySnapshot);
     }
 
+    const jobsReturnParams = sanitizeJobsReturnSnapshot(jobsReturnQuery);
+    if (jobsReturnParams.toString()) {
+      if (!(jobsReturnParams.get('status') || '').trim()) {
+        jobsReturnParams.set('status', 'all');
+      }
+      const jobsSource = (jobsReturnParams.get('source') || '').trim();
+      if (!jobsSource || (jobsSource !== 'applications' && jobsSource !== 'flow')) {
+        jobsReturnParams.set('source', 'applications');
+      }
+
+      const jobsReturnSnapshot = jobsReturnParams.toString();
+      if (jobsReturnSnapshot) {
+        params.set('jobs_return_query', jobsReturnSnapshot);
+      }
+    }
+
     const query = params.toString();
     return query ? `/flow?${query}` : '/flow';
-  }, [isFlowContext, jobId, focusApplicationId, defaultApplicationId, flowReturnQuerySnapshot]);
+  }, [
+    isFlowContext,
+    jobId,
+    focusApplicationId,
+    defaultApplicationId,
+    flowReturnQuerySnapshot,
+    jobsReturnQuery,
+  ]);
+
+  const applicationsReturnQuerySnapshot = useMemo(() => {
+    const next = sanitizeApplicationsReturnSnapshot(searchParams, {
+      stripFocusJobId: true,
+    });
+    return next.toString();
+  }, [searchParams]);
 
   const focusSeekKey = useMemo(() => {
     return JSON.stringify({
@@ -978,45 +1015,46 @@ export default function ApplicationsPage() {
   ]);
 
   useEffect(() => {
-    const next = new URLSearchParams(searchParams.toString());
-    const setOrDelete = (key: string, value: string) => {
-      if (value) {
-        next.set(key, value);
-      } else {
-        next.delete(key);
-      }
-    };
+    const next = createSearchParams(searchParams.toString());
 
-    setOrDelete('job_id', jobId.trim());
-    setOrDelete('application_id', focusApplicationId.trim());
-    setOrDelete(
+    setOrDeleteQueryParam(next, 'job_id', jobId.trim());
+    setOrDeleteQueryParam(next, 'application_id', focusApplicationId.trim());
+    setOrDeleteQueryParam(
+      next,
       'rc_focus',
       isRecruiterOrAdmin && focusApplicationId.trim() ? (focusOnlyMode ? 'focus' : 'all') : ''
     );
-    setOrDelete('candidate_id', candidateId.trim());
-    setOrDelete(
+    setOrDeleteQueryParam(next, 'candidate_id', candidateId.trim());
+    setOrDeleteQueryParam(
+      next,
       'candidate_focus',
       isCandidateOnly && candidateFocusEnabled && focusApplicationId.trim() ? '1' : ''
     );
-    setOrDelete('rc_changed_by', rankedChangedByFilter.trim());
-    setOrDelete('rc_after', rankedChangedAfter);
-    setOrDelete('rc_before', rankedChangedBefore);
-    setOrDelete('rc_preset', rankedDatePreset);
+    setOrDeleteQueryParam(next, 'rc_changed_by', rankedChangedByFilter.trim());
+    setOrDeleteQueryParam(next, 'rc_after', rankedChangedAfter);
+    setOrDeleteQueryParam(next, 'rc_before', rankedChangedBefore);
+    setOrDeleteQueryParam(next, 'rc_preset', rankedDatePreset);
     const canShareFocusedPanel = Boolean(focusApplicationId.trim());
-    setOrDelete(
+    setOrDeleteQueryParam(
+      next,
       'sh_open',
       canShareFocusedPanel && flowReturnPanel === 'status-history' ? '1' : ''
     );
-    setOrDelete(
+    setOrDeleteQueryParam(
+      next,
       'sc_open',
       canShareFocusedPanel && flowReturnPanel === 'status-changes' ? '1' : ''
     );
-    setOrDelete('fb_open', canShareFocusedPanel && flowReturnPanel === 'feedback' ? '1' : '');
-    setOrDelete('sc_status', statusChangesFilter);
-    setOrDelete('sc_changed_by', statusChangesChangedBy.trim());
-    setOrDelete('sc_after', statusChangesChangedAfter);
-    setOrDelete('sc_before', statusChangesChangedBefore);
-    setOrDelete('sc_preset', statusChangesPreset);
+    setOrDeleteQueryParam(
+      next,
+      'fb_open',
+      canShareFocusedPanel && flowReturnPanel === 'feedback' ? '1' : ''
+    );
+    setOrDeleteQueryParam(next, 'sc_status', statusChangesFilter);
+    setOrDeleteQueryParam(next, 'sc_changed_by', statusChangesChangedBy.trim());
+    setOrDeleteQueryParam(next, 'sc_after', statusChangesChangedAfter);
+    setOrDeleteQueryParam(next, 'sc_before', statusChangesChangedBefore);
+    setOrDeleteQueryParam(next, 'sc_preset', statusChangesPreset);
     if (statusChangesPage > 1) {
       next.set('sc_page', String(statusChangesPage));
     } else {
@@ -1029,7 +1067,7 @@ export default function ApplicationsPage() {
       return;
     }
 
-    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    router.replace(buildPathWithQuery(pathname, nextQuery), { scroll: false });
   }, [
     router,
     pathname,
@@ -1322,6 +1360,29 @@ export default function ApplicationsPage() {
     [t]
   );
 
+  const openCandidateProfile = useCallback(
+    async (candidateId: string | null, applicationId: string) => {
+      const resolvedId = String(candidateId || '').trim();
+      if (!resolvedId) return;
+      setError(null);
+      setIsLoadingCandidateProfile(true);
+
+      try {
+        const result = await fetchCandidateProfileById(resolvedId);
+        setCandidateProfile(result.data);
+        setFocusApplicationId(applicationId);
+        setFlowReturnPanel('profile');
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : t('applicationsPage.errors.loadCandidateProfileFailed')
+        );
+      } finally {
+        setIsLoadingCandidateProfile(false);
+      }
+    },
+    [t]
+  );
+
   const openStatusChanges = useCallback((applicationId: string) => {
     setError(null);
     setFocusApplicationId(applicationId);
@@ -1499,6 +1560,28 @@ export default function ApplicationsPage() {
       setError(t('common.popupBlocked', { url }));
     }
   }
+
+  const openJobBoardFromHistory = useCallback(
+    (jobId: string, jobTitle: string) => {
+      const params = sanitizeJobsReturnSnapshot(jobsReturnQuery);
+      applyJobsFilterPrecedence(params, searchParams);
+      if (jobId.trim()) {
+        params.set('focus_job_id', jobId.trim());
+      }
+      if (!(params.get('search') || '').trim() && jobTitle.trim()) {
+        params.set('search', jobTitle.trim());
+      }
+      if (!(params.get('status') || '').trim()) {
+        params.set('status', 'all');
+      }
+      params.set('source', 'applications');
+      if (applicationsReturnQuerySnapshot) {
+        params.set('applications_return_query', applicationsReturnQuerySnapshot);
+      }
+      router.push(buildPathWithQuery('/jobs', params));
+    },
+    [router, applicationsReturnQuerySnapshot, jobsReturnQuery, searchParams]
+  );
 
   useEffect(() => {
     if (!rankedActivated) return;
@@ -1700,8 +1783,8 @@ export default function ApplicationsPage() {
             </div>
             <p className="font-mono text-xs uppercase text-gray-600">
               {t('applicationsPage.recruiterView.countCandidates', { count: rankedItems.length })}{' '}
-              {topHybrid !== null
-                ? t('applicationsPage.recruiterView.topHybrid', { score: topHybrid.toFixed(2) })
+              {topSemantic !== null
+                ? t('applicationsPage.recruiterView.topSemantic', { score: topSemantic.toFixed(2) })
                 : ''}
             </p>
             </Card>
@@ -2221,6 +2304,13 @@ export default function ApplicationsPage() {
                       </option>
                     ))}
                   </select>
+                  <Button
+                    variant="outline"
+                    disabled={!item.candidate.id || isLoadingCandidateProfile}
+                    onClick={() => openCandidateProfile(item.candidate.id, item.application_id)}
+                  >
+                    {t('applicationsPage.rankedCandidates.profileButton')}
+                  </Button>
                   <Button variant="outline" onClick={() => openFeedback(item.application_id)}>
                     {t('applicationsPage.rankedCandidates.feedbackButton')}
                   </Button>
@@ -2313,6 +2403,28 @@ export default function ApplicationsPage() {
                     score: item.scores.hybrid_score.toFixed(2),
                   })}
                 </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!item.job.id}
+                    onClick={() =>
+                      openJobBoardFromHistory(item.job.id || '', item.job.title || '')
+                    }
+                  >
+                    {t('applicationsPage.candidateHistory.openJobInBoard')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setCandidateFocusEnabled(true);
+                      void openFeedback(item.application_id);
+                    }}
+                  >
+                    {t('applicationsPage.candidateHistory.openFeedback')}
+                  </Button>
+                </div>
               </div>
             ))}
 
@@ -2378,6 +2490,203 @@ export default function ApplicationsPage() {
                   <li key={`${item}-${index}`}>{item}</li>
                 ))}
               </ul>
+            </div>
+          </Card>
+        ) : null}
+
+        {candidateProfile ? (
+          <Card variant="outline" className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="text-2xl">
+                {t('applicationsPage.candidateProfile.title')}
+              </CardTitle>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCandidateProfile(null);
+                  if (flowReturnPanel === 'profile') {
+                    setFlowReturnPanel('');
+                  }
+                }}
+              >
+                {t('common.close')}
+              </Button>
+            </div>
+            <CardDescription className="text-xs uppercase">
+              {t('applicationsPage.candidateProfile.subtitle', {
+                name:
+                  candidateProfile.full_name ||
+                  candidateProfile.email ||
+                  t('common.unknown'),
+              })}
+            </CardDescription>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <p className="font-mono text-xs uppercase text-gray-500">
+                  {t('applicationsPage.candidateProfile.headlineLabel')}
+                </p>
+                <p className="text-sm">
+                  {candidateProfile.profile.headline ||
+                    t('applicationsPage.candidateProfile.emptyValue')}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p className="font-mono text-xs uppercase text-gray-500">
+                  {t('applicationsPage.candidateProfile.summaryLabel')}
+                </p>
+                <p className="text-sm">
+                  {candidateProfile.profile.summary ||
+                    t('applicationsPage.candidateProfile.emptyValue')}
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <p className="font-mono text-xs uppercase text-gray-500">
+                  {t('applicationsPage.candidateProfile.contactLabel')}
+                </p>
+                <p className="text-sm">
+                  {candidateProfile.profile.phone ||
+                    t('applicationsPage.candidateProfile.emptyValue')}
+                </p>
+                <p className="text-sm">
+                  {candidateProfile.profile.location ||
+                    t('applicationsPage.candidateProfile.emptyValue')}
+                </p>
+                {candidateProfile.profile.website ? (
+                  <a
+                    className="text-sm text-blue-700 underline"
+                    href={candidateProfile.profile.website}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {candidateProfile.profile.website}
+                  </a>
+                ) : (
+                  <p className="text-sm">
+                    {t('applicationsPage.candidateProfile.emptyValue')}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <p className="font-mono text-xs uppercase text-gray-500">
+                  {t('applicationsPage.candidateProfile.skillsLabel')}
+                </p>
+                <p className="text-sm">
+                  {candidateProfile.profile.skills.length
+                    ? candidateProfile.profile.skills.join(', ')
+                    : t('applicationsPage.candidateProfile.emptyValue')}
+                </p>
+                <p className="font-mono text-xs uppercase text-gray-500">
+                  {t('applicationsPage.candidateProfile.portfolioLinksLabel')}
+                </p>
+                <p className="text-sm">
+                  {candidateProfile.profile.portfolio_links.length
+                    ? candidateProfile.profile.portfolio_links.join(', ')
+                    : t('applicationsPage.candidateProfile.emptyValue')}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <p className="font-mono text-xs uppercase text-gray-500">
+                  {t('applicationsPage.candidateProfile.experienceTitle')}
+                </p>
+                {candidateProfile.profile.experience.length ? (
+                  <div className="space-y-2">
+                    {candidateProfile.profile.experience.map((item, index) => {
+                      const dateRange = [item.start_date, item.end_date]
+                        .filter(Boolean)
+                        .join(' - ');
+                      const companyLine = [item.company, item.location].filter(Boolean).join(' | ');
+                      return (
+                        <div key={`${item.title}-${index}`} className="border border-black bg-white p-2">
+                          <p className="font-semibold">
+                            {item.title || t('applicationsPage.candidateProfile.emptyValue')}
+                          </p>
+                          {companyLine ? (
+                            <p className="text-xs uppercase text-gray-600">{companyLine}</p>
+                          ) : null}
+                          {dateRange ? (
+                            <p className="text-xs uppercase text-gray-500">{dateRange}</p>
+                          ) : null}
+                          {item.summary ? <p className="text-sm mt-1">{item.summary}</p> : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    {t('applicationsPage.candidateProfile.emptySection')}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <p className="font-mono text-xs uppercase text-gray-500">
+                  {t('applicationsPage.candidateProfile.educationTitle')}
+                </p>
+                {candidateProfile.profile.education.length ? (
+                  <div className="space-y-2">
+                    {candidateProfile.profile.education.map((item, index) => {
+                      const dateRange = [item.start_date, item.end_date]
+                        .filter(Boolean)
+                        .join(' - ');
+                      const degreeLine = [item.degree, item.field].filter(Boolean).join(' | ');
+                      return (
+                        <div key={`${item.school}-${index}`} className="border border-black bg-white p-2">
+                          <p className="font-semibold">
+                            {item.school || t('applicationsPage.candidateProfile.emptyValue')}
+                          </p>
+                          {degreeLine ? (
+                            <p className="text-xs uppercase text-gray-600">{degreeLine}</p>
+                          ) : null}
+                          {dateRange ? (
+                            <p className="text-xs uppercase text-gray-500">{dateRange}</p>
+                          ) : null}
+                          {item.summary ? <p className="text-sm mt-1">{item.summary}</p> : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    {t('applicationsPage.candidateProfile.emptySection')}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <p className="font-mono text-xs uppercase text-gray-500">
+                  {t('applicationsPage.candidateProfile.portfolioTitle')}
+                </p>
+                {candidateProfile.profile.portfolio.length ? (
+                  <div className="space-y-2">
+                    {candidateProfile.profile.portfolio.map((item, index) => (
+                      <div key={`${item.name}-${index}`} className="border border-black bg-white p-2">
+                        <p className="font-semibold">
+                          {item.name || t('applicationsPage.candidateProfile.emptyValue')}
+                        </p>
+                        {item.url ? (
+                          <a
+                            className="text-xs uppercase text-blue-700 underline"
+                            href={item.url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {item.url}
+                          </a>
+                        ) : null}
+                        {item.description ? (
+                          <p className="text-sm mt-1">{item.description}</p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    {t('applicationsPage.candidateProfile.emptySection')}
+                  </p>
+                )}
+              </div>
             </div>
           </Card>
         ) : null}

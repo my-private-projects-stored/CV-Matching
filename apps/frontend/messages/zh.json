@@ -50,6 +50,51 @@
     "recruiterOnlyTitle": "仅招聘方可访问",
     "recruiterOnlyDescription": "此页面仅对招聘方和管理员账号开放。"
   },
+  "profile": {
+    "title": "候选人档案",
+    "description": "管理可复用的个人档案，用于未来的职位申请。",
+    "headlinePlaceholder": "职业标题",
+    "summaryPlaceholder": "职业概述",
+    "phonePlaceholder": "电话号码",
+    "locationPlaceholder": "当前所在地",
+    "websitePlaceholder": "个人网站或 LinkedIn",
+    "skillsPlaceholder": "技能（以逗号分隔）",
+    "portfolioLinksPlaceholder": "作品集链接（以逗号分隔）",
+    "experienceTitle": "工作经历",
+    "experienceItemLabel": "经历 {index}",
+    "addExperienceAction": "添加经历",
+    "experienceEmpty": "暂无工作经历。",
+    "experienceTitlePlaceholder": "职位名称",
+    "experienceCompanyPlaceholder": "公司",
+    "experienceLocationPlaceholder": "地点",
+    "experienceStartDatePlaceholder": "开始日期",
+    "experienceEndDatePlaceholder": "结束日期",
+    "experienceSummaryPlaceholder": "主要亮点",
+    "educationTitle": "教育背景",
+    "educationItemLabel": "教育 {index}",
+    "addEducationAction": "添加教育",
+    "educationEmpty": "暂无教育背景。",
+    "educationSchoolPlaceholder": "学校",
+    "educationDegreePlaceholder": "学历",
+    "educationFieldPlaceholder": "专业",
+    "educationStartDatePlaceholder": "开始日期",
+    "educationEndDatePlaceholder": "结束日期",
+    "educationSummaryPlaceholder": "概要",
+    "portfolioTitle": "作品集",
+    "portfolioItemLabel": "作品 {index}",
+    "addPortfolioAction": "添加作品",
+    "portfolioEmpty": "暂无作品。",
+    "portfolioNamePlaceholder": "项目名称",
+    "portfolioUrlPlaceholder": "项目链接",
+    "portfolioDescriptionPlaceholder": "简短描述",
+    "removeItemAction": "删除",
+    "saveAction": "保存档案",
+    "saveSuccess": "档案保存成功。",
+    "saveFailed": "档案保存失败。",
+    "loadFailed": "加载档案失败。",
+    "notCandidateTitle": "档案页面仅供候选人使用",
+    "notCandidateDescription": "此页面目前仅对候选人账号开放。"
+  },
   "jobsPage": {
     "title": "Job Board",
     "subtitle": "Browse and filter active job descriptions",
@@ -109,7 +154,7 @@
       "description": "Load ranked candidates by job",
       "jobIdPlaceholder": "job_id",
       "countCandidates": "{count} candidate(s)",
-      "topHybrid": "| top hybrid {score}"
+      "topSemantic": "| top semantic {score}"
     },
     "candidateView": {
       "title": "Candidate View",
@@ -120,6 +165,7 @@
     "rankedCandidates": {
       "title": "Ranked Candidates",
       "scoreLine": "hybrid {hybrid} | semantic {semantic} | keyword {keyword}",
+      "profileButton": "档案",
       "feedbackButton": "Feedback",
       "empty": "No ranked candidates loaded.",
       "notAvailable": "n/a"
@@ -127,6 +173,7 @@
     "candidateHistory": {
       "title": "Candidate History",
       "hybridLine": "hybrid {score}",
+      "openFeedback": "查看反馈",
       "empty": "No application history loaded.",
       "notAvailable": "N/A"
     },
@@ -139,13 +186,28 @@
       "none": "None",
       "recommendations": "Recommendations"
     },
+    "candidateProfile": {
+      "title": "候选人档案",
+      "subtitle": "{name} 的档案",
+      "headlineLabel": "标题",
+      "summaryLabel": "简介",
+      "contactLabel": "联系方式",
+      "skillsLabel": "技能",
+      "portfolioLinksLabel": "作品集链接",
+      "experienceTitle": "工作经历",
+      "educationTitle": "教育背景",
+      "portfolioTitle": "作品集",
+      "emptyValue": "暂无",
+      "emptySection": "暂无条目。"
+    },
     "errors": {
       "jobIdRequired": "job_id is required to load ranked candidates.",
       "candidateIdRequired": "candidate_id is required to load application history.",
       "loadRankingFailed": "Failed to load ranking.",
       "loadHistoryFailed": "Failed to load candidate history.",
       "updateStatusFailed": "Failed to update status.",
-      "loadFeedbackFailed": "Failed to load feedback."
+      "loadFeedbackFailed": "Failed to load feedback.",
+      "loadCandidateProfileFailed": "加载候选人档案失败。"
     }
   },
   "dashboard": {

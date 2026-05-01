@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from '@/lib/i18n';
 import {
   closeJob,
@@ -17,6 +17,13 @@ import {
 import { createApplication } from '@/lib/api/applications';
 import { fetchResumeList } from '@/lib/api/resume';
 import { useAuth } from '@/lib/context/auth-context';
+import {
+  buildPathWithQuery,
+  createSearchParams,
+  sanitizeApplicationsReturnSnapshot,
+  sanitizeJobsReturnSnapshot,
+  setOrDeleteQueryParam,
+} from '@/lib/utils/query-params';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -62,6 +69,15 @@ type Filters = {
   location: string;
 };
 
+type FlowPrefillJobPayload = {
+  jobId: string;
+  jobDescription: string;
+  source: 'jobs';
+  createdAt: string;
+};
+
+const FLOW_PREFILL_JOB_STORAGE_KEY = 'flow_prefill_job_v1';
+
 const DEFAULT_FILTERS: Filters = {
   search: '',
   category: '',
@@ -98,16 +114,54 @@ function toDateInputValue(value?: string | null): string {
   return parsed.toISOString().slice(0, 10);
 }
 
+function parseJobStatusFilter(value: string | null): JobStatus | '' | undefined {
+  if (value === null) return undefined;
+  if (value === '' || value === 'all') return '';
+  if (value === 'active' || value === 'closed') return value;
+  return undefined;
+}
+
+function parseJobCategoryFilter(value: string | null): JobCategory | '' | undefined {
+  if (value === null) return undefined;
+  if (value === '') return '';
+  if (value === 'IT' || value === 'Accounting' || value === 'Marketing') return value;
+  return undefined;
+}
+
+function parsePositivePage(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+  return parsed;
+}
+
 export default function JobsPage() {
   const { t } = useTranslations();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
-  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const defaultStatusFilter = parseJobStatusFilter(searchParams.get('status'));
+  const defaultCategoryFilter = parseJobCategoryFilter(searchParams.get('category'));
+  const defaultSearchFilter = (searchParams.get('search') || '').trim();
+  const defaultLocationFilter = (searchParams.get('location') || '').trim();
+  const defaultFocusJobId = (searchParams.get('focus_job_id') || '').trim();
+  const defaultSource = (searchParams.get('source') || '').trim();
+  const applicationsReturnQuery = (searchParams.get('applications_return_query') || '').trim();
+  const defaultPage = parsePositivePage(searchParams.get('page')) || 1;
+  const [filters, setFilters] = useState<Filters>({
+    search: defaultSearchFilter,
+    category: defaultCategoryFilter ?? DEFAULT_FILTERS.category,
+    status: defaultStatusFilter ?? DEFAULT_FILTERS.status,
+    location: defaultLocationFilter,
+  });
   const [jobs, setJobs] = useState<JobItem[]>([]);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(defaultPage);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSeekingFocusedJob, setIsSeekingFocusedJob] = useState(false);
+  const [focusJobId, setFocusJobId] = useState(defaultFocusJobId);
   const [masterResumeId, setMasterResumeId] = useState<string | null>(null);
   const [masterCandidateId, setMasterCandidateId] = useState<string | null>(null);
   const [isApplyingJobId, setIsApplyingJobId] = useState<string | null>(null);
@@ -140,8 +194,83 @@ export default function JobsPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const isRecruiterOrAdmin = user?.role === 'recruiter' || user?.role === 'admin';
+  const focusedJobCardRef = useRef<HTMLDivElement | null>(null);
+  const focusedJobSeekAttemptedKeyRef = useRef('');
+  const focusedJobSeekRunIdRef = useRef(0);
 
   const activeFilters = useMemo(() => ({ ...filters, page, limit: 12 }), [filters, page]);
+  const focusedJobVisible = useMemo(() => {
+    if (!focusJobId.trim()) return false;
+    return jobs.some((item) => item._id === focusJobId.trim());
+  }, [focusJobId, jobs]);
+  const focusedJobSeekKey = useMemo(
+    () =>
+      JSON.stringify({
+        focusJobId: focusJobId.trim(),
+        search: filters.search.trim(),
+        category: filters.category,
+        status: filters.status,
+        location: filters.location.trim(),
+      }),
+    [focusJobId, filters.search, filters.category, filters.status, filters.location]
+  );
+  const canReturnToApplications = defaultSource === 'applications';
+  const canReturnToFlow = defaultSource === 'flow';
+  const applicationsReturnHref = useMemo(() => {
+    if (!applicationsReturnQuery) {
+      return '/applications';
+    }
+
+    const params = sanitizeApplicationsReturnSnapshot(applicationsReturnQuery);
+    return buildPathWithQuery('/applications', params);
+  }, [applicationsReturnQuery]);
+  const flowReturnHref = useMemo(() => {
+    const params = createSearchParams();
+    const snapshot = sanitizeJobsReturnSnapshot(searchParams, {
+      stripApplicationsReturn: false,
+    });
+
+    if (focusJobId.trim()) {
+      params.set('flow_return_job_id', focusJobId.trim());
+    }
+
+    const snapshotQuery = snapshot.toString();
+    if (snapshotQuery) {
+      params.set('jobs_return_query', snapshotQuery);
+    }
+
+    return buildPathWithQuery('/flow', params);
+  }, [searchParams, focusJobId]);
+  const buildApplicationsJobHref = useCallback(
+    (nextJobId: string) => {
+      const params = canReturnToApplications
+        ? sanitizeApplicationsReturnSnapshot(applicationsReturnQuery, {
+            stripCandidateIdentity: true,
+            stripApplicationIdentity: true,
+          })
+        : createSearchParams();
+
+      const jobsSnapshot = sanitizeJobsReturnSnapshot(searchParams);
+      if (jobsSnapshot.toString()) {
+        if (!(jobsSnapshot.get('status') || '').trim()) {
+          jobsSnapshot.set('status', 'all');
+        }
+        const snapshotSource = (jobsSnapshot.get('source') || '').trim();
+        if (!snapshotSource || (snapshotSource !== 'applications' && snapshotSource !== 'flow')) {
+          jobsSnapshot.set('source', 'applications');
+        }
+        params.set('jobs_return_query', jobsSnapshot.toString());
+      }
+
+      setOrDeleteQueryParam(params, 'job_id', nextJobId.trim());
+      return buildPathWithQuery('/applications', params);
+    },
+    [canReturnToApplications, applicationsReturnQuery, searchParams]
+  );
+  const focusedJobItem = useMemo(() => {
+    if (!focusJobId.trim()) return null;
+    return jobs.find((item) => item._id === focusJobId.trim()) || null;
+  }, [focusJobId, jobs]);
 
   useEffect(() => {
     let active = true;
@@ -201,6 +330,135 @@ export default function JobsPage() {
     };
   }, [activeFilters]);
 
+  useEffect(() => {
+    const next = createSearchParams(searchParams.toString());
+
+    setOrDeleteQueryParam(next, 'search', filters.search.trim());
+    setOrDeleteQueryParam(next, 'category', filters.category);
+
+    const statusQueryValue =
+      filters.status === DEFAULT_FILTERS.status ? '' : filters.status === '' ? 'all' : filters.status;
+    setOrDeleteQueryParam(next, 'status', statusQueryValue);
+    setOrDeleteQueryParam(next, 'location', filters.location.trim());
+    setOrDeleteQueryParam(next, 'focus_job_id', focusJobId.trim());
+
+    if (page > 1) {
+      next.set('page', String(page));
+    } else {
+      next.delete('page');
+    }
+
+    const nextSource = (next.get('source') || '').trim();
+    if (nextSource && nextSource !== 'applications') {
+      next.delete('applications_return_query');
+    }
+
+    if (!focusJobId.trim() && nextSource === 'applications') {
+      next.delete('source');
+      next.delete('applications_return_query');
+    }
+
+    const nextQuery = next.toString();
+    const currentQuery = searchParams.toString();
+    if (nextQuery === currentQuery) {
+      return;
+    }
+
+    router.replace(buildPathWithQuery(pathname, nextQuery), { scroll: false });
+  }, [
+    router,
+    pathname,
+    searchParams,
+    filters.search,
+    filters.category,
+    filters.status,
+    filters.location,
+    page,
+    focusJobId,
+  ]);
+
+  useEffect(() => {
+    if (!focusJobId.trim() || !focusedJobVisible) return;
+
+    const timer = window.setTimeout(() => {
+      focusedJobCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [focusJobId, focusedJobVisible, page]);
+
+  useEffect(() => {
+    if (!focusJobId.trim()) {
+      focusedJobSeekRunIdRef.current += 1;
+      focusedJobSeekAttemptedKeyRef.current = '';
+      setIsSeekingFocusedJob(false);
+      return;
+    }
+
+    if (isLoading) return;
+    if (focusedJobVisible) return;
+    if (totalPages <= 1) return;
+    if (focusedJobSeekAttemptedKeyRef.current === focusedJobSeekKey) return;
+
+    focusedJobSeekAttemptedKeyRef.current = focusedJobSeekKey;
+    const runId = focusedJobSeekRunIdRef.current + 1;
+    focusedJobSeekRunIdRef.current = runId;
+
+    let cancelled = false;
+    const seekFocusedJob = async () => {
+      if (cancelled || focusedJobSeekRunIdRef.current !== runId) return;
+      setIsSeekingFocusedJob(true);
+
+      try {
+        for (let nextPage = 1; nextPage <= totalPages; nextPage += 1) {
+          if (nextPage === page) continue;
+
+          const response = await fetchJobs({
+            search: filters.search,
+            category: filters.category,
+            status: filters.status,
+            location: filters.location,
+            page: nextPage,
+            limit: 12,
+          });
+
+          if (cancelled || focusedJobSeekRunIdRef.current !== runId) return;
+
+          const match = response.data.some((job) => job._id === focusJobId.trim());
+          if (match) {
+            setPage(nextPage);
+            return;
+          }
+        }
+      } catch {
+        // Keep current page and focus hint when background seek fails.
+      } finally {
+        if (!cancelled && focusedJobSeekRunIdRef.current === runId) {
+          setIsSeekingFocusedJob(false);
+        }
+      }
+    };
+
+    void seekFocusedJob();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    focusJobId,
+    focusedJobVisible,
+    focusedJobSeekKey,
+    isLoading,
+    page,
+    totalPages,
+    filters.search,
+    filters.category,
+    filters.status,
+    filters.location,
+  ]);
+
   async function handleApply(jobId: string) {
     if (!masterResumeId) {
       setApplyMessage({
@@ -237,6 +495,18 @@ export default function JobsPage() {
         }
       }
 
+      const jobsSnapshot = sanitizeJobsReturnSnapshot(searchParams);
+      if (jobsSnapshot.toString()) {
+        if (!(jobsSnapshot.get('status') || '').trim()) {
+          jobsSnapshot.set('status', 'all');
+        }
+        const snapshotSource = (jobsSnapshot.get('source') || '').trim();
+        if (!snapshotSource || (snapshotSource !== 'applications' && snapshotSource !== 'flow')) {
+          jobsSnapshot.set('source', 'applications');
+        }
+        params.set('jobs_return_query', jobsSnapshot.toString());
+      }
+
       const target = `/applications?${params.toString()}`;
       setTimeout(() => {
         router.push(target);
@@ -249,9 +519,26 @@ export default function JobsPage() {
           text: t('jobsPage.duplicateRedirecting'),
         });
 
-        const target = masterCandidateId
-          ? `/applications?candidate_id=${encodeURIComponent(masterCandidateId)}`
-          : `/applications?job_id=${encodeURIComponent(jobId)}`;
+        const params = createSearchParams();
+        if (masterCandidateId) {
+          params.set('candidate_id', masterCandidateId);
+        } else {
+          params.set('job_id', jobId);
+        }
+
+        const jobsSnapshot = sanitizeJobsReturnSnapshot(searchParams);
+        if (jobsSnapshot.toString()) {
+          if (!(jobsSnapshot.get('status') || '').trim()) {
+            jobsSnapshot.set('status', 'all');
+          }
+          const snapshotSource = (jobsSnapshot.get('source') || '').trim();
+          if (!snapshotSource || (snapshotSource !== 'applications' && snapshotSource !== 'flow')) {
+            jobsSnapshot.set('source', 'applications');
+          }
+          params.set('jobs_return_query', jobsSnapshot.toString());
+        }
+
+        const target = buildPathWithQuery('/applications', params);
         setTimeout(() => {
           router.push(target);
         }, 600);
@@ -261,6 +548,44 @@ export default function JobsPage() {
     } finally {
       setIsApplyingJobId(null);
     }
+  }
+
+  function handleTailorAndApply(job: JobItem, options?: { fromFocusedBanner?: boolean }) {
+    if (!masterResumeId) {
+      setApplyMessage({
+        type: 'error',
+        text: t('jobsPage.masterRequired'),
+      });
+      return;
+    }
+
+    const payload: FlowPrefillJobPayload = {
+      jobId: job._id,
+      jobDescription: job.description || '',
+      source: 'jobs',
+      createdAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem(FLOW_PREFILL_JOB_STORAGE_KEY, JSON.stringify(payload));
+
+    const flowParams = createSearchParams();
+    flowParams.set('prefill_job', '1');
+    if (options?.fromFocusedBanner) {
+      flowParams.set('focused_job', '1');
+    }
+
+    const jobsReturnSnapshot = sanitizeJobsReturnSnapshot(searchParams, {
+      stripApplicationsReturn: false,
+    });
+    if (jobsReturnSnapshot.toString()) {
+      const snapshotSource = (jobsReturnSnapshot.get('source') || '').trim();
+      if (!snapshotSource || (snapshotSource !== 'applications' && snapshotSource !== 'flow')) {
+        jobsReturnSnapshot.set('source', 'flow');
+      }
+      flowParams.set('jobs_return_query', jobsReturnSnapshot.toString());
+    }
+
+    router.push(buildPathWithQuery('/flow', flowParams));
   }
 
   function updateFilters(patch: Partial<Filters>) {
@@ -526,6 +851,44 @@ export default function JobsPage() {
           </Card>
         ) : null}
 
+        {focusJobId ? (
+          <Card variant="outline" className="border-blue-700 bg-blue-50">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardDescription className="text-blue-800">
+                {focusedJobVisible
+                  ? t('jobsPage.focusedJobVisible')
+                  : isSeekingFocusedJob
+                    ? t('jobsPage.focusedJobSeeking')
+                    : t('jobsPage.focusedJobNotVisible')}
+              </CardDescription>
+              <div className="flex flex-wrap gap-2">
+                {canReturnToApplications ? (
+                  <Button variant="outline" size="sm" onClick={() => router.push(applicationsReturnHref)}>
+                    {t('jobsPage.backToApplications')}
+                  </Button>
+                ) : null}
+                {canReturnToFlow ? (
+                  <Button variant="outline" size="sm" onClick={() => router.push(flowReturnHref)}>
+                    {t('applicationsPage.returnToFlow')}
+                  </Button>
+                ) : null}
+                {focusedJobItem ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTailorAndApply(focusedJobItem, { fromFocusedBanner: true })}
+                  >
+                    {t('jobsPage.openFocusedInFlow')}
+                  </Button>
+                ) : null}
+                <Button variant="outline" size="sm" onClick={() => setFocusJobId('')}>
+                  {t('jobsPage.clearFocusedJob')}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        ) : null}
+
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {jobs.map((job) => {
             const isToggling =
@@ -535,8 +898,23 @@ export default function JobsPage() {
             const disableCardActions = isManaging || isApplyingJobId === job._id || isSavingJobEdit;
 
             return (
-              <Card key={job._id} variant="interactive" className="min-h-[260px]">
+              <div
+                key={job._id}
+                ref={job._id === focusJobId ? focusedJobCardRef : null}
+                data-jobs-focused={job._id === focusJobId ? 'true' : 'false'}
+              >
+              <Card
+                variant="interactive"
+                className={`min-h-[260px] ${
+                  job._id === focusJobId ? 'border-blue-700 bg-blue-50 ring-1 ring-blue-300' : ''
+                }`}
+              >
                 <div className="space-y-3">
+                  {job._id === focusJobId ? (
+                    <p className="font-mono text-[10px] uppercase text-blue-800">
+                      {t('jobsPage.focusBadge')}
+                    </p>
+                  ) : null}
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs uppercase text-blue-700">{job.category}</span>
                     <span className="font-mono text-xs uppercase text-gray-600">{job.status}</span>
@@ -575,7 +953,7 @@ export default function JobsPage() {
 
                   {isRecruiterOrAdmin ? (
                     <Link
-                      href={`/applications?job_id=${encodeURIComponent(job._id)}`}
+                      href={buildApplicationsJobHref(job._id)}
                       className="inline-block font-mono text-[11px] uppercase text-blue-700 hover:underline"
                     >
                       {t('jobsPage.viewRankedCandidates')}
@@ -622,20 +1000,30 @@ export default function JobsPage() {
                       </Button>
                     </div>
                   ) : (
-                    <Button
-                      variant="success"
-                      disabled={isApplyingJobId === job._id || disableCardActions || job.status === 'closed'}
-                      onClick={() => handleApply(job._id)}
-                    >
-                      {job.status === 'closed'
-                        ? t('jobsPage.closedUnavailable')
-                        : isApplyingJobId === job._id
-                          ? t('jobsPage.applying')
-                          : t('jobsPage.applyWithMaster')}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        disabled={disableCardActions || job.status === 'closed'}
+                        onClick={() => handleTailorAndApply(job)}
+                      >
+                        {t('jobsPage.tailorAndApply')}
+                      </Button>
+                      <Button
+                        variant="success"
+                        disabled={isApplyingJobId === job._id || disableCardActions || job.status === 'closed'}
+                        onClick={() => handleApply(job._id)}
+                      >
+                        {job.status === 'closed'
+                          ? t('jobsPage.closedUnavailable')
+                          : isApplyingJobId === job._id
+                            ? t('jobsPage.applying')
+                            : t('jobsPage.applyWithMaster')}
+                      </Button>
+                    </div>
                   )}
                 </div>
               </Card>
+              </div>
             );
           })}
         </div>

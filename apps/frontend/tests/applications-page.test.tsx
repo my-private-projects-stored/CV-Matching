@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { createMutableSearchParams } from './utils/search-params';
 
 const mockedReplace = vi.fn();
-const mockedSearchParams = new URLSearchParams();
+const mockedPush = vi.fn();
+const searchParamsHarness = createMutableSearchParams();
+const mockedSearchParams = searchParamsHarness.params;
 const mockedScrollIntoView = vi.fn();
 const mockedAuthUser: { id: string; role: 'candidate' | 'recruiter' | 'admin' } = {
   id: 'recruiter-1',
@@ -26,11 +29,15 @@ type StatusChangesRequestParams = {
   changedBefore?: string;
 };
 
-function resetMockedSearchParams() {
-  const keys = Array.from(mockedSearchParams.keys());
-  for (const key of keys) {
-    mockedSearchParams.delete(key);
-  }
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
 }
 
 function expectLatestReplaceHrefContains(parts: string[]) {
@@ -67,7 +74,7 @@ function getLatestStatusChangesParams() {
 vi.mock('next/navigation', () => ({
   useSearchParams: () => mockedSearchParams,
   usePathname: () => '/applications',
-  useRouter: () => ({ replace: mockedReplace }),
+  useRouter: () => ({ replace: mockedReplace, push: mockedPush }),
 }));
 
 vi.mock('next/link', () => ({
@@ -100,6 +107,10 @@ vi.mock('@/lib/api/applications', () => ({
   updateApplicationStatus: vi.fn(),
 }));
 
+vi.mock('@/lib/api/candidate-profile', () => ({
+  fetchCandidateProfileById: vi.fn(),
+}));
+
 vi.mock('@/lib/utils/download', () => ({
   downloadBlobAsFile: vi.fn(),
 }));
@@ -115,6 +126,7 @@ import {
   fetchRankedApplications,
   fetchRecentStatusChanges,
 } from '@/lib/api/applications';
+import { fetchCandidateProfileById } from '@/lib/api/candidate-profile';
 import { downloadBlobAsFile } from '@/lib/utils/download';
 import {
   clickFirstButtonByName,
@@ -134,14 +146,16 @@ const mockedFetchApplicationStatusHistory = vi.mocked(fetchApplicationStatusHist
 const mockedBulkUpdateApplicationStatus = vi.mocked(bulkUpdateApplicationStatus);
 const mockedExportRecentStatusChangesCsv = vi.mocked(exportRecentStatusChangesCsv);
 const mockedDownloadBlobAsFile = vi.mocked(downloadBlobAsFile);
+const mockedFetchCandidateProfileById = vi.mocked(fetchCandidateProfileById);
 
 describe('ApplicationsPage status changes filters', () => {
   beforeEach(() => {
     vi.useRealTimers();
     mockedAuthUser.id = 'recruiter-1';
     mockedAuthUser.role = 'recruiter';
-    resetMockedSearchParams();
+    searchParamsHarness.reset();
     mockedReplace.mockReset();
+    mockedPush.mockReset();
     mockedScrollIntoView.mockReset();
     mockedFetchRankedApplications.mockReset();
     mockedFetchApplicationStatusSummary.mockReset();
@@ -152,6 +166,7 @@ describe('ApplicationsPage status changes filters', () => {
     mockedBulkUpdateApplicationStatus.mockReset();
     mockedExportRecentStatusChangesCsv.mockReset();
     mockedDownloadBlobAsFile.mockReset();
+    mockedFetchCandidateProfileById.mockReset();
 
     mockedFetchRankedApplications.mockResolvedValue({
       request_id: 'req-ranked',
@@ -345,6 +360,296 @@ describe('ApplicationsPage status changes filters', () => {
     });
   });
 
+  it('opens related job board focus from candidate history item', async () => {
+    mockedAuthUser.id = 'candidate-1';
+    mockedAuthUser.role = 'candidate';
+    mockedSearchParams.set('candidate_id', 'candidate-1');
+    mockedSearchParams.set('rc_changed_by', 'qa-reviewer');
+    mockedSearchParams.set('sc_preset', '7d');
+    mockedFetchCandidateApplicationHistory.mockResolvedValue({
+      request_id: 'req-history-open-job-board',
+      data: {
+        candidate_id: 'candidate-1',
+        applications: [
+          {
+            application_id: 'app-2',
+            status: 'interview',
+            ai_status: 'completed',
+            job: {
+              id: 'job-2',
+              title: 'Platform Engineer',
+              status: 'active',
+              location: 'Hybrid',
+              category: 'IT',
+            },
+            resume: {
+              id: 'r-2',
+              title: 'Resume Two',
+              processing_status: 'ready',
+            },
+            scores: { hybrid_score: 0.88 },
+            submitted_at: '2026-03-22T00:00:00.000Z',
+            updated_at: '2026-03-23T00:00:00.000Z',
+            status_audit: null,
+          },
+        ],
+        pagination: { page: 1, limit: 20, total: 1, total_pages: 1 },
+      },
+    });
+
+    render(<ApplicationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' }));
+
+    const href = getLatestMockCallArg<string>(mockedPush) || '';
+    expect(href.startsWith('/jobs?')).toBe(true);
+
+    const query = href.split('?')[1] || '';
+    const params = new URLSearchParams(query);
+    expect(params.get('focus_job_id')).toBe('job-2');
+    expect(params.get('search')).toBe('Platform Engineer');
+    expect(params.get('status')).toBe('all');
+    expect(params.get('source')).toBe('applications');
+
+    const returnQuery = params.get('applications_return_query') || '';
+    const returnSnapshot = new URLSearchParams(returnQuery);
+    expect(returnSnapshot.get('candidate_id')).toBe('candidate-1');
+    expect(returnSnapshot.get('rc_changed_by')).toBe('qa-reviewer');
+    expect(returnSnapshot.get('sc_preset')).toBe('7d');
+  });
+
+  it('preserves jobs filter and page snapshot when opening job board from candidate history item', async () => {
+    mockedAuthUser.id = 'candidate-1';
+    mockedAuthUser.role = 'candidate';
+    mockedSearchParams.set('candidate_id', 'candidate-1');
+    mockedSearchParams.set('jobs_return_query', 'search=Data+Engineer&status=active&page=3&location=Remote');
+    mockedFetchCandidateApplicationHistory.mockResolvedValue({
+      request_id: 'req-history-open-job-board-with-jobs-snapshot',
+      data: {
+        candidate_id: 'candidate-1',
+        applications: [
+          {
+            application_id: 'app-2',
+            status: 'interview',
+            ai_status: 'completed',
+            job: {
+              id: 'job-2',
+              title: 'Platform Engineer',
+              status: 'active',
+              location: 'Hybrid',
+              category: 'IT',
+            },
+            resume: {
+              id: 'r-2',
+              title: 'Resume Two',
+              processing_status: 'ready',
+            },
+            scores: { hybrid_score: 0.88 },
+            submitted_at: '2026-03-22T00:00:00.000Z',
+            updated_at: '2026-03-23T00:00:00.000Z',
+            status_audit: null,
+          },
+        ],
+        pagination: { page: 1, limit: 20, total: 1, total_pages: 1 },
+      },
+    });
+
+    render(<ApplicationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' }));
+
+    const href = getLatestMockCallArg<string>(mockedPush) || '';
+    expect(href.startsWith('/jobs?')).toBe(true);
+    const params = new URLSearchParams((href.split('?')[1] || ''));
+
+    expect(params.get('focus_job_id')).toBe('job-2');
+    expect(params.get('search')).toBe('Data Engineer');
+    expect(params.get('status')).toBe('active');
+    expect(params.get('page')).toBe('3');
+    expect(params.get('location')).toBe('Remote');
+    expect(params.get('source')).toBe('applications');
+  });
+
+  it('prioritizes applications source and strips flow context keys from return snapshot when opening job board', async () => {
+    mockedAuthUser.id = 'candidate-1';
+    mockedAuthUser.role = 'candidate';
+    mockedSearchParams.set('candidate_id', 'candidate-1');
+    mockedSearchParams.set('flow_ctx', '1');
+    mockedSearchParams.set('jobs_return_query', 'search=Data+Engineer&status=active&page=2&source=flow');
+    mockedFetchCandidateApplicationHistory.mockResolvedValue({
+      request_id: 'req-history-open-job-board-precedence',
+      data: {
+        candidate_id: 'candidate-1',
+        applications: [
+          {
+            application_id: 'app-2',
+            status: 'interview',
+            ai_status: 'completed',
+            job: {
+              id: 'job-2',
+              title: 'Platform Engineer',
+              status: 'active',
+              location: 'Hybrid',
+              category: 'IT',
+            },
+            resume: {
+              id: 'r-2',
+              title: 'Resume Two',
+              processing_status: 'ready',
+            },
+            scores: { hybrid_score: 0.88 },
+            submitted_at: '2026-03-22T00:00:00.000Z',
+            updated_at: '2026-03-23T00:00:00.000Z',
+            status_audit: null,
+          },
+        ],
+        pagination: { page: 1, limit: 20, total: 1, total_pages: 1 },
+      },
+    });
+
+    render(<ApplicationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' }));
+
+    const href = getLatestMockCallArg<string>(mockedPush) || '';
+    const params = new URLSearchParams(href.split('?')[1] || '');
+    expect(params.get('source')).toBe('applications');
+
+    const returnQuery = params.get('applications_return_query') || '';
+    const returnSnapshot = new URLSearchParams(returnQuery);
+    expect(returnSnapshot.get('flow_ctx')).toBeNull();
+    expect(returnSnapshot.get('jobs_return_query')).toBeNull();
+  });
+
+  it('applies fixed filter precedence from jobs_return_query over top-level duplicates when opening job board', async () => {
+    mockedAuthUser.id = 'candidate-1';
+    mockedAuthUser.role = 'candidate';
+    mockedSearchParams.set('candidate_id', 'candidate-1');
+    mockedSearchParams.set('search', 'Top Level Search');
+    mockedSearchParams.set('status', 'closed');
+    mockedSearchParams.set('page', '9');
+    mockedSearchParams.set('location', 'Onsite');
+    mockedSearchParams.set(
+      'jobs_return_query',
+      'search=Nested+Search&status=active&page=2&location=Remote'
+    );
+    mockedFetchCandidateApplicationHistory.mockResolvedValue({
+      request_id: 'req-history-open-job-board-fixed-precedence',
+      data: {
+        candidate_id: 'candidate-1',
+        applications: [
+          {
+            application_id: 'app-2',
+            status: 'interview',
+            ai_status: 'completed',
+            job: {
+              id: 'job-2',
+              title: 'Platform Engineer',
+              status: 'active',
+              location: 'Hybrid',
+              category: 'IT',
+            },
+            resume: {
+              id: 'r-2',
+              title: 'Resume Two',
+              processing_status: 'ready',
+            },
+            scores: { hybrid_score: 0.88 },
+            submitted_at: '2026-03-22T00:00:00.000Z',
+            updated_at: '2026-03-23T00:00:00.000Z',
+            status_audit: null,
+          },
+        ],
+        pagination: { page: 1, limit: 20, total: 1, total_pages: 1 },
+      },
+    });
+
+    render(<ApplicationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' }));
+
+    const href = getLatestMockCallArg<string>(mockedPush) || '';
+    const params = new URLSearchParams(href.split('?')[1] || '');
+    expect(params.get('search')).toBe('Nested Search');
+    expect(params.get('status')).toBe('active');
+    expect(params.get('page')).toBe('2');
+    expect(params.get('location')).toBe('Remote');
+  });
+
+  it('sanitizes nested jobs snapshot recursion when opening job board from candidate history item', async () => {
+    mockedAuthUser.id = 'candidate-1';
+    mockedAuthUser.role = 'candidate';
+    mockedSearchParams.set('candidate_id', 'candidate-1');
+    mockedSearchParams.set(
+      'jobs_return_query',
+      'search=Nested+Search&status=active&jobs_return_query=page%3D2&applications_return_query=rc_focus%3Dfocus'
+    );
+    mockedFetchCandidateApplicationHistory.mockResolvedValue({
+      request_id: 'req-history-open-job-board-sanitize-nested',
+      data: {
+        candidate_id: 'candidate-1',
+        applications: [
+          {
+            application_id: 'app-2',
+            status: 'interview',
+            ai_status: 'completed',
+            job: {
+              id: 'job-2',
+              title: 'Platform Engineer',
+              status: 'active',
+              location: 'Hybrid',
+              category: 'IT',
+            },
+            resume: {
+              id: 'r-2',
+              title: 'Resume Two',
+              processing_status: 'ready',
+            },
+            scores: { hybrid_score: 0.88 },
+            submitted_at: '2026-03-22T00:00:00.000Z',
+            updated_at: '2026-03-23T00:00:00.000Z',
+            status_audit: null,
+          },
+        ],
+        pagination: { page: 1, limit: 20, total: 1, total_pages: 1 },
+      },
+    });
+
+    render(<ApplicationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' }));
+
+    const href = getLatestMockCallArg<string>(mockedPush) || '';
+    const params = new URLSearchParams(href.split('?')[1] || '');
+    expect(params.get('search')).toBe('Nested Search');
+    expect(params.get('status')).toBe('active');
+    expect(params.get('jobs_return_query')).toBeNull();
+
+    const returnSnapshot = new URLSearchParams(params.get('applications_return_query') || '');
+    expect(returnSnapshot.get('candidate_id')).toBe('candidate-1');
+    expect(returnSnapshot.get('jobs_return_query')).toBeNull();
+  });
+
   it('highlights candidate history item from candidate_focus deep-link and clears focus', async () => {
     mockedAuthUser.id = 'candidate-1';
     mockedAuthUser.role = 'candidate';
@@ -517,6 +822,113 @@ describe('ApplicationsPage status changes filters', () => {
       expect(focusedHistoryRow).toBeTruthy();
       expect(focusedHistoryRow?.textContent).toContain('Platform Engineer');
     });
+  });
+
+  it('ignores stale in-flight candidate history seek result after focus is cleared', async () => {
+    mockedAuthUser.id = 'candidate-1';
+    mockedAuthUser.role = 'candidate';
+    mockedSearchParams.set('candidate_id', 'candidate-1');
+    mockedSearchParams.set('application_id', 'app-target');
+    mockedSearchParams.set('candidate_focus', '1');
+
+    const pageTwoDeferred = createDeferred<Awaited<ReturnType<typeof fetchCandidateApplicationHistory>>>();
+
+    mockedFetchCandidateApplicationHistory.mockImplementation(async (params) => {
+      const page = params?.page || 1;
+
+      if (page === 2) {
+        return pageTwoDeferred.promise;
+      }
+
+      return {
+        request_id: 'req-history-page-1-stale-clear-focus',
+        data: {
+          candidate_id: 'candidate-1',
+          applications: [
+            {
+              application_id: 'app-1',
+              status: 'screening',
+              ai_status: 'completed',
+              job: {
+                id: 'job-1',
+                title: 'Backend Engineer',
+                status: 'active',
+                location: 'Remote',
+                category: 'IT',
+              },
+              resume: {
+                id: 'r-1',
+                title: 'Resume One',
+                processing_status: 'ready',
+              },
+              scores: { hybrid_score: 0.75 },
+              submitted_at: '2026-03-20T00:00:00.000Z',
+              updated_at: '2026-03-21T00:00:00.000Z',
+              status_audit: null,
+            },
+          ],
+          pagination: { page: 1, limit: 20, total: 21, total_pages: 2 },
+        },
+      };
+    });
+
+    render(<ApplicationsPage />);
+
+    await waitFor(() => {
+      const pageTwoCalls = mockedFetchCandidateApplicationHistory.mock.calls.filter(
+        (call) => call[0]?.page === 2
+      );
+      expect(pageTwoCalls).toHaveLength(1);
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.candidateHistory.clearFocusedApplication' })
+    );
+
+    await waitFor(() => {
+      const latestHref = getLatestMockCallArg<string>(mockedReplace) || '';
+      expect(latestHref).toContain('candidate_id=candidate-1');
+      expect(latestHref).not.toContain('candidate_focus=1');
+      expect(latestHref).not.toContain('application_id=app-target');
+    });
+
+    pageTwoDeferred.resolve({
+      request_id: 'req-history-page-2-stale-clear-focus',
+      data: {
+        candidate_id: 'candidate-1',
+        applications: [
+          {
+            application_id: 'app-target',
+            status: 'interview',
+            ai_status: 'completed',
+            job: {
+              id: 'job-2',
+              title: 'Platform Engineer',
+              status: 'active',
+              location: 'Hybrid',
+              category: 'IT',
+            },
+            resume: {
+              id: 'r-target',
+              title: 'Resume Target',
+              processing_status: 'ready',
+            },
+            scores: { hybrid_score: 0.92 },
+            submitted_at: '2026-03-25T00:00:00.000Z',
+            updated_at: '2026-03-26T00:00:00.000Z',
+            status_audit: null,
+          },
+        ],
+        pagination: { page: 2, limit: 20, total: 21, total_pages: 2 },
+      },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const pageTwoCallsAfterResolve = mockedFetchCandidateApplicationHistory.mock.calls.filter(
+      (call) => call[0]?.page === 2
+    );
+    expect(pageTwoCallsAfterResolve).toHaveLength(1);
   });
 
   it('filters ranked candidates by latest changed_by', async () => {
@@ -861,6 +1273,85 @@ describe('ApplicationsPage status changes filters', () => {
     });
   });
 
+  it('ignores stale in-flight ranked seek result after focus is cleared', async () => {
+    mockedSearchParams.set('job_id', 'job-1');
+    mockedSearchParams.set('application_id', 'app-target');
+
+    const pageTwoDeferred = createDeferred<Awaited<ReturnType<typeof fetchRankedApplications>>>();
+
+    mockedFetchRankedApplications.mockImplementation(async (params) => {
+      const page = params?.page || 1;
+
+      if (page === 2) {
+        return pageTwoDeferred.promise;
+      }
+
+      return {
+        request_id: 'req-ranked-page-1-stale-clear-focus',
+        data: {
+          job: { id: 'job-1', title: 'Backend Engineer', status: 'active' },
+          candidates: [
+            {
+              application_id: 'app-1',
+              status: 'screening',
+              ai_status: 'completed',
+              candidate: { id: 'c-1', full_name: 'Candidate One', email: 'one@example.com' },
+              resume: { id: 'r-1', title: 'Resume One', processing_status: 'ready' },
+              scores: { semantic_score: 0.8, keyword_score: 0.7, hybrid_score: 0.75 },
+              explainability: { matched_keywords: ['node'], missing_keywords: ['redis'] },
+              updated_at: '2026-03-23T00:00:00.000Z',
+              status_audit: null,
+            },
+          ],
+          pagination: { page: 1, limit: 20, total: 21, total_pages: 2 },
+        },
+      };
+    });
+
+    render(<ApplicationsPage />);
+
+    await waitFor(() => {
+      const pageTwoCalls = mockedFetchRankedApplications.mock.calls.filter((call) => call[0]?.page === 2);
+      expect(pageTwoCalls).toHaveLength(1);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.clearFocusedApplication' }));
+
+    await waitFor(() => {
+      const latestHref = getLatestMockCallArg<string>(mockedReplace) || '';
+      expect(latestHref).toContain('job_id=job-1');
+      expect(latestHref).not.toContain('application_id=app-target');
+    });
+
+    pageTwoDeferred.resolve({
+      request_id: 'req-ranked-page-2-stale-clear-focus',
+      data: {
+        job: { id: 'job-1', title: 'Backend Engineer', status: 'active' },
+        candidates: [
+          {
+            application_id: 'app-target',
+            status: 'interview',
+            ai_status: 'completed',
+            candidate: { id: 'c-target', full_name: 'Candidate Target', email: 'target@example.com' },
+            resume: { id: 'r-target', title: 'Resume Target', processing_status: 'ready' },
+            scores: { semantic_score: 0.93, keyword_score: 0.88, hybrid_score: 0.9 },
+            explainability: { matched_keywords: ['node'], missing_keywords: ['redis'] },
+            updated_at: '2026-03-24T00:00:00.000Z',
+            status_audit: null,
+          },
+        ],
+        pagination: { page: 2, limit: 20, total: 21, total_pages: 2 },
+      },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const pageTwoCallsAfterResolve = mockedFetchRankedApplications.mock.calls.filter(
+      (call) => call[0]?.page === 2
+    );
+    expect(pageTwoCallsAfterResolve).toHaveLength(1);
+  });
+
   it('auto-opens status history from sh_open query deep-link', async () => {
     mockedSearchParams.set('job_id', 'job-1');
     mockedSearchParams.set('application_id', 'app-2');
@@ -915,6 +1406,121 @@ describe('ApplicationsPage status changes filters', () => {
     });
   });
 
+  it('opens feedback panel from candidate history action', async () => {
+    mockedAuthUser.id = 'candidate-1';
+    mockedAuthUser.role = 'candidate';
+
+    mockedFetchCandidateApplicationHistory.mockResolvedValue({
+      request_id: 'req-history-candidate',
+      data: {
+        candidate_id: 'candidate-1',
+        applications: [
+          {
+            application_id: 'app-9',
+            status: 'new',
+            ai_status: 'completed',
+            job: {
+              id: 'job-9',
+              title: 'Data Engineer',
+              status: 'active',
+              location: null,
+              category: null,
+            },
+            resume: {
+              id: 'r-9',
+              title: 'Resume Nine',
+              processing_status: 'ready',
+            },
+            scores: {
+              hybrid_score: 0.71,
+            },
+            submitted_at: '2026-03-23T00:00:00.000Z',
+            updated_at: '2026-03-23T00:00:00.000Z',
+            status_audit: null,
+          },
+        ],
+        pagination: { page: 1, limit: 20, total: 1, total_pages: 1 },
+      },
+    });
+
+    mockedFetchApplicationFeedback.mockResolvedValueOnce({
+      request_id: 'req-feedback-candidate',
+      data: {
+        application_id: 'app-9',
+        job_id: 'job-9',
+        resume_id: 'r-9',
+        scores: {
+          semantic_score: 0.82,
+          keyword_score: 0.64,
+          hybrid_score: 0.72,
+        },
+        explainability: {
+          matched_keywords: ['node'],
+          missing_keywords: ['redis'],
+        },
+        recommendations: ['Consider adding evidence for: redis'],
+        status: 'new',
+        ai_status: 'completed',
+      },
+    });
+
+    render(<ApplicationsPage />);
+
+    await waitFor(() => {
+      expect(mockedFetchCandidateApplicationHistory).toHaveBeenCalled();
+      expect(
+        screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openFeedback' })
+      ).toBeInTheDocument();
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openFeedback' })
+    );
+
+    await waitFor(() => {
+      expect(mockedFetchApplicationFeedback).toHaveBeenCalledWith('app-9');
+      expect(screen.getByText('applicationsPage.feedback.title')).toBeInTheDocument();
+    });
+  });
+
+  it('opens candidate profile panel from ranked candidate action', async () => {
+    mockedFetchCandidateProfileById.mockResolvedValue({
+      data: {
+        user_id: 'c-1',
+        email: 'one@example.com',
+        full_name: 'Candidate One',
+        role: 'candidate',
+        profile: {
+          headline: 'Platform Engineer',
+          summary: 'Focused on platform work.',
+          phone: '',
+          location: '',
+          website: '',
+          portfolio_links: [],
+          skills: ['Node.js'],
+          experience: [],
+          education: [],
+          portfolio: [],
+        },
+        updated_at: '2026-03-23T00:00:00.000Z',
+      },
+    });
+
+    render(<ApplicationsPage />);
+
+    await loadRecruiterAndWaitRanked('job-1');
+
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'applicationsPage.rankedCandidates.profileButton' })[0]
+    );
+
+    await waitFor(() => {
+      expect(mockedFetchCandidateProfileById).toHaveBeenCalledWith('c-1');
+      expect(screen.getByText('applicationsPage.candidateProfile.title')).toBeInTheDocument();
+      expect(screen.getByText('Platform Engineer')).toBeInTheDocument();
+    });
+  });
+
   it('syncs and clears feedback panel flag in query from ranked candidate actions', async () => {
     render(<ApplicationsPage />);
 
@@ -940,6 +1546,46 @@ describe('ApplicationsPage status changes filters', () => {
       expect(latestHref).toContain('job_id=job-1');
       expect(latestHref).toContain('application_id=app-1');
       expect(latestHref).not.toContain('fb_open=1');
+    });
+  });
+
+  it('shows feedback processing notice and empty recommendations', async () => {
+    mockedFetchApplicationFeedback.mockResolvedValueOnce({
+      request_id: 'req-feedback-pending',
+      data: {
+        application_id: 'app-1',
+        job_id: 'job-1',
+        resume_id: 'r-1',
+        scores: {
+          semantic_score: 0.3,
+          keyword_score: 0.2,
+          hybrid_score: 0.25,
+        },
+        explainability: {
+          matched_keywords: [],
+          missing_keywords: [],
+        },
+        recommendations: [],
+        status: 'new',
+        ai_status: 'scoring',
+      },
+    });
+
+    render(<ApplicationsPage />);
+
+    await loadRecruiterAndWaitRanked('job-1');
+
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'applicationsPage.rankedCandidates.feedbackButton' })[0]
+    );
+
+    await waitFor(() => {
+      expect(mockedFetchApplicationFeedback).toHaveBeenCalledWith('app-1');
+      expect(screen.getByText('applicationsPage.feedback.title')).toBeInTheDocument();
+      expect(screen.getByText('applicationsPage.feedback.statusLine')).toBeInTheDocument();
+      expect(screen.getAllByText('applicationsPage.feedback.none')).toHaveLength(2);
+      const recommendationsLabel = screen.getByText('applicationsPage.feedback.recommendations');
+      expect(recommendationsLabel.closest('div')?.querySelectorAll('li')).toHaveLength(0);
     });
   });
 
@@ -1231,6 +1877,89 @@ describe('ApplicationsPage status changes filters', () => {
     expect(returnToFlow?.getAttribute('href')).toBe(
       '/flow?flow_return_job_id=job-1&flow_return_application_id=app-2'
     );
+  });
+
+  it('propagates jobs return snapshot when returning to flow from flow context', async () => {
+    mockedSearchParams.set('flow_ctx', '1');
+    mockedSearchParams.set('job_id', 'job-1');
+    mockedSearchParams.set('application_id', 'app-2');
+    mockedSearchParams.set('jobs_return_query', 'search=Platform+Engineer&status=all&page=2');
+
+    render(<ApplicationsPage />);
+
+    const returnToFlow = screen.getByText('applicationsPage.returnToFlow').closest('a');
+    expect(returnToFlow).toBeTruthy();
+
+    const href = returnToFlow?.getAttribute('href') || '';
+    const params = new URLSearchParams(href.replace('/flow?', ''));
+    const jobsReturn = params.get('jobs_return_query') || '';
+    const jobsSnapshot = new URLSearchParams(jobsReturn);
+    expect(jobsSnapshot.get('search')).toBe('Platform Engineer');
+    expect(jobsSnapshot.get('status')).toBe('all');
+    expect(jobsSnapshot.get('page')).toBe('2');
+    expect(jobsSnapshot.get('source')).toBe('applications');
+  });
+
+  it('preserves valid jobs snapshot source when returning to flow', async () => {
+    mockedSearchParams.set('flow_ctx', '1');
+    mockedSearchParams.set('job_id', 'job-1');
+    mockedSearchParams.set('application_id', 'app-2');
+    mockedSearchParams.set('jobs_return_query', 'search=Platform+Engineer&status=all&page=2&source=flow');
+
+    render(<ApplicationsPage />);
+
+    const returnToFlow = screen.getByText('applicationsPage.returnToFlow').closest('a');
+    expect(returnToFlow).toBeTruthy();
+
+    const href = returnToFlow?.getAttribute('href') || '';
+    const params = new URLSearchParams(href.replace('/flow?', ''));
+    const jobsReturn = params.get('jobs_return_query') || '';
+    const jobsSnapshot = new URLSearchParams(jobsReturn);
+    expect(jobsSnapshot.get('source')).toBe('flow');
+  });
+
+  it('adds fallback status when returning to flow with non-empty jobs snapshot missing status', async () => {
+    mockedSearchParams.set('flow_ctx', '1');
+    mockedSearchParams.set('job_id', 'job-1');
+    mockedSearchParams.set('application_id', 'app-2');
+    mockedSearchParams.set('jobs_return_query', 'search=Platform+Engineer');
+
+    render(<ApplicationsPage />);
+
+    const returnToFlow = screen.getByText('applicationsPage.returnToFlow').closest('a');
+    expect(returnToFlow).toBeTruthy();
+
+    const href = returnToFlow?.getAttribute('href') || '';
+    const params = new URLSearchParams(href.replace('/flow?', ''));
+    const jobsReturn = params.get('jobs_return_query') || '';
+    const jobsSnapshot = new URLSearchParams(jobsReturn);
+    expect(jobsSnapshot.get('search')).toBe('Platform Engineer');
+    expect(jobsSnapshot.get('status')).toBe('all');
+    expect(jobsSnapshot.get('source')).toBe('applications');
+  });
+
+  it('sanitizes nested return-query keys from jobs snapshot when returning to flow', async () => {
+    mockedSearchParams.set('flow_ctx', '1');
+    mockedSearchParams.set('job_id', 'job-1');
+    mockedSearchParams.set('application_id', 'app-2');
+    mockedSearchParams.set(
+      'jobs_return_query',
+      'search=Platform+Engineer&status=all&jobs_return_query=page%3D2&applications_return_query=rc_focus%3Dfocus'
+    );
+
+    render(<ApplicationsPage />);
+
+    const returnToFlow = screen.getByText('applicationsPage.returnToFlow').closest('a');
+    expect(returnToFlow).toBeTruthy();
+
+    const href = returnToFlow?.getAttribute('href') || '';
+    const params = new URLSearchParams(href.replace('/flow?', ''));
+    const jobsReturn = params.get('jobs_return_query') || '';
+    const jobsSnapshot = new URLSearchParams(jobsReturn);
+    expect(jobsSnapshot.get('search')).toBe('Platform Engineer');
+    expect(jobsSnapshot.get('status')).toBe('all');
+    expect(jobsSnapshot.get('jobs_return_query')).toBeNull();
+    expect(jobsSnapshot.get('applications_return_query')).toBeNull();
   });
 
   it('stores active status-history panel in flow return query snapshot', async () => {

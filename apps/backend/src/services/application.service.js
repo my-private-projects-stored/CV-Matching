@@ -390,7 +390,7 @@ export async function listRankedApplicationsByJob(jobId, query = {}) {
   }
 
   const items = await Application.find(filter)
-    .sort({ "aiScores.hybridScore": -1, updatedAt: -1 })
+    .sort({ "aiScores.semanticScore": -1, "aiScores.hybridScore": -1, updatedAt: -1 })
     .populate({
       path: "resumeId",
       populate: {

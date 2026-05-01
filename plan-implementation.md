@@ -1,11 +1,20 @@
 # Plan Implementation Log
 
-Last updated: 2026-04-20
+Last updated: 2026-04-28
 
 ## Scope
 This file tracks concrete implementation work executed from the project plan, focused on the critical-path Phase B slice (UC-CORE-02/03 parsing + vector readiness) and immediate validation.
 
 ## Completed Work
+
+### 40) UC-CORE-04 Ranked Candidate Dashboard (Cosine-first ordering)
+- Aligned ranked-candidate API sorting with cosine similarity as primary ranking:
+	- `apps/backend/src/services/application.service.js` now sorts by semantic score first.
+- Updated recruiter view summary label to reflect semantic-top ranking:
+	- `apps/frontend/app/(default)/applications/page.tsx`
+	- `apps/frontend/messages/*.json` (top semantic label)
+- Adjusted integration coverage to assert semantic-first ordering:
+	- `apps/backend/tests/integration/application-endpoints.test.mjs`
 
 ### 1) Parsing Worker Implementation (workers/parsing)
 - Added parser service with FastAPI:
@@ -1819,6 +1828,25 @@ This file tracks concrete implementation work executed from the project plan, fo
 - Outcome:
 	- enforces compact-code parity with normalized `ok` tail consistency state.
 
+### 182) Product E2E Source-Precedence Normalization (Applications vs Flow)
+- Standardized query-source precedence and context sanitization across product flow routes:
+	- `apps/frontend/app/(default)/applications/page.tsx`
+	- `apps/frontend/app/(default)/flow/page.tsx`
+	- `apps/frontend/app/(default)/jobs/page.tsx`
+- New behavior:
+	- Applications deep-link to Jobs now strips conflicting flow-layer keys from `applications_return_query` snapshot (`flow_ctx`, `jobs_return_query`) and preserves `source=applications` precedence.
+	- Flow history -> Jobs navigation now sets `source=flow` when snapshot source is missing/invalid while preserving `source=applications` when present.
+	- Jobs URL sync now drops stale `applications_return_query` when `source` is not `applications`.
+- Added regression coverage:
+	- `apps/frontend/tests/applications-page.test.tsx`
+	- `apps/frontend/tests/product-flow-page.test.tsx`
+	- `apps/frontend/tests/jobs-page.test.tsx`
+- Validation:
+	- Connected suites: `87 passed, 0 failed`
+	- Readiness artifact:
+		- `scripts/reports/product-e2e-readiness-20260426-132043.json`
+		- `scripts/reports/product-e2e-readiness-20260426-132043.md`
+
 ### 182) Replay Tail-Consistency Reason Source Field
 - Added replay webhook provenance field for tail-consistency reason origin:
 	- `scripts/queue-replay-dlq.ps1`
@@ -2014,6 +2042,280 @@ This file tracks concrete implementation work executed from the project plan, fo
 	- validation enforces `attempt_status_sequence_tail_status_consistency_reason_scope_code_matches_scope == true`
 - Outcome:
 	- guarantees alias parity signal remains synchronized with canonical scope consistency checks.
+
+### 203) Product E2E Top-Level vs Nested Jobs-Filter Precedence Table
+- Standardized fixed precedence resolution for duplicate Jobs filter keys between top-level query and nested `jobs_return_query`:
+	- `apps/frontend/lib/utils/query-params.ts`
+	- `apps/frontend/app/(default)/applications/page.tsx`
+	- `apps/frontend/app/(default)/flow/page.tsx`
+- Fixed precedence table:
+	- `search`: `jobs_return_query` -> top-level
+	- `status`: `jobs_return_query` -> top-level
+	- `page`: `jobs_return_query` -> top-level
+	- `location`: `jobs_return_query` -> top-level
+- New behavior:
+	- Added shared helper `applyJobsFilterPrecedence` and wired both Applications-history -> Jobs and Flow-history -> Jobs paths to use the same resolver.
+	- Invalid/empty values are ignored by key normalization (`status` only allows `all|active|closed`; `page` only positive integer).
+	- Existing source/context behavior remains intact (`source=applications` preservation, flow fallback behavior, return snapshot handling).
+- Added regression coverage:
+	- `apps/frontend/tests/applications-page.test.tsx`
+	- `apps/frontend/tests/product-flow-page.test.tsx`
+- Validation:
+	- Connected suites: `89 passed, 0 failed`
+	- Readiness artifact:
+		- `scripts/reports/product-e2e-readiness-20260426-133751.json`
+		- `scripts/reports/product-e2e-readiness-20260426-133751.md`
+
+### 204) Product E2E Flow-Return vs Top-Level Applications Precedence Table
+- Standardized fixed precedence resolution for duplicate Applications return-state keys between top-level query and nested `flow_return_query` on Flow -> Applications round-trip:
+	- `apps/frontend/lib/utils/query-params.ts`
+	- `apps/frontend/app/(default)/flow/page.tsx`
+- Fixed precedence table (all keys):
+	- `flow_return_query` -> top-level
+- Keys covered:
+	- `rc_changed_by`, `rc_after`, `rc_before`, `rc_preset`, `rc_focus`
+	- `sc_status`, `sc_changed_by`, `sc_after`, `sc_before`, `sc_preset`, `sc_page`
+	- `flow_panel`, `sh_open`, `sc_open`, `fb_open`
+- New behavior:
+	- Added shared helper `applyFlowReturnPrecedence` and wired Flow `buildApplicationsHref` to merge `flow_return_query` with top-level deterministically.
+	- Nested `flow_return_query` now wins for overlapping keys; top-level only backfills missing/invalid nested keys.
+	- Panel restoration (`flow_panel`/open flags) now follows the same precedence contract before Flow computes destination open panel.
+- Added regression coverage:
+	- `apps/frontend/tests/product-flow-page.test.tsx`
+		- nested wins on duplicates
+		- top-level fallback when nested omits keys
+- Validation:
+	- Connected suites: `91 passed, 0 failed`
+	- Readiness artifact:
+		- `scripts/reports/product-e2e-readiness-20260426-134055.json`
+		- `scripts/reports/product-e2e-readiness-20260426-134055.md`
+
+### 205) Product E2E Jobs Focused-Context Return-To-Flow Action
+- Extended focused Jobs banner continuity for flow-origin context:
+	- `apps/frontend/app/(default)/jobs/page.tsx`
+- New behavior:
+	- When Jobs is opened with `source=flow` and a focused job context, banner now exposes a direct return action to Flow.
+	- Return action pushes `/flow` with:
+		- `flow_return_job_id=<focused_job_id>`
+		- `jobs_return_query=<current_jobs_query_snapshot>`
+	- Snapshot creation excludes nested `jobs_return_query` key to prevent recursive nesting.
+- Minimal regression coverage (functionality-first, low test overhead):
+	- `apps/frontend/tests/jobs-page.test.tsx`
+		- verifies return-to-flow button visibility in flow context
+		- verifies pushed href contains focused job id + jobs snapshot contract fields
+- Validation:
+	- Connected suites: `92 passed, 0 failed`
+	- Readiness artifact:
+		- `scripts/reports/product-e2e-readiness-20260426-134957.json`
+		- `scripts/reports/product-e2e-readiness-20260426-134957.md`
+
+### 206) Product E2E Symmetric Applications-Source Return Action on Recruiter Card Entry
+- Completed symmetric Applications-source continuity for remaining recruiter secondary entry:
+	- `apps/frontend/app/(default)/jobs/page.tsx`
+- New behavior:
+	- Recruiter card link `viewRankedCandidates` now reuses Applications return snapshot when Jobs context source is `applications`.
+	- Link builder preserves recruiter filters/snapshot keys (for example `rc_*`, `sc_*`) while overriding `job_id` to selected card job.
+	- Stale candidate-focus identity keys are sanitized from card-entry navigation:
+		- `candidate_id`
+		- `candidate_focus`
+		- `application_id`
+- Minimal regression coverage (functionality-first):
+	- `apps/frontend/tests/jobs-page.test.tsx`
+		- verifies recruiter card entry preserves snapshot filters and clears stale candidate-focus identity keys
+- Validation:
+	- Connected suites: `93 passed, 0 failed`
+	- Readiness artifact:
+		- `scripts/reports/product-e2e-readiness-20260426-140333.json`
+		- `scripts/reports/product-e2e-readiness-20260426-140333.md`
+
+### 207) Product E2E Shared Applications Snapshot Sanitizer (Banner + Card)
+- Consolidated Applications-return snapshot sanitation into a shared helper to prevent rule drift across Jobs entry points:
+	- `apps/frontend/app/(default)/jobs/page.tsx`
+- New behavior:
+	- Added shared sanitizer for `applications_return_query` used by both:
+		- focused banner return action (`backToApplications`)
+		- recruiter card entry action (`viewRankedCandidates`)
+	- Common sanitizer now strips recursive context keys from snapshot:
+		- `source`, `flow_ctx`, `jobs_return_query`, `applications_return_query`
+	- Card-entry path still applies identity cleanup on top of shared sanitizer:
+		- removes `candidate_id`, `candidate_focus`, `application_id`
+		- sets `job_id` to selected card job
+- Minimal regression coverage (functionality-first):
+	- `apps/frontend/tests/jobs-page.test.tsx`
+		- verifies focused banner return sanitizes recursive context keys while preserving intended snapshot fields
+- Validation:
+	- Connected suites: `94 passed, 0 failed`
+	- Readiness artifact:
+		- `scripts/reports/product-e2e-readiness-20260426-140520.json`
+		- `scripts/reports/product-e2e-readiness-20260426-140520.md`
+
+### 208) Product E2E Shared Snapshot Sanitizer Migration (Jobs/Flow/Applications)
+- Migrated Applications-return snapshot sanitation contract from Jobs-local helper to shared query utilities:
+	- `apps/frontend/lib/utils/query-params.ts`
+	- `apps/frontend/app/(default)/jobs/page.tsx`
+	- `apps/frontend/app/(default)/applications/page.tsx`
+	- `apps/frontend/app/(default)/flow/page.tsx`
+- New behavior:
+	- Introduced shared helper `sanitizeApplicationsReturnSnapshot` in query utilities with configurable identity stripping options.
+	- Jobs now consumes shared helper for both:
+		- focused banner return-to-applications action
+		- recruiter card `viewRankedCandidates` entry
+	- Applications now uses shared helper for `applicationsReturnQuerySnapshot` construction (with focused-job id stripping).
+	- Flow now sanitizes `applications_return_query` sourced from jobs snapshot and sanitized base return query before composing Applications href.
+- Outcome:
+	- One sanitizer contract reused across Jobs/Flow/Applications, reducing drift risk when context keys evolve.
+- Validation:
+	- Connected suites: `94 passed, 0 failed`
+	- Readiness artifact:
+		- `scripts/reports/product-e2e-readiness-20260427-080636.json`
+		- `scripts/reports/product-e2e-readiness-20260427-080636.md`
+
+### 209) Product E2E Shared Flow-Return Snapshot Sanitizer
+- Standardized `flow_return_query` snapshot sanitation contract into shared query utilities:
+	- `apps/frontend/lib/utils/query-params.ts`
+	- `apps/frontend/app/(default)/applications/page.tsx`
+- New behavior:
+	- Added shared helper `sanitizeFlowReturnSnapshot` with configurable strip options for:
+		- flow context key (`flow_ctx`)
+		- identity keys (`job_id`, `application_id`, `candidate_id`)
+		- panel-open flags (`sh_open`, `sc_open`, `fb_open`)
+	- Replaced Applications local/manual delete block in `flowReturnQuerySnapshot` with shared helper call.
+- Outcome:
+	- Flow-return sanitizer logic now follows the same shared-contract pattern as applications-return sanitizer, reducing drift risk.
+- Validation (minimal test strategy, reuse existing coverage):
+	- Connected suites: `94 passed, 0 failed`
+	- Readiness artifact:
+		- `scripts/reports/product-e2e-readiness-20260427-080949.json`
+		- `scripts/reports/product-e2e-readiness-20260427-080949.md`
+
+### 210) Product E2E Candidate Apply Redirect Jobs-Snapshot Continuity
+- Extended Jobs -> Applications candidate apply redirect to preserve Jobs query snapshot for round-trip restore:
+	- `apps/frontend/app/(default)/jobs/page.tsx`
+- New behavior:
+	- On apply success redirect and duplicate redirect, target Applications URL now includes `jobs_return_query` snapshot when available.
+	- Snapshot is derived from current Jobs query and sanitized to avoid recursive nesting:
+		- removes `jobs_return_query`
+		- removes `applications_return_query`
+	- Enables Applications candidate-history “Open Job Board” action to restore original Jobs search/status/page/location context after apply flows.
+- Minimal regression coverage:
+	- `apps/frontend/tests/jobs-page.test.tsx`
+		- verifies apply-success redirect includes `jobs_return_query` and preserves key filters (`search`, `status`, `page`, `location`)
+- Validation:
+	- Connected suites: `95 passed, 0 failed`
+	- Readiness artifact:
+		- `scripts/reports/product-e2e-readiness-20260427-081445.json`
+		- `scripts/reports/product-e2e-readiness-20260427-081445.md`
+
+### 211) Product E2E Recruiter Applications Entry Jobs-Snapshot Continuity
+- Extended recruiter `viewRankedCandidates` card entry (Jobs -> Applications) to preserve Jobs query snapshot:
+	- `apps/frontend/app/(default)/jobs/page.tsx`
+- New behavior:
+	- Applications entry href now includes `jobs_return_query` snapshot in both contexts:
+		- default Jobs context
+		- `source=applications` return context
+	- Snapshot is sanitized to avoid recursive nesting by removing:
+		- `jobs_return_query`
+		- `applications_return_query`
+	- Existing applications-return snapshot preservation remains intact for `source=applications` path.
+- Minimal regression coverage:
+	- `apps/frontend/tests/jobs-page.test.tsx`
+		- verifies recruiter entry from applications source keeps applications filters and now also carries `jobs_return_query`
+		- verifies recruiter entry from default jobs context carries `jobs_return_query` with key filters (`search`, `status`, `page`, `location`)
+- Validation:
+	- Connected suites: `96 passed, 0 failed`
+	- Readiness artifact:
+		- `scripts/reports/product-e2e-readiness-20260427-081713.json`
+		- `scripts/reports/product-e2e-readiness-20260427-081713.md`
+
+### 212) Product E2E Flow->Applications Jobs-Snapshot Propagation
+- Extended Flow -> Applications navigation actions to propagate `jobs_return_query` snapshot when Flow has Jobs-return context:
+	- `apps/frontend/app/(default)/flow/page.tsx`
+- New behavior:
+	- `buildApplicationsHref` now copies top-level `jobs_return_query` into generated Applications links.
+	- This applies to both primary action (`flow.actions.openApplications`) and session-history actions (`openApplicationsForItem`, panel-open variants).
+	- Enables Applications page to carry Jobs snapshot downstream, so “Open Job Board” restores original Jobs filters/page more reliably after Flow detours.
+- Regression coverage:
+	- `apps/frontend/tests/product-flow-page.test.tsx`
+		- updated restore test to assert propagated `jobs_return_query`
+		- added test for action-level propagation from Flow actions
+- Validation:
+	- Connected suites: `97 passed, 0 failed`
+	- Readiness artifact:
+		- `scripts/reports/product-e2e-readiness-20260427-082846.json`
+		- `scripts/reports/product-e2e-readiness-20260427-082846.md`
+
+### 213) Product E2E Applications->Flow Jobs-Snapshot Propagation
+- Extended Applications return-to-Flow link to preserve Jobs snapshot context when available:
+	- `apps/frontend/app/(default)/applications/page.tsx`
+- New behavior:
+	- `flowReturnHref` now propagates `jobs_return_query` from Applications URL into generated Flow return links.
+	- Preserves Jobs-search continuity across full loop:
+		- Jobs -> Applications -> Flow -> Applications/Jobs actions
+- Minimal regression coverage:
+	- `apps/frontend/tests/applications-page.test.tsx`
+		- verifies `returnToFlow` link carries `jobs_return_query` and preserves key snapshot filters (`search`, `status`, `page`)
+- Validation:
+	- Connected suites: `98 passed, 0 failed`
+	- Readiness artifact:
+		- `scripts/reports/product-e2e-readiness-20260427-083209.json`
+		- `scripts/reports/product-e2e-readiness-20260427-083209.md`
+
+### 214) Product E2E Flow Back-To-Jobs Focused-Context Fallback
+- Improved Flow back-navigation behavior when `jobs_return_query` is missing:
+	- `apps/frontend/app/(default)/flow/page.tsx`
+- New behavior:
+	- `flow.actions.backToJobsContext` now falls back to focused Jobs context when Flow has active `jobId` but no `jobs_return_query`.
+	- Fallback href now includes:
+		- `focus_job_id=<current_job_id>`
+		- `status=all`
+		- `source=flow`
+	- If no current job id, fallback remains plain `/jobs`.
+- Minimal regression coverage:
+	- `apps/frontend/tests/product-flow-page.test.tsx`
+		- verifies fallback link carries focused job context after prefilled-job hydration and missing `jobs_return_query`
+- Validation:
+	- Connected suites: `99 passed, 0 failed`
+	- Readiness artifact:
+		- `scripts/reports/product-e2e-readiness-20260427-083449.json`
+		- `scripts/reports/product-e2e-readiness-20260427-083449.md`
+
+### 215) Product E2E Flow Back-To-Jobs Auto-Focus Within Existing Jobs Snapshot
+- Improved Flow back-to-jobs behavior when `jobs_return_query` exists but lacks `focus_job_id`:
+	- `apps/frontend/app/(default)/flow/page.tsx`
+- New behavior:
+	- `flow.actions.backToJobsContext` now injects current Flow `jobId` as `focus_job_id` if missing in incoming jobs snapshot.
+	- Preserves existing snapshot keys (`search`, `status`, `source`) while adding focus for better return targeting.
+	- Keeps previous behavior unchanged when `focus_job_id` already exists.
+- Minimal regression coverage:
+	- `apps/frontend/tests/product-flow-page.test.tsx`
+		- verifies back-to-jobs keeps snapshot filters/source and auto-adds `focus_job_id` from hydrated prefilled job context
+- Validation:
+	- Connected suites: `100 passed, 0 failed`
+	- Readiness artifact:
+		- `scripts/reports/product-e2e-readiness-20260427-084150.json`
+		- `scripts/reports/product-e2e-readiness-20260427-084150.md`
+
+### 216) Product E2E Shared Jobs-Return Snapshot Sanitizer Unification
+- Standardized jobs snapshot sanitation via shared utility across Jobs/Flow/Applications propagation points:
+	- `apps/frontend/lib/utils/query-params.ts`
+	- `apps/frontend/app/(default)/jobs/page.tsx`
+	- `apps/frontend/app/(default)/flow/page.tsx`
+	- `apps/frontend/app/(default)/applications/page.tsx`
+- New behavior:
+	- Added shared helper `sanitizeJobsReturnSnapshot` to strip nested return-query keys deterministically.
+	- Replaced scattered manual snapshot key deletions with shared helper usage in:
+		- Jobs apply redirects and recruiter applications entry links
+		- Jobs return-to-flow link snapshot packaging
+		- Flow/Applications propagation of `jobs_return_query`
+	- Prevents nested `jobs_return_query` and `applications_return_query` growth across repeated round-trip loops.
+- Minimal regression coverage:
+	- `apps/frontend/tests/applications-page.test.tsx`
+		- verifies `returnToFlow` propagated `jobs_return_query` strips nested return-query keys while preserving core filters
+- Validation:
+	- Connected suites: `101 passed, 0 failed`
+	- Readiness artifact:
+		- `scripts/reports/product-e2e-readiness-20260427-084417.json`
+		- `scripts/reports/product-e2e-readiness-20260427-084417.md`
 
 ### 203) Replay Scope Pair-Consistency Boolean
 - Added replay webhook pair-consistency boolean:
@@ -2836,6 +3138,16 @@ This file tracks concrete implementation work executed from the project plan, fo
 	- command: `./scripts/verify-e2e-product.ps1`
 	- backend result: `2 passed, 0 failed`
 	- frontend result: `7 passed, 0 failed`
+
+## UC-CORE-05 Candidate Feedback Slice (2026-04-28)
+- Added candidate history action to open feedback panel:
+	- `apps/frontend/app/(default)/applications/page.tsx`
+- Added i18n label for candidate feedback action:
+	- `apps/frontend/messages/en.json`
+	- `apps/frontend/messages/vi.json`
+	- `apps/frontend/messages/zh.json`
+- Added minimal frontend coverage to verify candidate feedback action:
+	- `apps/frontend/tests/applications-page.test.tsx`
 	- outcome: product E2E verification remains fully green after apply-now hardening and test additions
 - Extended guided-flow frontend assertions for post-apply state and navigation behavior:
 	- updated file: `apps/frontend/tests/product-flow-page.test.tsx`
@@ -4012,4 +4324,769 @@ This file tracks concrete implementation work executed from the project plan, fo
 	- readiness result: `PASSED`
 	- report artifact: `scripts/reports/product-e2e-readiness-20260420-145705.json`
 	- outcome: all focused seek flows remain fully green with broader stale-run commit protection and refreshed readiness evidence
+
+- Added deterministic stale in-flight regression coverage for focus clear during seek:
+	- updated file:
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- new tests:
+		- `ignores stale in-flight candidate history seek result after focus is cleared`
+		- `ignores stale in-flight ranked seek result after focus is cleared`
+	- test strategy:
+		- uses deferred promises to hold page-2 seek probes in-flight
+		- clears focused context before resolving deferred seek response
+		- asserts no second page-2 fetch occurs (proves stale result does not commit page-change side effects)
+	- outcome:
+		- latest-run token hardening now has deterministic regression protection for overlap-clear race paths without relying on flaky timer sequencing
+
+- Re-validation after deterministic stale in-flight coverage expansion:
+	- command: `npm run test -- tests/applications-page.test.tsx`
+	- frontend result: `50 passed, 0 failed`
+	- command: `npm run test -- tests/jobs-page.test.tsx tests/applications-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `67 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `BLOCKED (environment)`
+	- blocker detail: Docker daemon unavailable at `//./pipe/dockerDesktopLinuxEngine`; readiness run stalled after qdrant bootstrap failure while entering backend product E2E stage
+	- outcome: code/test changes are green on targeted frontend suites; readiness artifact refresh is pending environment recovery
+
+- Re-validation after Docker recovery (post-blocker check):
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `FAILED (transient qdrant health)` then `PASSED` on immediate rerun
+	- transient fail artifact: `scripts/reports/product-e2e-readiness-20260423-054900.json`
+	- pass artifact: `scripts/reports/product-e2e-readiness-20260423-054922.json`
+	- outcome: environment blocker is resolved; remaining readiness instability is startup-transient on qdrant health probe
+
+- Hardened readiness qdrant health gate with retry-on-startup:
+	- updated file:
+		- `scripts/release-readiness-product-e2e.ps1`
+	- new behavior:
+		- added configurable retry policy for qdrant health probe (`QdrantHealthRetries`, `QdrantHealthRetryDelaySeconds`)
+		- qdrant health check now retries transient connection-closed failures before marking readiness failed
+	- outcome:
+		- reduces false-negative readiness failures immediately after dependency startup
+
+- Re-validation after qdrant health retry hardening:
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260423-055002.json`
+	- outcome: readiness gate is green again with improved resilience against startup race conditions
+
+- Implemented candidate end-to-end shortcut: Job Board -> Flow (Tailor & Apply):
+	- updated files:
+		- `apps/frontend/app/(default)/jobs/page.tsx`
+		- `apps/frontend/app/(default)/flow/page.tsx`
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new behavior:
+		- candidate cards now include `Tailor & Apply` action from Jobs page
+		- clicking action stores selected job context to local storage and opens `/flow?prefill_job=1`
+		- Flow page hydrates prefilled job context, pre-populates job description, and shows readiness message
+		- when prefilled context is unchanged, Flow reuses existing `job_id` for preview generation (skips JD upload step)
+	- outcome:
+		- reduced friction for candidate E2E path (discover job -> tailor resume -> apply)
+
+- Minimal regression coverage added for new Jobs -> Flow prefill path:
+	- updated tests:
+		- `apps/frontend/tests/jobs-page.test.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertions:
+		- Jobs page stores `flow_prefill_job_v1` payload and redirects to `/flow?prefill_job=1`
+		- Flow page consumes prefill payload and calls preview API with prefilled `job_id` without invoking `uploadJobDescriptions`
+
+- Re-validation after Jobs -> Flow prefill implementation:
+	- command: `npm --prefix apps/frontend run test -- tests/jobs-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `19 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260423-060407.json`
+	- outcome: new E2E shortcut is validated and readiness remains green
+
+- Implemented candidate-centric Flow -> Applications routing:
+	- updated file:
+		- `apps/frontend/app/(default)/flow/page.tsx`
+	- new behavior:
+		- Flow now reads auth context and detects candidate role
+		- `Open Applications` actions from Flow/session-history route candidate users with `candidate_id`
+		- when a concrete application exists, Flow now adds `candidate_focus=1` and keeps `application_id`
+		- recruiter/admin routing remains unchanged via `job_id`-based ranked context
+	- outcome:
+		- candidate E2E loop now opens candidate history directly instead of recruiter-ranked view
+
+- Minimal regression coverage added for candidate Flow routing:
+	- updated test:
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertion:
+		- session-history `Open Applications` routes candidate users to `/applications?candidate_id=...&application_id=...&candidate_focus=1&flow_ctx=1`
+
+- Re-validation after candidate Flow routing enhancement:
+	- command: `npm --prefix apps/frontend run test -- tests/product-flow-page.test.tsx`
+	- frontend result: `17 passed, 0 failed`
+	- command: `npm --prefix apps/frontend run test -- tests/jobs-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `20 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `BLOCKED (environment)`
+	- blocker detail: Docker daemon socket `//./pipe/dockerDesktopLinuxEngine` unavailable during qdrant bootstrap; no new readiness artifact was emitted
+	- outcome: frontend regression suite is green; readiness rerun pending Docker daemon recovery
+
+- Implemented candidate history -> Job Board deep-link shortcut:
+	- updated files:
+		- `apps/frontend/app/(default)/applications/page.tsx`
+		- `apps/frontend/app/(default)/jobs/page.tsx`
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new behavior:
+		- candidate history cards now expose `Open Job Board` action
+		- action routes to `/jobs` with focused job context (`focus_job_id`) and prefilter query (`search`, `status=all`)
+		- Jobs page now hydrates filters from query, highlights focused job card, auto-scrolls to focused card, and supports cross-page focused job seek
+	- outcome:
+		- candidate can round-trip applications history -> exact related job view without manual re-search
+
+- Minimal regression coverage added for candidate history -> job deep-link:
+	- updated tests:
+		- `apps/frontend/tests/applications-page.test.tsx`
+		- `apps/frontend/tests/jobs-page.test.tsx`
+	- new assertions:
+		- Applications candidate-history `Open Job Board` emits route with `focus_job_id`, `search`, `status=all`, `source=applications`
+		- Jobs page hydrates query-based filters and shows focused-job state (`focusedJobVisible`, `focusBadge`)
+
+- Re-validation after candidate history -> job deep-link implementation:
+	- command: `npm --prefix apps/frontend run test -- tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `55 passed, 0 failed`
+	- command: `npm --prefix apps/frontend run test -- tests/jobs-page.test.tsx tests/applications-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `72 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260426-044641.json`
+	- outcome: new candidate shortcut is fully validated and product readiness stays green
+
+- Implemented Jobs page query-state synchronization for shareable deep-links:
+	- updated files:
+		- `apps/frontend/app/(default)/jobs/page.tsx`
+		- `apps/frontend/tests/jobs-page.test.tsx`
+	- new behavior:
+		- Jobs page now hydrates `page` from query string on initial load
+		- Jobs state changes now sync back to URL via `router.replace` (`search`, `category`, `status`, `location`, `page`, `focus_job_id`)
+		- `status=all` is preserved in URL when all-status mode is active for candidate deep-link continuity
+		- `source=applications` is automatically dropped when focused job context is cleared
+	- outcome:
+		- Jobs links are now round-trip shareable and consistent with Applications -> Jobs deep-link flow
+
+- Minimal regression coverage added for Jobs query sync:
+	- updated test:
+		- `apps/frontend/tests/jobs-page.test.tsx`
+	- new assertions:
+		- filter + pagination changes update URL query state (`search`, `page`)
+		- clearing focused job removes `focus_job_id` and `source=applications` while preserving user filters
+
+- Re-validation after Jobs query sync implementation:
+	- command: `npm --prefix apps/frontend run test -- tests/jobs-page.test.tsx`
+	- frontend result: `6 passed, 0 failed`
+	- command: `npm --prefix apps/frontend run test -- tests/jobs-page.test.tsx tests/applications-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `74 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260426-063321.json`
+	- outcome: URL-sync enhancement is validated and readiness remains green
+
+- Implemented Jobs -> Flow -> Jobs context handoff for candidate tailor flow:
+	- updated files:
+		- `apps/frontend/app/(default)/jobs/page.tsx`
+		- `apps/frontend/app/(default)/flow/page.tsx`
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new behavior:
+		- `Tailor & Apply` on Jobs now forwards a `jobs_return_query` snapshot into Flow route params
+		- Flow now derives a canonical Jobs return href from `jobs_return_query`
+		- Flow header now includes `Back to Job Board` action that restores prior Jobs filter/deep-link context
+	- outcome:
+		- users can round-trip Jobs -> Flow and return to original Jobs context without losing filter/focus state
+
+- Minimal regression coverage added for Jobs/Flow context handoff:
+	- updated tests:
+		- `apps/frontend/tests/jobs-page.test.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertions:
+		- Jobs `Tailor & Apply` route now includes `prefill_job=1` plus encoded `jobs_return_query`
+		- Flow `Back to Job Board` action pushes `/jobs` with restored query state
+
+- Re-validation after Jobs/Flow context handoff implementation:
+	- command: `npm --prefix apps/frontend run test -- tests/jobs-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `24 passed, 0 failed`
+	- command: `npm --prefix apps/frontend run test -- tests/jobs-page.test.tsx tests/applications-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `75 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260426-070333.json`
+	- outcome: context handoff enhancement is validated and end-to-end readiness remains green
+
+- Implemented Flow session-history -> Job Board shortcut:
+	- updated files:
+		- `apps/frontend/app/(default)/flow/page.tsx`
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new behavior:
+		- each Flow session-history row now includes `Open Job Board`
+		- action deep-links to Jobs with focused job context (`focus_job_id`) and `status=all`
+	- outcome:
+		- users can jump directly from a Flow history item back to the related job board context
+
+- Minimal regression coverage added for Flow history job shortcut:
+	- updated test:
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertion:
+		- clicking `flow.sessionHistory.openJobBoardForItem` routes to `/jobs?focus_job_id=<job>&status=all`
+
+- Re-validation after Flow history job shortcut implementation:
+	- command: `npm --prefix apps/frontend run test -- tests/product-flow-page.test.tsx`
+	- frontend result: `19 passed, 0 failed`
+	- command: `npm --prefix apps/frontend run test -- tests/jobs-page.test.tsx tests/applications-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `76 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260426-070850.json`
+	- outcome: new shortcut is validated and product readiness remains green
+
+- Implemented Applications -> Jobs -> Applications return-context handoff:
+	- updated files:
+		- `apps/frontend/app/(default)/applications/page.tsx`
+		- `apps/frontend/app/(default)/jobs/page.tsx`
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new behavior:
+		- Applications candidate-history `Open Job Board` now includes `applications_return_query` snapshot in Jobs deep-link
+		- Jobs focused banner now shows `Back to Applications` action when `source=applications`
+		- return action restores Applications query context from `applications_return_query`
+		- clearing focused context on Jobs now also removes stale `applications_return_query`
+	- outcome:
+		- users can round-trip between Applications and Jobs while preserving list/filter context
+
+- Minimal regression coverage added for Applications/Jobs return-context:
+	- updated tests:
+		- `apps/frontend/tests/applications-page.test.tsx`
+		- `apps/frontend/tests/jobs-page.test.tsx`
+	- new assertions:
+		- Applications -> Jobs deep-link carries `applications_return_query` with stable context keys
+		- Jobs focused banner return action navigates back to Applications with preserved query
+
+- Re-validation after Applications/Jobs return-context implementation:
+	- command: `npm --prefix apps/frontend run test -- tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `58 passed, 0 failed`
+	- command: `npm --prefix apps/frontend run test -- tests/jobs-page.test.tsx tests/applications-page.test.tsx tests/product-flow-page.test.tsx`
+	- frontend result: `77 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260426-071141.json`
+	- outcome: round-trip return-context enhancement is validated and readiness remains green
+
+- Completed remaining proposed UX enhancement: focused Jobs banner -> Flow shortcut:
+	- updated files:
+		- `apps/frontend/app/(default)/jobs/page.tsx`
+		- `apps/frontend/app/(default)/flow/page.tsx`
+		- `apps/frontend/messages/en.json`
+		- `apps/frontend/messages/vi.json`
+	- new behavior:
+		- Jobs focused banner now includes `Open Focused in Flow` action
+		- action reuses existing prefill flow, adds `focused_job=1`, and forwards `jobs_return_query`
+		- Flow now renders focused-entry context badge when opened from focused Jobs banner
+	- outcome:
+		- users can jump directly from focused Jobs context into guided Flow while preserving round-trip context
+
+- Completed remaining proposed refactor: shared query-param helper usage:
+	- added file:
+		- `apps/frontend/lib/utils/query-params.ts`
+	- updated files:
+		- `apps/frontend/app/(default)/jobs/page.tsx`
+		- `apps/frontend/app/(default)/applications/page.tsx`
+		- `apps/frontend/app/(default)/flow/page.tsx`
+	- refactor scope:
+		- replaced repeated ad-hoc query param set/delete and href composition with shared helpers (`createSearchParams`, `setOrDeleteQueryParam`, `buildPathWithQuery`)
+	- outcome:
+		- consistent query handling across Jobs/Applications/Flow and lower drift risk for future deep-link changes
+
+- Minimal regression coverage added for final proposals:
+	- updated tests:
+		- `apps/frontend/tests/jobs-page.test.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertions:
+		- focused banner action opens Flow with `prefill_job=1`, `focused_job=1`, and `jobs_return_query`
+		- Flow shows focused-entry badge when `focused_job=1`
+
+- Re-validation after completing all proposed enhancements:
+	- command: `npm --prefix apps/frontend run test -- tests/jobs-page.test.tsx tests/product-flow-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `79 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260426-072502.json`
+	- outcome: all proposed increments are implemented and validated with green readiness
+
+- Completed final proposed cleanup: shared search-params test utility:
+	- added file:
+		- `apps/frontend/tests/utils/search-params.ts`
+	- updated tests:
+		- `apps/frontend/tests/jobs-page.test.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- cleanup scope:
+		- replaced duplicated mutable URLSearchParams reset helpers with shared `createMutableSearchParams()` harness
+	- outcome:
+		- reduced test boilerplate and standardized search-param mocking across key frontend suites
+
+- Re-validation after shared search-params test utility migration:
+	- command: `npm --prefix apps/frontend run test -- tests/jobs-page.test.tsx tests/product-flow-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `79 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260426-074355.json`
+	- outcome: cleanup is behavior-neutral and readiness remains green
+
+- Implemented next E2E round-trip continuity: Applications -> Jobs -> Flow -> Applications context restore:
+	- updated files:
+		- `apps/frontend/app/(default)/flow/page.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new behavior:
+		- Flow now bootstraps Applications return context from `applications_return_query` embedded inside `jobs_return_query` when `flow_return_query` is absent
+		- session-history/app-open actions in Flow preserve prior Applications query state across cross-screen traversal
+	- outcome:
+		- candidate/recruiter deep-link continuity remains intact even when user detours through Job Board before entering Flow
+
+- Minimal regression coverage added for this increment:
+	- updated test:
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertion:
+		- Flow reopens Applications with restored snapshot from `jobs_return_query -> applications_return_query` payload chain
+
+- Re-validation after Applications->Jobs->Flow->Applications context restore:
+	- command: `npm --prefix apps/frontend run test -- tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `80 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260426-074615.json`
+	- outcome: new cross-screen round-trip increment is validated and readiness remains green
+
+- Implemented next E2E increment: panel continuity restore across Applications -> Jobs -> Flow -> Applications:
+	- updated files:
+		- `apps/frontend/app/(default)/flow/page.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new behavior:
+		- Flow now infers panel hint from existing open flags (`sh_open`, `sc_open`, `fb_open`) when `flow_panel` is not present
+		- when coming from Jobs with embedded `applications_return_query`, Flow preserves panel-open intent and reapplies it while rebuilding Applications href
+	- outcome:
+		- status-history/status-changes/feedback panel continuity survives detours through Job Board and Flow
+
+- Minimal regression coverage added for panel continuity fallback:
+	- updated test:
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertion:
+		- Flow restores `sc_open=1` + associated filters from `jobs_return_query -> applications_return_query` snapshot even without `flow_panel`
+
+- Re-validation after panel continuity fallback implementation:
+	- command: `npm --prefix apps/frontend run test -- tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `81 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260426-125830.json`
+	- outcome: panel continuity fallback is validated and product readiness remains green
+
+- Implemented next E2E increment: Flow session-history -> Job Board keeps round-trip jobs context snapshot:
+	- updated files:
+		- `apps/frontend/app/(default)/flow/page.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new behavior:
+		- `Open Job Board` action in Flow session history now starts from `jobs_return_query` (when available)
+		- action overrides `focus_job_id` with selected history item job and keeps continuity keys (`source`, `applications_return_query`, and existing jobs filters)
+		- still enforces `status=all` for predictable focus visibility in Job Board
+	- outcome:
+		- users reopening Job Board from Flow no longer lose preserved cross-screen context
+
+- Minimal regression coverage added for Flow history job-board context restoration:
+	- updated test:
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertion:
+		- with `jobs_return_query` snapshot present, `openJobBoardForItem` preserves `source=applications` + `applications_return_query` while updating `focus_job_id`
+
+- Re-validation after Flow history job-board context restoration:
+	- command: `npm --prefix apps/frontend run test -- tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `82 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260426-131009.json`
+	- outcome: jobs-context restoration increment is validated and product readiness remains green
+
+- Implemented next E2E increment: snapshot-priority restoration of Jobs filters/page across return entry points:
+	- updated files:
+		- `apps/frontend/app/(default)/flow/page.tsx`
+		- `apps/frontend/app/(default)/applications/page.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- new behavior:
+		- Flow session-history `Open Job Board` keeps `status/page/filter` from `jobs_return_query` when available; fallback `status=all` is applied only if snapshot has no status
+		- Applications deep-link `Open Job Board` now also starts from existing `jobs_return_query` snapshot when present, then overrides only the new focused job id
+		- snapshot-first policy is now consistent across Flow header (existing), Flow history, and Applications deep-link
+	- outcome:
+		- Jobs context restoration is standardized and no longer loses page/filter state during cross-screen round-trip navigation
+
+- Minimal regression coverage added for snapshot-priority jobs restoration:
+	- updated tests:
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- new assertions:
+		- Flow history reopen keeps `status=active&page=3` from jobs snapshot while updating `focus_job_id`
+		- Applications deep-link reopen keeps `search/status/page/location` from jobs snapshot while preserving applications source context
+
+- Re-validation after snapshot-priority jobs restoration:
+	- command: `npm --prefix apps/frontend run test -- tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `84 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260426-131630.json`
+	- outcome: standardized jobs filter/page restoration increment is validated and readiness remains green
+
+- Implemented next E2E increment: Flow -> Applications links now auto-preserve Jobs fallback snapshot for recruiter context:
+	- updated files:
+		- `apps/frontend/app/(default)/flow/page.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new behavior:
+		- when Flow builds Applications href without `jobs_return_query`, non-candidate paths now auto-seed a jobs snapshot with `focus_job_id=<current job>`, `status=all`, and `source=flow`
+		- when a jobs snapshot already exists, Flow fills missing recruiter-path continuity keys (`focus_job_id`, `status`, `source`) without overriding existing values
+		- candidate-focused Applications links are left unchanged to avoid cross-context pollution
+	- outcome:
+		- recruiter round-trip continuity now remains deterministic even when Flow enters Applications without an explicit jobs snapshot
+
+- Minimal regression coverage added for recruiter jobs snapshot fallback propagation:
+	- updated test:
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertions:
+		- guided Flow and session-history Applications actions include `jobs_return_query` fallback keys (`focus_job_id`, `status`, `source`) in recruiter path
+		- panel-specific reopen actions (`fb_open`, `sc_open`) preserve panel behavior while carrying the fallback jobs snapshot
+
+- Re-validation after Flow->Applications recruiter snapshot fallback:
+	- command: `npx vitest run tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `101 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260427-090638.json`
+	- outcome: fallback propagation increment is validated and product E2E readiness remains green
+
+- Implemented next E2E increment: deterministic Flow -> Jobs fallback context when no jobs snapshot exists:
+	- updated files:
+		- `apps/frontend/app/(default)/flow/page.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new behavior:
+		- `backToJobsContext` in Flow now always returns a contextual Jobs URL with `status=all&source=flow` when `jobs_return_query` is missing
+		- if current flow has a selected job, fallback still includes `focus_job_id` as before
+		- if selected job is absent, fallback remains stable with base flow context keys only
+	- outcome:
+		- back-to-jobs navigation is now deterministic and no longer emits context-less `/jobs` URLs
+
+- Minimal regression coverage added for empty-snapshot + empty-focus fallback:
+	- updated test:
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertion:
+		- with no `jobs_return_query` and no prefill job id, `backToJobsContext` pushes `/jobs` with `status=all` and `source=flow` (without forced `focus_job_id`)
+
+- Re-validation after deterministic Flow->Jobs fallback context:
+	- command: `npx vitest run tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `102 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260427-091024.json`
+	- outcome: deterministic fallback increment is validated and product readiness remains green
+
+- Implemented next E2E increment: normalize missing Jobs snapshot source when Flow returns to Job Board:
+	- updated files:
+		- `apps/frontend/app/(default)/flow/page.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new behavior:
+		- when `jobs_return_query` exists but omits `source`, Flow now normalizes it to `source=flow` in `backToJobsContext`
+		- existing valid sources remain respected (`applications` and `flow`), while invalid values continue to be normalized to `flow`
+	- outcome:
+		- return-to-jobs links from Flow are now deterministic on source attribution even with incomplete snapshots
+
+- Minimal regression coverage added for missing-source normalization:
+	- updated test:
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertion:
+		- with `jobs_return_query=search=...&status=active` (no source), `backToJobsContext` pushes `/jobs` including `source=flow`
+
+- Re-validation after Flow jobs-source normalization:
+	- command: `npx vitest run tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `103 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260427-092816.json`
+	- outcome: source-normalization increment is validated and product readiness remains green
+
+- Implemented next E2E increment: Applications history -> Jobs link now sanitizes nested jobs snapshot recursion:
+	- updated files:
+		- `apps/frontend/app/(default)/applications/page.tsx`
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- new behavior:
+		- `openJobBoardFromHistory` now starts from `sanitizeJobsReturnSnapshot(jobs_return_query)` before applying precedence and rebuilding `/jobs` URL
+		- nested `jobs_return_query` payloads are stripped from outgoing Jobs links, preventing recursive snapshot growth across repeated round-trips
+		- `applications_return_query` is rebuilt from current Applications context and remains recursion-safe
+	- outcome:
+		- candidate history navigation back to Jobs remains stable under malformed or recursively nested jobs snapshots
+
+- Minimal regression coverage added for nested jobs snapshot sanitization:
+	- updated test:
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- new assertion:
+		- with nested `jobs_return_query` inside incoming jobs snapshot, `openJobInBoard` output strips nested jobs recursion and keeps clean `applications_return_query` snapshot
+
+- Re-validation after Applications history jobs-snapshot sanitization:
+	- command: `npx vitest run tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `104 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260427-093202.json`
+	- outcome: nested-snapshot hardening increment is validated and product readiness remains green
+
+- Implemented next E2E increment: Flow job-board return paths now strip nested jobs snapshot recursion while preserving applications snapshot:
+	- updated files:
+		- `apps/frontend/app/(default)/flow/page.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new behavior:
+		- `jobsReturnHref` and `buildJobBoardHref` now start from `sanitizeJobsReturnSnapshot(jobs_return_query, { stripApplicationsReturn: false })`
+		- nested `jobs_return_query` recursion keys are removed before rebuilding `/jobs` links from Flow actions
+		- `applications_return_query` continuity is intentionally preserved for Applications round-trip restoration
+	- outcome:
+		- Flow -> Jobs links stay recursion-safe across repeated traversals without losing cross-screen applications snapshot context
+
+- Minimal regression coverage added for Flow history recursion sanitization:
+	- updated test:
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertion:
+		- `openJobBoardForItem` strips nested `jobs_return_query` while retaining `applications_return_query` fields (`candidate_id`, `rc_changed_by`)
+
+- Re-validation after Flow jobs-return recursion sanitization:
+	- command: `npx vitest run tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `105 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260427-093445.json`
+	- outcome: Flow recursion-hardening increment is validated and product readiness remains green
+
+- Implemented next E2E increment: Applications -> Flow return now normalizes missing/invalid jobs snapshot source:
+	- updated files:
+		- `apps/frontend/app/(default)/applications/page.tsx`
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- new behavior:
+		- while building `flowReturnHref`, when `jobs_return_query` exists and contains data, missing/invalid `source` is normalized to `applications`
+		- valid `source` values (`applications`, `flow`) are preserved without override
+		- no synthetic jobs snapshot is created when incoming `jobs_return_query` is empty
+	- outcome:
+		- return-to-flow links keep deterministic jobs source semantics without polluting empty-context links
+
+- Minimal regression coverage added for source normalization + preservation:
+	- updated test:
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- new assertions:
+		- propagated jobs snapshot now includes `source=applications` when source was missing
+		- existing `source=flow` remains unchanged
+
+- Re-validation after Applications flow-return source normalization:
+	- command: `npx vitest run tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `106 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260427-093846.json`
+	- outcome: source-normalization increment is validated and product readiness remains green
+
+- Implemented next E2E increment: Jobs -> Applications routes now normalize missing/invalid jobs snapshot source:
+	- updated files:
+		- `apps/frontend/app/(default)/jobs/page.tsx`
+		- `apps/frontend/tests/jobs-page.test.tsx`
+	- new behavior:
+		- when Jobs builds Applications links or apply redirects with `jobs_return_query`, missing/invalid `source` is normalized to `applications`
+		- valid existing sources (`applications`, `flow`) remain preserved
+		- no jobs snapshot is attached when source snapshot is empty
+	- outcome:
+		- Applications entry points from Jobs now carry deterministic source attribution for stable round-trip restoration
+
+- Minimal regression coverage added for Jobs -> Applications source normalization:
+	- updated test:
+		- `apps/frontend/tests/jobs-page.test.tsx`
+	- new assertions:
+		- candidate apply success redirect includes `jobs_return_query.source=applications` when snapshot source was previously absent
+		- recruiter ranked-candidates entry in default Jobs context includes `jobs_return_query.source=applications`
+
+- Re-validation after Jobs->Applications source normalization:
+	- command: `npx vitest run tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `106 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260427-094052.json`
+	- outcome: jobs-source normalization increment is validated and product readiness remains green
+
+- Implemented next E2E increment: Jobs tailor-and-apply flow links now sanitize jobs snapshot and normalize missing source:
+	- updated files:
+		- `apps/frontend/app/(default)/jobs/page.tsx`
+		- `apps/frontend/tests/jobs-page.test.tsx`
+	- new behavior:
+		- `handleTailorAndApply` now builds `jobs_return_query` from `sanitizeJobsReturnSnapshot(searchParams, { stripApplicationsReturn: false })` instead of raw query string
+		- when snapshot exists but `source` is missing/invalid, it is normalized to `source=flow`
+		- valid existing sources (`applications`, `flow`) remain preserved
+	- outcome:
+		- Jobs -> Flow links are recursion-safe and keep deterministic source attribution for return navigation
+
+- Minimal regression coverage added for tailor-and-apply source normalization:
+	- updated test:
+		- `apps/frontend/tests/jobs-page.test.tsx`
+	- new assertions:
+		- with missing source and nested jobs snapshot input, tailor-and-apply flow link includes `source=flow` and strips nested `jobs_return_query`
+
+- Re-validation after Jobs tailor-and-apply snapshot hardening:
+	- command: `npx vitest run tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `107 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260427-094340.json`
+	- outcome: tailor-and-apply hardening increment is validated and product readiness remains green
+
+- Implemented next E2E increment: Flow back-to-jobs now enforces fallback status when jobs snapshot omits status:
+	- updated files:
+		- `apps/frontend/app/(default)/flow/page.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new behavior:
+		- in `jobsReturnHref`, when `jobs_return_query` exists but omits `status`, Flow now sets `status=all`
+		- existing explicit statuses from snapshot are preserved
+		- source normalization behavior remains unchanged (`applications`/`flow` preserved, invalid/missing normalized to `flow`)
+	- outcome:
+		- back-to-jobs navigation from Flow stays deterministic for list visibility even with partial jobs snapshots
+
+- Minimal regression coverage added for missing-status fallback:
+	- updated test:
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertion:
+		- with `jobs_return_query=search=Platform+Engineer`, `backToJobsContext` outputs `search=Platform Engineer&status=all&source=flow`
+
+- Re-validation after Flow missing-status fallback hardening:
+	- command: `npx vitest run tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `108 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260427-094910.json`
+	- outcome: fallback-status increment is validated and product readiness remains green
+
+- Implemented next E2E increment: Jobs->Applications snapshots now enforce fallback status when missing:
+	- updated files:
+		- `apps/frontend/app/(default)/jobs/page.tsx`
+		- `apps/frontend/tests/jobs-page.test.tsx`
+	- new behavior:
+		- in all Jobs -> Applications snapshot emit paths (recruiter link + apply success + duplicate redirect), when `jobs_return_query` exists but omits `status`, snapshot now sets `status=all`
+		- source normalization to `applications` remains intact and valid existing sources are preserved
+	- outcome:
+		- downstream back-to-jobs behavior becomes deterministic earlier in the chain, reducing dependency on later-stage fallback logic
+
+- Minimal regression coverage added for missing-status snapshot emission:
+	- updated test:
+		- `apps/frontend/tests/jobs-page.test.tsx`
+	- new assertion:
+		- recruiter ranked-candidates entry with only `search` query now emits `jobs_return_query` including `status=all` and `source=applications`
+
+- Re-validation after Jobs->Applications status fallback emission hardening:
+	- command: `npx vitest run tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `109 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260427-122142.json`
+	- outcome: early fallback-status emission increment is validated and product readiness remains green
+
+- Implemented next E2E increment: Applications->Flow jobs snapshot now enforces fallback status when missing:
+	- updated files:
+		- `apps/frontend/app/(default)/applications/page.tsx`
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- new behavior:
+		- when `flowReturnHref` propagates non-empty `jobs_return_query` and `status` is missing, snapshot now sets `status=all`
+		- source normalization behavior remains in place (`applications`/`flow` preserved, invalid/missing normalized to `applications`)
+		- empty jobs snapshots still do not produce synthetic `jobs_return_query`
+	- outcome:
+		- Flow return links from Applications now emit deterministic Jobs visibility defaults earlier in the round-trip chain
+
+- Minimal regression coverage added for Applications->Flow missing-status fallback:
+	- updated test:
+		- `apps/frontend/tests/applications-page.test.tsx`
+	- new assertion:
+		- with `jobs_return_query=search=Platform+Engineer`, return-to-flow link emits jobs snapshot with `search`, `status=all`, and `source=applications`
+
+- Re-validation after Applications->Flow status fallback emission hardening:
+	- command: `npx vitest run tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `110 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260427-122600.json`
+	- outcome: Applications-flow snapshot fallback increment is validated and product readiness remains green
+
+- Implemented next E2E increment: Flow session-history -> Applications now emits deterministic jobs snapshot even when job id is missing:
+	- updated files:
+		- `apps/frontend/app/(default)/flow/page.tsx`
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new behavior:
+		- in `buildApplicationsHref` for non-candidate paths, fallback `status=all` and source normalization (`source=flow`) now apply even when `nextJobId` is empty
+		- `focus_job_id` remains conditional on a real job id and is not synthesized when absent
+	- outcome:
+		- Flow history actions preserve deterministic return context under partial legacy/history payloads with missing job id
+
+- Minimal regression coverage added for missing-job-id history payload:
+	- updated test:
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertion:
+		- `openApplicationsForItem` with empty `jobId` emits `jobs_return_query` containing `status=all` + `source=flow`, with no forced `focus_job_id`
+
+- Re-validation after Flow history missing-job-id fallback hardening:
+	- command: `npx vitest run tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `111 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260427-123140.json`
+	- outcome: missing-job-id continuity increment is validated and product readiness remains green
+
+- Implemented next E2E increment: Flow session-history panel actions remain deterministic when job id is missing:
+	- updated files:
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new behavior verified:
+		- `openStatusHistoryForItem` with empty `jobId` still emits `job_id`-less Applications link with `application_id`, `sh_open=1`, `flow_ctx=1`
+		- propagated `jobs_return_query` remains recursion-safe and carries fallback `status=all` + `source=flow`
+		- panel-specific round-trip state remains intact even with partial session-history payloads
+	- outcome:
+		- Flow panel actions now have explicit coverage for legacy history entries missing job ids, preventing silent regressions in URL-state continuity
+
+- Minimal regression coverage added for missing-job-id panel action:
+	- updated test:
+		- `apps/frontend/tests/product-flow-page.test.tsx`
+	- new assertion:
+		- status-history panel open from a history item with empty `jobId` preserves panel flags and fallback jobs snapshot without `focus_job_id`
+
+- Re-validation after Flow session-history panel-action hardening:
+	- command: `npx vitest run tests/product-flow-page.test.tsx tests/jobs-page.test.tsx tests/applications-page.test.tsx`
+	- frontend result: `113 passed, 0 failed`
+	- command: `./scripts/release-readiness-product-e2e.ps1`
+	- readiness result: `PASSED`
+	- report artifact: `scripts/reports/product-e2e-readiness-20260428-063927.json`
+	- outcome: panel-action continuity increment is validated and product readiness remains green
+
+## UC-BASIC-05 Candidate Profile Management (2026-04-29)
+- Added candidate profile page happy-path coverage for load + save:
+	- `apps/frontend/tests/profile-page.test.tsx`
+- Added zh locale strings for candidate profile page:
+	- `apps/frontend/messages/zh.json`
+
+## Candidate Profile Expansion + Recruiter View (2026-04-28)
+- Added recruiter/admin endpoint to fetch candidate profile by user id + validation error codes:
+	- `apps/backend/src/routes/candidate-profile.routes.js`
+	- `apps/backend/src/controllers/candidate-profile.controller.js`
+	- `apps/backend/src/services/candidate-profile.service.js`
+- Expanded candidate profile integration coverage for sanitization + recruiter lookup + invalid id error code:
+	- `apps/backend/tests/integration/candidate-profile-endpoints.test.mjs`
+- Extended candidate profile UI to manage experience/education/portfolio sections:
+	- `apps/frontend/app/(default)/profile/page.tsx`
+	- `apps/frontend/tests/profile-page.test.tsx`
+- Added recruiter Applications panel for candidate profile + API client support:
+	- `apps/frontend/lib/api/candidate-profile.ts`
+	- `apps/frontend/app/(default)/applications/page.tsx`
+	- `apps/frontend/tests/applications-page.test.tsx`
+	- `apps/frontend/tests/candidate-profile-api.test.ts`
+- Added i18n strings for new profile fields and candidate profile panel:
+	- `apps/frontend/messages/en.json`
+	- `apps/frontend/messages/vi.json`
+	- `apps/frontend/messages/zh.json`
 

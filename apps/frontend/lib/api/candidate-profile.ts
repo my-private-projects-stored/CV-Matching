@@ -61,6 +61,13 @@ export async function fetchMyCandidateProfile(): Promise<CandidateProfileRespons
   return (await res.json()) as CandidateProfileResponse;
 }
 
+export async function fetchCandidateProfileById(userId: string): Promise<CandidateProfileResponse> {
+  const encodedId = encodeURIComponent(String(userId || '').trim());
+  const res = await apiFetch(`/candidate-profile/${encodedId}`);
+  await assertOk(res, 'Fetch candidate profile failed');
+  return (await res.json()) as CandidateProfileResponse;
+}
+
 export async function updateMyCandidateProfile(
   payload: Partial<CandidateProfilePayload>
 ): Promise<CandidateProfileResponse> {

@@ -2,7 +2,9 @@ param(
     [string]$OutputDir = "scripts/reports",
     [int]$ExpectedMinimumChecks = 3,
     [int]$MaxHistoryLines = 2000,
-    [switch]$SkipHistoryRetention
+    [switch]$SkipHistoryRetention,
+    [int]$QdrantHealthRetries = 5,
+    [int]$QdrantHealthRetryDelaySeconds = 2
 )
 
 $ErrorActionPreference = "Stop"
@@ -82,10 +84,29 @@ $checks += Invoke-ReadinessCheck -Id "qdrant_health" -Title "Qdrant dependency a
         throw "Failed to start qdrant service"
     }
 
-    $health = Invoke-WebRequest -Uri "http://127.0.0.1:6333/healthz" -Method Get -TimeoutSec 10 -UseBasicParsing
-    if ($health.StatusCode -lt 200 -or $health.StatusCode -gt 299) {
-        throw "Qdrant health endpoint returned status $($health.StatusCode)"
+    $lastError = $null
+    for ($attempt = 1; $attempt -le $QdrantHealthRetries; $attempt++) {
+        try {
+            $health = Invoke-WebRequest -Uri "http://127.0.0.1:6333/healthz" -Method Get -TimeoutSec 10 -UseBasicParsing
+            if ($health.StatusCode -ge 200 -and $health.StatusCode -le 299) {
+                return
+            }
+
+            $lastError = "Qdrant health endpoint returned status $($health.StatusCode)"
+        } catch {
+            $lastError = $_.Exception.Message
+        }
+
+        if ($attempt -lt $QdrantHealthRetries) {
+            Start-Sleep -Seconds $QdrantHealthRetryDelaySeconds
+        }
     }
+
+    if ([string]::IsNullOrWhiteSpace($lastError)) {
+        throw "Qdrant health check failed after $QdrantHealthRetries attempts"
+    }
+
+    throw "Qdrant health check failed after $QdrantHealthRetries attempts: $lastError"
 }
 
 $checks += Invoke-ReadinessCheck -Id "flow_entrypoint" -Title "Guided flow entrypoint is linked from dashboard" -Action {
