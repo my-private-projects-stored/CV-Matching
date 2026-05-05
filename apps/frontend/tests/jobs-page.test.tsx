@@ -52,14 +52,20 @@ vi.mock('@/lib/api/applications', () => ({
   createApplication: vi.fn(),
 }));
 
+vi.mock('@/lib/api/config', () => ({
+  fetchCompanyProfileConfig: vi.fn(),
+}));
+
 import JobsPage from '@/app/(default)/jobs/page';
 import { fetchJobs } from '@/lib/api/jobs';
 import { fetchResumeList } from '@/lib/api/resume';
 import { createApplication } from '@/lib/api/applications';
+import { fetchCompanyProfileConfig } from '@/lib/api/config';
 
 const mockedFetchJobs = vi.mocked(fetchJobs);
 const mockedFetchResumeList = vi.mocked(fetchResumeList);
 const mockedCreateApplication = vi.mocked(createApplication);
+const mockedFetchCompanyProfileConfig = vi.mocked(fetchCompanyProfileConfig);
 
 describe('JobsPage candidate apply redirects', () => {
   beforeEach(() => {
@@ -69,6 +75,7 @@ describe('JobsPage candidate apply redirects', () => {
     mockedFetchJobs.mockReset();
     mockedFetchResumeList.mockReset();
     mockedCreateApplication.mockReset();
+    mockedFetchCompanyProfileConfig.mockReset();
     mockedAuthUser.id = 'candidate-1';
     mockedAuthUser.role = 'candidate';
 
@@ -117,6 +124,17 @@ describe('JobsPage candidate apply redirects', () => {
       data: {
         application_id: 'app-1',
       },
+    });
+
+    mockedFetchCompanyProfileConfig.mockResolvedValue({
+      company_name: '',
+      overview: '',
+      industry: '',
+      company_size: '',
+      address: '',
+      website: '',
+      brand_primary_color: '#1D4ED8',
+      brand_logo_url: '',
     });
 
     localStorage.clear();
@@ -224,6 +242,31 @@ describe('JobsPage candidate apply redirects', () => {
       expect(latestHref).toContain('search=Backend+Engineer');
       expect(latestHref).toContain('status=all');
     });
+  });
+
+  it('renders company profile banner when config is available', async () => {
+    mockedFetchCompanyProfileConfig.mockResolvedValue({
+      company_name: 'Acme Corp',
+      overview: 'Global hiring platform for high growth teams.',
+      industry: 'Software',
+      company_size: '51-200',
+      address: 'Ho Chi Minh City',
+      website: 'https://acme.example',
+      brand_primary_color: '#FF5500',
+      brand_logo_url: 'https://acme.example/logo.png',
+    });
+
+    render(<JobsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('jobsPage.companyProfileLabel')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Acme Corp')).toBeInTheDocument();
+    expect(screen.getByText(/jobsPage\.companyProfileIndustry/i)).toBeInTheDocument();
+    expect(screen.getByText(/Software/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /acme\.example/i })).toBeInTheDocument();
+    expect(screen.getByAltText('Acme Corp logo')).toBeInTheDocument();
   });
 
   it('returns to applications with preserved query snapshot from focused banner', async () => {

@@ -25,6 +25,9 @@ import { requireAuth, requireRoles } from "../middleware/auth.middleware.js";
 const router = Router();
 const requireRecruiterRole = [requireAuth, requireRoles("recruiter", "admin")];
 
+router.get("/language", getLanguageConfigHandler);
+router.get("/company-profile", requireAuth, getCompanyProfileConfigHandler);
+
 router.use(...requireRecruiterRole);
 
 router.get("/llm-api-key", getLlmConfigHandler);
@@ -37,10 +40,7 @@ router.put("/privacy", updatePrivacyConfigHandler);
 router.get("/features", getFeatureConfigHandler);
 router.put("/features", updateFeatureConfigHandler);
 
-router.get("/company-profile", getCompanyProfileConfigHandler);
 router.put("/company-profile", updateCompanyProfileConfigHandler);
-
-router.get("/language", getLanguageConfigHandler);
 router.put("/language", updateLanguageConfigHandler);
 
 router.get("/prompts", getPromptConfigHandler);

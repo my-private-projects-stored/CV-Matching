@@ -14,6 +14,7 @@ import {
   type JobItem,
   type JobStatus,
 } from '@/lib/api/jobs';
+import { fetchCompanyProfileConfig, type CompanyProfileConfig } from '@/lib/api/config';
 import { createApplication } from '@/lib/api/applications';
 import { fetchResumeList } from '@/lib/api/resume';
 import { useAuth } from '@/lib/context/auth-context';
@@ -135,6 +136,14 @@ function parsePositivePage(value: string | null): number | undefined {
   return parsed;
 }
 
+function normalizeCompanyValue(value?: string | null): string {
+  return String(value || '').trim();
+}
+
+function formatWebsiteDisplay(value: string): string {
+  return value.replace(/^https?:\/\//i, '').replace(/\/$/, '');
+}
+
 export default function JobsPage() {
   const { t } = useTranslations();
   const router = useRouter();
@@ -156,6 +165,7 @@ export default function JobsPage() {
     location: defaultLocationFilter,
   });
   const [jobs, setJobs] = useState<JobItem[]>([]);
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfileConfig | null>(null);
   const [page, setPage] = useState(defaultPage);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -296,6 +306,29 @@ export default function JobsPage() {
     }
 
     void resolveMasterResume();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadCompanyProfile() {
+      try {
+        const profile = await fetchCompanyProfileConfig();
+        if (active) {
+          setCompanyProfile(profile);
+        }
+      } catch {
+        if (active) {
+          setCompanyProfile(null);
+        }
+      }
+    }
+
+    void loadCompanyProfile();
 
     return () => {
       active = false;
@@ -713,6 +746,29 @@ export default function JobsPage() {
     return sorted.filter((entry) => entry.changedFields.includes(historyFieldFilter));
   }, [historyEntries, historyFieldFilter]);
 
+  const companyName = normalizeCompanyValue(companyProfile?.company_name);
+  const companyOverview = normalizeCompanyValue(companyProfile?.overview);
+  const companyIndustry = normalizeCompanyValue(companyProfile?.industry);
+  const companySize = normalizeCompanyValue(companyProfile?.company_size);
+  const companyAddress = normalizeCompanyValue(companyProfile?.address);
+  const companyWebsite = normalizeCompanyValue(companyProfile?.website);
+  const companyLogoUrl = normalizeCompanyValue(companyProfile?.brand_logo_url);
+  const brandPrimaryColor = normalizeCompanyValue(companyProfile?.brand_primary_color) || '#1D4ED8';
+  const showCompanyProfile = Boolean(
+    companyName ||
+      companyOverview ||
+      companyIndustry ||
+      companySize ||
+      companyAddress ||
+      companyWebsite ||
+      companyLogoUrl
+  );
+  const companyMetaItems = [
+    { label: t('jobsPage.companyProfileIndustry'), value: companyIndustry },
+    { label: t('jobsPage.companyProfileSize'), value: companySize },
+    { label: t('jobsPage.companyProfileAddress'), value: companyAddress },
+  ].filter((item) => item.value);
+
   async function handleSaveJobEdit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!editingJobId) return;
@@ -759,6 +815,53 @@ export default function JobsPage() {
             <Button variant="outline">{t('nav.backToDashboard')}</Button>
           </Link>
         </div>
+
+        {showCompanyProfile ? (
+          <Card variant="outline" noPadding className="border-2 bg-white">
+            <div style={{ backgroundColor: brandPrimaryColor }} className="h-1 w-full" />
+            <div className="flex flex-col gap-4 p-4 md:flex-row md:items-start md:justify-between">
+              <div className="flex flex-1 items-start gap-4">
+                {companyLogoUrl ? (
+                  <div className="h-14 w-14 shrink-0 border border-black bg-white p-1">
+                    <img
+                      src={companyLogoUrl}
+                      alt={`${companyName || t('jobsPage.companyProfileFallbackName')} logo`}
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                ) : null}
+                <div className="space-y-1">
+                  <p className="font-mono text-[10px] uppercase text-gray-600">
+                    {t('jobsPage.companyProfileLabel')}
+                  </p>
+                  <h2 className="font-serif text-2xl">
+                    {companyName || t('jobsPage.companyProfileFallbackName')}
+                  </h2>
+                  {companyOverview ? (
+                    <p className="text-sm text-gray-700">{companyOverview}</p>
+                  ) : null}
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 text-xs font-mono uppercase text-gray-600">
+                {companyMetaItems.map((item) => (
+                  <span key={item.label}>
+                    {item.label}: {item.value}
+                  </span>
+                ))}
+                {companyWebsite ? (
+                  <a
+                    href={companyWebsite}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-700 hover:underline"
+                  >
+                    {t('jobsPage.companyProfileWebsite')}: {formatWebsiteDisplay(companyWebsite)}
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          </Card>
+        ) : null}
 
         <Card variant="outline" className="space-y-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
