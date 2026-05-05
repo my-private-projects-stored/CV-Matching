@@ -42,7 +42,12 @@ export async function listJobsHandler(req, res, next) {
 
 export async function getJobHandler(req, res, next) {
   try {
-    const job = await getJobById(req.params.id);
+    const includeDeleted = ["1", "true", "yes"].includes(
+      String(req.query?.include_deleted || req.query?.includeDeleted || "")
+        .trim()
+        .toLowerCase()
+    );
+    const job = await getJobById(req.params.id, { includeDeleted });
 
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
@@ -146,7 +151,12 @@ export async function deleteJobHandler(req, res, next) {
       return res.status(404).json({ message: "Job not found" });
     }
 
-    return res.status(200).json({ message: "Job deleted", id: String(deleted._id) });
+    return res.status(200).json({
+      message: "Job deleted",
+      id: String(deleted._id),
+      status: deleted.status,
+      deletedAt: deleted.deletedAt,
+    });
   } catch (error) {
     return next(error);
   }

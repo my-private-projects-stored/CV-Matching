@@ -92,6 +92,21 @@ const resumeSchema = new Schema(
       index: true,
     },
 
+    // Khi resume được restore từ một version khác, lưu lại nguồn restore.
+    restoredFromVersionId: {
+      type: Schema.Types.ObjectId,
+      ref: "Resume",
+      default: null,
+      index: true,
+    },
+
+    // Thời điểm restore gần nhất để hiển thị source tracking trong history.
+    restoredAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+
     // Tiêu đề hiển thị trong dashboard/builder.
     title: {
       type: String,

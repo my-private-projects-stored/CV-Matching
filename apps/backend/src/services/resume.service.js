@@ -171,7 +171,29 @@ function toDisplayKeyword(keyword) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
-function applyJobImprovements(basePreview, jobText) {
+function getTailorCopy(language) {
+  const normalized = resolveOutputLanguage(language);
+
+  if (normalized === "vi") {
+    return {
+      summaryWithKeywords: (keywords) => `Tap trung vao vai tro nay, nhan manh ${keywords}.`,
+      summaryNoKeywords: "Dieu chinh tom tat de phu hop vai tro va tac dong ro rang hon.",
+      suggestionForKeyword: (keyword) =>
+        `Nhan manh ${keyword} trong cac bullet kinh nghiem phu hop.`,
+      defaultSuggestion: "Lam ro tom tat de phu hop mo ta cong viec va ket qua mong doi.",
+    };
+  }
+
+  return {
+    summaryWithKeywords: (keywords) => `Targeted for this role with emphasis on ${keywords}.`,
+    summaryNoKeywords: "Tailored for this role with measurable and relevant impact.",
+    suggestionForKeyword: (keyword) =>
+      `Highlight ${keyword} in work experience bullets where relevant.`,
+    defaultSuggestion: "Refine resume summary to better mirror the job description outcomes.",
+  };
+}
+
+function applyJobImprovements(basePreview, jobText, outputLanguage) {
   const preview = deepClone(basePreview);
   const keywords = extractJobKeywords(jobText);
 
@@ -192,9 +214,10 @@ function applyJobImprovements(basePreview, jobText) {
 
   const existingSummary = String(preview.summary || "").trim();
   const shortKeywords = suggestedSkills.slice(0, 3).join(", ");
+  const copy = getTailorCopy(outputLanguage);
   const summaryAddon = shortKeywords
-    ? `Targeted for this role with emphasis on ${shortKeywords}.`
-    : "Tailored for this role with measurable and relevant impact.";
+    ? copy.summaryWithKeywords(shortKeywords)
+    : copy.summaryNoKeywords;
 
   preview.summary = existingSummary ? `${existingSummary} ${summaryAddon}` : summaryAddon;
 
@@ -245,18 +268,20 @@ function buildDiffAndChanges(originalPreview, improvedPreview, addedSkills = [])
   };
 }
 
-function buildImprovementSuggestions(keywords = []) {
+function buildImprovementSuggestions(keywords = [], outputLanguage) {
+  const copy = getTailorCopy(outputLanguage);
+
   if (!keywords.length) {
     return [
       {
-        suggestion: "Refine resume summary to better mirror the job description outcomes.",
+        suggestion: copy.defaultSuggestion,
         lineNumber: null,
       },
     ];
   }
 
   return keywords.slice(0, 5).map((keyword, index) => ({
-    suggestion: `Highlight ${toDisplayKeyword(keyword)} in work experience bullets where relevant.`,
+    suggestion: copy.suggestionForKeyword(toDisplayKeyword(keyword)),
     lineNumber: index + 1,
   }));
 }
@@ -312,6 +337,8 @@ export function toResumeFetchData(resumeDoc) {
     cover_letter: resume.coverLetter ?? null,
     outreach_message: resume.outreachMessage ?? null,
     parent_id: resume.parentResumeId ? String(resume.parentResumeId) : null,
+    restored_from_version_id: resume.restoredFromVersionId ? String(resume.restoredFromVersionId) : null,
+    restored_at: resume.restoredAt ? toIsoDate(resume.restoredAt) : null,
     title: resume.title ?? null,
   };
 }
@@ -325,6 +352,8 @@ export function toResumeSummary(resumeDoc) {
     filename: resume.filename ?? null,
     is_master: Boolean(resume.isMaster),
     parent_id: resume.parentResumeId ? String(resume.parentResumeId) : null,
+    restored_from_version_id: resume.restoredFromVersionId ? String(resume.restoredFromVersionId) : null,
+    restored_at: resume.restoredAt ? toIsoDate(resume.restoredAt) : null,
     processing_status: deriveProcessingStatus(resume),
     created_at: toIsoDate(resume.createdAt),
     updated_at: toIsoDate(resume.updatedAt),
@@ -514,6 +543,23 @@ export async function listResumeSummaries(includeMaster = false, candidateId) {
   return resumes.map(toResumeSummary);
 }
 
+export async function getResumeVersionHistory(resumeId) {
+  const resume = await getResumeByPublicId(resumeId);
+  if (!resume) return null;
+
+  const candidateId = String(resume.candidateId || '').trim();
+  const query = candidateId ? { candidateId } : { _id: resume._id };
+  const versions = await Resume.find(query).sort({ createdAt: 1, updatedAt: 1 });
+
+  return {
+    resume_id: String(resume._id),
+    candidate_id: candidateId || null,
+    root_resume_id: versions.length ? String(versions[0]._id) : String(resume._id),
+    current_resume_id: String(resume._id),
+    versions: versions.map(toResumeSummary),
+  };
+}
+
 export async function getMasterResume(candidateId = DEFAULT_CANDIDATE_ID) {
   if (!candidateId) return null;
 
@@ -539,6 +585,59 @@ export async function setResumeAsMaster(resumeId) {
     await resume.save();
   }
 
+  return resume;
+}
+
+export async function restoreFromVersion(resumeId, versionId) {
+  const resume = await getResumeByPublicId(resumeId);
+  if (!resume) return null;
+
+  const version = await getResumeByPublicId(versionId);
+  if (!version) return null;
+
+  // Verify both resumes belong to same candidate
+  if (String(resume.candidateId) !== String(version.candidateId)) {
+    return null;
+  }
+
+  const snapshotData = {
+    candidateId: resume.candidateId,
+    fileUrl: resume.fileUrl,
+    rawText: resume.rawText,
+    qdrantId: resume.qdrantId,
+    parsedData: deepClone(resume.parsedData),
+    processingStatus: resume.processingStatus,
+    filename: resume.filename,
+    sourceFile: deepClone(resume.sourceFile),
+    isMaster: false,
+    parentResumeId: resume.parentResumeId || null,
+    title: resume.title || null,
+    coverLetter: resume.coverLetter ?? null,
+    outreachMessage: resume.outreachMessage ?? null,
+    jobDescription: resume.jobDescription ?? null,
+    jobId: resume.jobId ?? null,
+    isAnalyzed: resume.isAnalyzed,
+  };
+
+  await Resume.create(snapshotData);
+
+  // Copy content fields from version to current resume
+  resume.title = version.title || resume.title;
+  resume.rawText = version.rawText || resume.rawText;
+  resume.parsedData = deepClone(version.parsedData) || resume.parsedData;
+
+  // Optionally preserve job context if version had it
+  if (version.jobDescription) {
+    resume.jobDescription = version.jobDescription;
+  }
+  if (version.jobId) {
+    resume.jobId = version.jobId;
+  }
+
+  resume.restoredFromVersionId = version._id;
+  resume.restoredAt = new Date();
+
+  await resume.save();
   return resume;
 }
 
@@ -586,7 +685,7 @@ export async function updateResumeFields(resumeId, fields = {}) {
   return resume;
 }
 
-export async function previewResumeImprovement(resumeId, jobId) {
+export async function previewResumeImprovement(resumeId, jobId, outputLanguage = "en") {
   const { resume, job } = await getResumeAndJob(resumeId, jobId);
   if (!resume || !job) {
     return null;
@@ -594,9 +693,13 @@ export async function previewResumeImprovement(resumeId, jobId) {
 
   const jobText = String(job.description || job.cleanText || job.requirements || "").trim();
   const originalPreview = toResumePreviewData(resume.parsedData);
-  const { improved, keywords, addedSkills } = applyJobImprovements(originalPreview, jobText);
+  const { improved, keywords, addedSkills } = applyJobImprovements(
+    originalPreview,
+    jobText,
+    outputLanguage
+  );
   const { diffSummary, detailedChanges } = buildDiffAndChanges(originalPreview, improved, addedSkills);
-  const improvements = buildImprovementSuggestions(keywords);
+  const improvements = buildImprovementSuggestions(keywords, outputLanguage);
   const requestId = makeRequestId();
 
   return buildImproveResponse({
@@ -617,6 +720,7 @@ export async function confirmResumeImprovement({
   jobId,
   improvedData,
   improvements,
+  outputLanguage = "en",
 }) {
   const { resume, job } = await getResumeAndJob(resumeId, jobId);
   if (!resume || !job) {
@@ -646,9 +750,10 @@ export async function confirmResumeImprovement({
   });
 
   const requestId = makeRequestId();
+  const copy = getTailorCopy(outputLanguage);
   const normalizedImprovements = Array.isArray(improvements)
     ? improvements.map((item) => ({
-        suggestion: String(item?.suggestion || "").trim() || "Refined resume content for target role.",
+        suggestion: String(item?.suggestion || "").trim() || copy.defaultSuggestion,
         lineNumber: item?.lineNumber ?? null,
       }))
     : [];
@@ -666,8 +771,8 @@ export async function confirmResumeImprovement({
   });
 }
 
-export async function improveResume(resumeId, jobId) {
-  const preview = await previewResumeImprovement(resumeId, jobId);
+export async function improveResume(resumeId, jobId, outputLanguage = "en") {
+  const preview = await previewResumeImprovement(resumeId, jobId, outputLanguage);
   if (!preview) {
     return null;
   }
@@ -677,6 +782,7 @@ export async function improveResume(resumeId, jobId) {
     jobId,
     improvedData: preview.data.resume_preview,
     improvements: preview.data.improvements,
+    outputLanguage,
   });
 }
 

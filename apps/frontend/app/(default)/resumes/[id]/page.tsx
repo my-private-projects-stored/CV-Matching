@@ -7,12 +7,14 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import Resume, { ResumeData } from '@/components/dashboard/resume-component';
 import {
   fetchResume,
+  fetchResumeHistory,
   downloadOriginalResumeFile,
   downloadResumePdf,
   getResumePdfUrl,
   deleteResume,
   retryProcessing,
   renameResume,
+  restoreResumeVersion,
   setResumeAsMaster,
 } from '@/lib/api/resume';
 import { useStatusCache } from '@/lib/context/status-cache';
@@ -23,8 +25,102 @@ import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
 import { useLanguage } from '@/lib/context/language-context';
 import { downloadBlobAsFile, openUrlInNewTab, sanitizeFilename } from '@/lib/utils/download';
 import { logError } from '@/lib/utils/logger';
+import ResumeVersionHistory from '@/components/builder/resume-version-history';
 
 type ProcessingStatus = 'pending' | 'processing' | 'ready' | 'failed';
+type ResumeRecord = Awaited<ReturnType<typeof fetchResume>>;
+
+type ResumeSnapshot = {
+  title: string;
+  name: string;
+  role: string;
+  summary: string;
+  skills: string[];
+  languages: string[];
+  certifications: string[];
+  awards: string[];
+  experienceCount: number;
+  educationCount: number;
+  projectCount: number;
+};
+
+type ResumeComparison = {
+  current: ResumeSnapshot;
+  selected: ResumeSnapshot;
+  rows: Array<{ label: string; current: string; selected: string }>;
+  skillChanges: { added: string[]; removed: string[] };
+};
+
+function normalizeStringList(values: unknown): string[] {
+  if (!Array.isArray(values)) return [];
+
+  return values
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+}
+
+function toSnapshotFromProcessed(processed: ResumeData | null, title: string | null): ResumeSnapshot {
+  const additional = processed?.additional || {};
+  const personalInfo = processed?.personalInfo || {};
+
+  return {
+    title: String(title || personalInfo.name || 'Untitled resume').trim(),
+    name: String(personalInfo.name || '').trim(),
+    role: String(personalInfo.title || '').trim(),
+    summary: String(processed?.summary || '').trim(),
+    skills: normalizeStringList(additional.technicalSkills),
+    languages: normalizeStringList(additional.languages),
+    certifications: normalizeStringList(additional.certificationsTraining),
+    awards: normalizeStringList(additional.awards),
+    experienceCount: Array.isArray(processed?.workExperience) ? processed.workExperience.length : 0,
+    educationCount: Array.isArray(processed?.education) ? processed.education.length : 0,
+    projectCount: Array.isArray(processed?.personalProjects) ? processed.personalProjects.length : 0,
+  };
+}
+
+function parseStructuredResume(record: ResumeRecord | null): ResumeData | null {
+  if (!record) return null;
+  if (record.processed_resume) {
+    return record.processed_resume as ResumeData;
+  }
+
+  const raw = String(record.raw_resume?.content || '').trim();
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as ResumeData;
+  } catch {
+    return null;
+  }
+}
+
+function buildComparison(current: ResumeSnapshot, selected: ResumeSnapshot): ResumeComparison {
+  const rows = [
+    { label: 'Title', current: current.title, selected: selected.title },
+    { label: 'Name', current: current.name || '-', selected: selected.name || '-' },
+    { label: 'Role', current: current.role || '-', selected: selected.role || '-' },
+    { label: 'Summary', current: current.summary || '-', selected: selected.summary || '-' },
+    { label: 'Experience sections', current: String(current.experienceCount), selected: String(selected.experienceCount) },
+    { label: 'Education sections', current: String(current.educationCount), selected: String(selected.educationCount) },
+    { label: 'Projects', current: String(current.projectCount), selected: String(selected.projectCount) },
+    { label: 'Languages', current: current.languages.join(', ') || '-', selected: selected.languages.join(', ') || '-' },
+    { label: 'Certifications', current: current.certifications.join(', ') || '-', selected: selected.certifications.join(', ') || '-' },
+    { label: 'Awards', current: current.awards.join(', ') || '-', selected: selected.awards.join(', ') || '-' },
+  ];
+
+  const currentSkills = new Set(current.skills.map((skill) => skill.toLowerCase()));
+  const selectedSkills = new Set(selected.skills.map((skill) => skill.toLowerCase()));
+
+  return {
+    current,
+    selected,
+    rows,
+    skillChanges: {
+      added: selected.skills.filter((skill) => !currentSkills.has(skill.toLowerCase())),
+      removed: current.skills.filter((skill) => !selectedSkills.has(skill.toLowerCase())),
+    },
+  };
+}
 
 export default function ResumeViewerPage() {
   const { t } = useTranslations();
@@ -47,6 +143,13 @@ export default function ResumeViewerPage() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editingTitleValue, setEditingTitleValue] = useState('');
   const [isSettingMaster, setIsSettingMaster] = useState(false);
+  const [resumeHistory, setResumeHistory] = useState<Awaited<ReturnType<typeof fetchResumeHistory>> | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [comparison, setComparison] = useState<ResumeComparison | null>(null);
+  const [comparisonLoading, setComparisonLoading] = useState(false);
+  const [comparisonError, setComparisonError] = useState<string | null>(null);
+  const [comparisonTitle, setComparisonTitle] = useState<string | null>(null);
 
   const resumeId = params?.id as string;
 
@@ -100,6 +203,38 @@ export default function ResumeViewerPage() {
 
     loadResume();
     setIsMasterResume(localStorage.getItem('master_resume_id') === resumeId);
+  }, [resumeId, t]);
+
+  useEffect(() => {
+    if (!resumeId) return;
+
+    let active = true;
+
+    const loadHistory = async () => {
+      try {
+        setHistoryLoading(true);
+        setHistoryError(null);
+        const history = await fetchResumeHistory(resumeId);
+        if (active) {
+          setResumeHistory(history);
+        }
+      } catch (err) {
+        logError('resume-viewer-page', 'Failed to load resume history', err);
+        if (active) {
+          setHistoryError(t('resumeViewer.versionHistoryFailed'));
+        }
+      } finally {
+        if (active) {
+          setHistoryLoading(false);
+        }
+      }
+    };
+
+    loadHistory();
+
+    return () => {
+      active = false;
+    };
   }, [resumeId, t]);
 
   const handleRetryProcessing = async () => {
@@ -243,6 +378,53 @@ export default function ResumeViewerPage() {
 
   const handleDownloadSuccessConfirm = () => {
     setShowDownloadSuccessDialog(false);
+  };
+
+  const handleRestoreVersion = async (versionId: string) => {
+    if (!resumeId) return;
+
+    try {
+      await restoreResumeVersion(resumeId, versionId);
+      // Reload the resume data to show the restored content
+      const data = await fetchResume(resumeId);
+      if (data.processed_resume) {
+        setResumeData(data.processed_resume as ResumeData);
+        setError(null);
+      }
+      setResumeTitle(data.title ?? null);
+      // Reload history to update version list
+      const history = await fetchResumeHistory(resumeId);
+      setResumeHistory(history);
+    } catch (err) {
+      logError('resume-viewer-page', 'Failed to restore resume version', err);
+      setError(t('resumeViewer.errors.failedToRestore'));
+    }
+  };
+
+  const handleCompareVersion = async (versionId: string) => {
+    if (!resumeData) return;
+
+    setComparisonError(null);
+    setComparisonLoading(true);
+    setComparisonTitle(null);
+    setComparison(null);
+
+    try {
+      const version = await fetchResume(versionId);
+      const currentSnapshot = toSnapshotFromProcessed(resumeData, resumeTitle);
+      const versionSnapshot = toSnapshotFromProcessed(
+        parseStructuredResume(version),
+        version.title ?? null
+      );
+
+      setComparisonTitle(version.title || version.filename || version.resume_id);
+      setComparison(buildComparison(currentSnapshot, versionSnapshot));
+    } catch (err) {
+      logError('resume-viewer-page', 'Failed to compare resume version', err);
+      setComparisonError('Unable to load comparison for this version.');
+    } finally {
+      setComparisonLoading(false);
+    }
   };
 
   if (loading) {
@@ -421,6 +603,16 @@ export default function ResumeViewerPage() {
           </div>
         </div>
 
+        <ResumeVersionHistory
+          versions={resumeHistory?.versions || []}
+          currentResumeId={resumeId}
+          isLoading={historyLoading}
+          error={historyError}
+          onSelectVersion={(versionId) => router.push(`/resumes/${versionId}`)}
+          onRestore={handleRestoreVersion}
+          onCompare={handleCompareVersion}
+        />
+
         <div className="flex justify-end pt-4 no-print">
           <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
             {isMasterResume
@@ -485,6 +677,124 @@ export default function ResumeViewerPage() {
           showCancelButton={false}
         />
       )}
+
+      {comparisonTitle ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 no-print">
+          <div className="w-full max-w-5xl border border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)]">
+            <div className="border-b border-black px-5 py-4 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-serif text-xl font-bold">Compare versions</h3>
+                <p className="font-mono text-[10px] uppercase tracking-wider text-gray-600">
+                  Current version vs {comparisonTitle}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setComparisonTitle(null);
+                  setComparison(null);
+                  setComparisonError(null);
+                }}
+              >
+                Close
+              </Button>
+            </div>
+
+            <div className="p-5 space-y-4 max-h-[75vh] overflow-auto">
+              {comparisonLoading ? (
+                <p className="font-mono text-xs uppercase text-gray-500">Loading comparison...</p>
+              ) : comparisonError ? (
+                <p className="font-mono text-xs uppercase text-red-700">{comparisonError}</p>
+              ) : comparison ? (
+                <>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="border border-black/20 bg-[#F8F8F4] p-4">
+                      <p className="font-mono text-[10px] uppercase tracking-wider text-gray-600">Current</p>
+                      <h4 className="mt-1 font-serif text-lg font-bold">{comparison.current.title}</h4>
+                      <dl className="mt-3 space-y-2 font-mono text-xs">
+                        <div>
+                          <dt className="text-gray-500">Role</dt>
+                          <dd>{comparison.current.role || '-'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-500">Summary</dt>
+                          <dd className="whitespace-pre-wrap">{comparison.current.summary || '-'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-500">Skills</dt>
+                          <dd>{comparison.current.skills.join(', ') || '-'}</dd>
+                        </div>
+                      </dl>
+                    </div>
+                    <div className="border border-black/20 bg-[#F8F8F4] p-4">
+                      <p className="font-mono text-[10px] uppercase tracking-wider text-gray-600">Selected version</p>
+                      <h4 className="mt-1 font-serif text-lg font-bold">{comparison.selected.title}</h4>
+                      <dl className="mt-3 space-y-2 font-mono text-xs">
+                        <div>
+                          <dt className="text-gray-500">Role</dt>
+                          <dd>{comparison.selected.role || '-'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-500">Summary</dt>
+                          <dd className="whitespace-pre-wrap">{comparison.selected.summary || '-'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-500">Skills</dt>
+                          <dd>{comparison.selected.skills.join(', ') || '-'}</dd>
+                        </div>
+                      </dl>
+                    </div>
+                  </div>
+
+                  <div className="border border-black/20 bg-white p-4">
+                    <h4 className="font-serif text-lg font-bold">What changed</h4>
+                    <div className="mt-3 space-y-3">
+                      {comparison.rows.map((row) => (
+                        <div
+                          key={row.label}
+                          className="grid gap-2 md:grid-cols-[180px_1fr_1fr] md:items-start border-b border-black/10 pb-2 last:border-b-0 last:pb-0"
+                        >
+                          <div className="font-mono text-[10px] uppercase tracking-wider text-gray-500">
+                            {row.label}
+                          </div>
+                          <div className="font-mono text-xs">
+                            <span className="text-gray-500 md:hidden">Current: </span>
+                            {row.current}
+                          </div>
+                          <div className="font-mono text-xs">
+                            <span className="text-gray-500 md:hidden">Selected: </span>
+                            {row.selected}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="border border-green-700 bg-green-50 p-4">
+                      <h4 className="font-serif text-base font-bold text-green-800">Added skills</h4>
+                      <p className="mt-2 font-mono text-xs uppercase text-green-800">
+                        {comparison.skillChanges.added.length
+                          ? comparison.skillChanges.added.join(', ')
+                          : 'No skill additions'}
+                      </p>
+                    </div>
+                    <div className="border border-red-700 bg-red-50 p-4">
+                      <h4 className="font-serif text-base font-bold text-red-800">Removed skills</h4>
+                      <p className="mt-2 font-mono text-xs uppercase text-red-800">
+                        {comparison.skillChanges.removed.length
+                          ? comparison.skillChanges.removed.join(', ')
+                          : 'No skill removals'}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Enrichment Modal - Only for master resume */}
       {isMasterResume && (

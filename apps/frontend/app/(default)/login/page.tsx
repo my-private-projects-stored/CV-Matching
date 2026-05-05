@@ -87,6 +87,11 @@ export default function LoginPage() {
             {t('auth.signupAction')}
           </Link>
         </p>
+        <p className="mt-2 font-mono text-xs uppercase text-gray-600">
+          <Link href="/forgot-password" className="text-blue-700 underline">
+            {t('auth.forgotPasswordAction')}
+          </Link>
+        </p>
       </Card>
     </section>
   );

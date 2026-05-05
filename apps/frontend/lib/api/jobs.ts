@@ -7,7 +7,7 @@ async function assertOk(res: Response, fallbackMessagePrefix: string): Promise<v
   throw buildApiClientError(res.status, body, fallbackMessagePrefix);
 }
 
-export type JobStatus = 'active' | 'closed';
+export type JobStatus = 'active' | 'closed' | 'deleted';
 export type JobCategory = 'IT' | 'Accounting' | 'Marketing';
 
 export interface ImportantJobChange {
@@ -37,6 +37,7 @@ export interface JobItem {
   location: string;
   experienceLevel: string;
   status: JobStatus;
+  deletedAt?: string | null;
   importantChangeHistory?: ImportantJobChange[];
   applications_count?: number;
   createdAt: string;
@@ -48,6 +49,7 @@ export interface JobListQuery {
   category?: JobCategory | '';
   location?: string;
   status?: JobStatus | '';
+  includeDeleted?: boolean;
   page?: number;
   limit?: number;
 }
@@ -81,6 +83,7 @@ function toSearchParams(query: JobListQuery): string {
   if (query.category) params.set('category', query.category);
   if (query.location?.trim()) params.set('location', query.location.trim());
   if (query.status) params.set('status', query.status);
+  if (query.includeDeleted) params.set('includeDeleted', 'true');
   if (query.page) params.set('page', String(query.page));
   if (query.limit) params.set('limit', String(query.limit));
 

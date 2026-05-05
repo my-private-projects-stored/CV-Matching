@@ -1,5 +1,58 @@
 import Resume from "../models/Resume.js";
 
+const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi"]);
+
+function resolveOutputLanguage(language) {
+  const normalized = String(language || "").trim().toLowerCase();
+  if (SUPPORTED_OUTPUT_LANGUAGES.has(normalized)) {
+    return normalized;
+  }
+
+  return "en";
+}
+
+function getEnrichmentCopy(language) {
+  const lang = resolveOutputLanguage(language);
+
+  if (lang === "vi") {
+    return {
+      weaknessEmpty: "Muc nay chua co bullet do luong ro rang.",
+      weaknessBrief: "Mo ta con ngan va can bo sung ket qua cu the.",
+      weaknessDefault: "Co the cai thien bang dong tu hanh dong manh va tac dong do luong duoc.",
+      impactQuestion: "Ban da tao ra tac dong do luong nao trong vai tro nay?",
+      impactPlaceholder: "vd: tang ty le chuyen doi 18%, giam latency 40%",
+      projectQuestion: "Du an nay giai quyet van de gi va cong nghe nao quan trong?",
+      projectPlaceholder: "vd: xay dung X voi Y, phuc vu Z nguoi dung, giam chi phi ...",
+      analysisSummary: (count) =>
+        count > 0
+          ? `Phat hien ${count} muc can bo sung chi tiet.`
+          : "Khong co muc can bo sung dang ke.",
+      impactLine: (text) => `Tao tac dong bang viec ${text}.`,
+      projectLine: (text) => `Trien khai giai phap giup ${text}.`,
+      defaultInstruction: "cai thien do ro rang va tac dong",
+      diffSummary: (count) => `Da viet lai ${count} bullet theo huong chi dan.`,
+    };
+  }
+
+  return {
+    weaknessEmpty: "This section has no measurable bullet points yet.",
+    weaknessBrief: "Description is brief and can be improved with clearer impact and outcomes.",
+    weaknessDefault: "Could be improved with stronger action verbs and quantifiable impact.",
+    impactQuestion: "What measurable impact did you deliver in this role?",
+    impactPlaceholder: "e.g. improved conversion by 18%, reduced latency by 40%",
+    projectQuestion: "What problem did this project solve and what technologies were critical?",
+    projectPlaceholder: "e.g. built X with Y, served Z users, reduced cost by ...",
+    analysisSummary: (count) =>
+      count > 0
+        ? `Identified ${count} section(s) that would benefit from stronger detail.`
+        : "No major enrichment opportunities found.",
+    impactLine: (text) => `Delivered impact by ${text}.`,
+    projectLine: (text) => `Implemented solution that ${text}.`,
+    defaultInstruction: "improved clarity and impact",
+    diffSummary: (count) => `Rewrote ${count} bullet(s) based on instruction.`,
+  };
+}
+
 function isStructuredData(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -31,20 +84,22 @@ function getResumeData(resume) {
   return isStructuredData(resume?.parsedData) ? clone(resume.parsedData) : {};
 }
 
-function getWeaknessReason(lines) {
+function getWeaknessReason(lines, language) {
+  const copy = getEnrichmentCopy(language);
   if (lines.length === 0) {
-    return "This section has no measurable bullet points yet.";
+    return copy.weaknessEmpty;
   }
 
   const totalChars = lines.join(" ").length;
   if (lines.length < 2 || totalChars < 120) {
-    return "Description is brief and can be improved with clearer impact and outcomes.";
+    return copy.weaknessBrief;
   }
 
-  return "Could be improved with stronger action verbs and quantifiable impact.";
+  return copy.weaknessDefault;
 }
 
-function buildAnalyzePayload(parsedData) {
+function buildAnalyzePayload(parsedData, outputLanguage) {
+  const copy = getEnrichmentCopy(outputLanguage);
   const items = [];
   const questions = [];
 
@@ -61,14 +116,14 @@ function buildAnalyzePayload(parsedData) {
       title: String(exp?.title || "Experience").trim() || "Experience",
       subtitle: String(exp?.company || "").trim() || undefined,
       current_description: current,
-      weakness_reason: getWeaknessReason(current),
+      weakness_reason: getWeaknessReason(current, outputLanguage),
     });
 
     questions.push({
       question_id: `q_${itemId}_impact`,
       item_id: itemId,
-      question: "What measurable impact did you deliver in this role?",
-      placeholder: "e.g. improved conversion by 18%, reduced latency by 40%",
+      question: copy.impactQuestion,
+      placeholder: copy.impactPlaceholder,
     });
   });
 
@@ -85,33 +140,30 @@ function buildAnalyzePayload(parsedData) {
       title: String(project?.name || "Project").trim() || "Project",
       subtitle: String(project?.role || "").trim() || undefined,
       current_description: current,
-      weakness_reason: getWeaknessReason(current),
+      weakness_reason: getWeaknessReason(current, outputLanguage),
     });
 
     questions.push({
       question_id: `q_${itemId}_detail`,
       item_id: itemId,
-      question: "What problem did this project solve and what technologies were critical?",
-      placeholder: "e.g. built X with Y, served Z users, reduced cost by ...",
+      question: copy.projectQuestion,
+      placeholder: copy.projectPlaceholder,
     });
   });
 
   return {
     items_to_enrich: items,
     questions,
-    analysis_summary:
-      items.length > 0
-        ? `Identified ${items.length} section(s) that would benefit from stronger detail.`
-        : "No major enrichment opportunities found.",
+    analysis_summary: copy.analysisSummary(items.length),
   };
 }
 
-export async function analyzeResumeEnrichment(resumeId) {
+export async function analyzeResumeEnrichment(resumeId, outputLanguage = "en") {
   const resume = await Resume.findById(resumeId);
   if (!resume) return null;
 
   const parsedData = getResumeData(resume);
-  return buildAnalyzePayload(parsedData);
+  return buildAnalyzePayload(parsedData, outputLanguage);
 }
 
 function groupAnswersByItem(answers = []) {
@@ -136,10 +188,11 @@ function groupAnswersByItem(answers = []) {
   return grouped;
 }
 
-export async function enhanceResumeDescriptions({ resumeId, answers }) {
+export async function enhanceResumeDescriptions({ resumeId, answers, outputLanguage }) {
   const resume = await Resume.findById(resumeId);
   if (!resume) return null;
 
+  const copy = getEnrichmentCopy(outputLanguage);
   const parsedData = getResumeData(resume);
   const grouped = groupAnswersByItem(answers);
   const enhancements = [];
@@ -152,7 +205,7 @@ export async function enhanceResumeDescriptions({ resumeId, answers }) {
       if (!exp) continue;
 
       const original = normalizeLines(exp.description);
-      const generated = answerTexts.map((text) => `Delivered impact by ${text}.`);
+      const generated = answerTexts.map((text) => copy.impactLine(text));
       enhancements.push({
         item_id: itemId,
         item_type: "experience",
@@ -169,7 +222,7 @@ export async function enhanceResumeDescriptions({ resumeId, answers }) {
       if (!project) continue;
 
       const original = normalizeLines(project.description);
-      const generated = answerTexts.map((text) => `Implemented solution that ${text}.`);
+      const generated = answerTexts.map((text) => copy.projectLine(text));
       enhancements.push({
         item_id: itemId,
         item_type: "project",
@@ -235,11 +288,12 @@ function rewriteBullet(line, instruction) {
   return `${base} (${instruction})`;
 }
 
-export async function regenerateResumeItems({ resumeId, items, instruction }) {
+export async function regenerateResumeItems({ resumeId, items, instruction, outputLanguage }) {
   const resume = await Resume.findById(resumeId);
   if (!resume) return null;
 
-  const normalizedInstruction = String(instruction || "").trim() || "improved clarity and impact";
+  const copy = getEnrichmentCopy(outputLanguage);
+  const normalizedInstruction = String(instruction || "").trim() || copy.defaultInstruction;
   const regeneratedItems = [];
   const errors = [];
 
@@ -267,7 +321,7 @@ export async function regenerateResumeItems({ resumeId, items, instruction }) {
       subtitle: String(item?.subtitle || "").trim() || undefined,
       original_content: current,
       new_content: newContent,
-      diff_summary: `Rewrote ${newContent.length} bullet(s) based on instruction.`,
+      diff_summary: copy.diffSummary(newContent.length),
     });
   }
 

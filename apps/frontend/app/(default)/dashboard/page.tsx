@@ -94,7 +94,11 @@ export default function DashboardPage() {
     } catch (err: unknown) {
       logError('dashboard-page', 'Failed to check resume status', err);
       // If resume not found (404), clear the stale localStorage
-      if (err instanceof Error && err.message.includes('404')) {
+      const statusCode =
+        typeof err === 'object' && err !== null && 'statusCode' in err
+          ? Number((err as { statusCode?: number }).statusCode)
+          : undefined;
+      if (statusCode === 404 || (err instanceof Error && err.message.includes('Resume not found'))) {
         localStorage.removeItem('master_resume_id');
         setMasterResumeId(null);
         return;

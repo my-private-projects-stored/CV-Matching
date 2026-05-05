@@ -148,6 +148,12 @@ test(
       }, recruiterToken);
       assert.equal(llmPutOllama.status, 200);
 
+      const languagePut = await requestJson(baseUrl, "PUT", "/config/language", {
+        ui_language: "vi",
+        content_language: "vi",
+      }, recruiterToken);
+      assert.equal(languagePut.status, 200);
+
       const preview = await requestJson(baseUrl, "POST", "/resumes/improve/preview", {
         resume_id: String(masterResume._id),
         job_id: jobId,
@@ -160,6 +166,8 @@ test(
       assert.equal(typeof preview.json?.data?.resume_preview?.personalInfo, "object");
       assert.equal(typeof preview.json?.data?.diff_summary?.total_changes, "number");
       assert.equal(Array.isArray(preview.json?.data?.detailed_changes), true);
+      assert.match(String(preview.json?.data?.resume_preview?.summary || ""), /Tap trung/i);
+      assert.match(String(preview.json?.data?.improvements?.[0]?.suggestion || ""), /Nhan manh/i);
 
       const confirm = await requestJson(baseUrl, "POST", "/resumes/improve/confirm", {
         resume_id: String(masterResume._id),

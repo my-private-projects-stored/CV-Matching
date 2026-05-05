@@ -137,6 +137,7 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ headline?: string; summary?: string }>({});
 
   const isCandidate = useMemo(() => user?.role === 'candidate' || user?.role === 'admin', [user?.role]);
 
@@ -174,12 +175,26 @@ export default function ProfilePage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setFieldErrors({});
     setSuccess(null);
     setIsSaving(true);
 
     const experience = form.experience.filter((item) => !isExperienceEmpty(item));
     const education = form.education.filter((item) => !isEducationEmpty(item));
     const portfolio = form.portfolio.filter((item) => !isPortfolioEmpty(item));
+
+    // Client-side validation: headline required, summary minimum length
+    if (!String(form.headline || '').trim()) {
+      setFieldErrors({ headline: t('profile.errors.headlineRequired') });
+      setIsSaving(false);
+      return;
+    }
+
+    if (String(form.summary || '').trim().length > 0 && String(form.summary || '').trim().length < 20) {
+      setFieldErrors({ summary: t('profile.errors.summaryTooShort') });
+      setIsSaving(false);
+      return;
+    }
 
     try {
       await updateMyCandidateProfile({
@@ -294,6 +309,9 @@ export default function ProfilePage() {
             onChange={(event) => setForm((prev) => ({ ...prev, headline: event.target.value }))}
             placeholder={t('profile.headlinePlaceholder')}
           />
+          {fieldErrors.headline ? (
+            <p className="font-mono text-xs uppercase text-red-700">{fieldErrors.headline}</p>
+          ) : null}
 
           <Textarea
             value={form.summary}
@@ -301,6 +319,9 @@ export default function ProfilePage() {
             placeholder={t('profile.summaryPlaceholder')}
             rows={5}
           />
+          {fieldErrors.summary ? (
+            <p className="font-mono text-xs uppercase text-red-700">{fieldErrors.summary}</p>
+          ) : null}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input

@@ -102,7 +102,16 @@ export async function apiFetch(
   if (isAbsoluteUrl) {
     url = endpoint;
   } else if (isApiPath) {
-    url = resolveRuntimeApiBase(normalizedEndpoint);
+    // Ensure browser client calls to "/api/..." use the configured public API host
+    // when NEXT_PUBLIC_API_BASE_URL is set (e.g. http://localhost:3001).
+    const publicBase = API_BASE_URL || '/';
+    if (publicBase === '/' || publicBase === '') {
+      // Same-origin: keep relative API path
+      url = normalizedEndpoint;
+    } else {
+      const host = publicBase.replace(/\/+$/, '');
+      url = `${host}${normalizedEndpoint}`;
+    }
   }
 
   // Matches the backend's 240s hard limit (resumes.py wait_for timeout)
@@ -170,5 +179,9 @@ export async function apiDelete(endpoint: string): Promise<Response> {
  * Builds the full upload URL for file uploads.
  */
 export function getUploadUrl(): string {
-  return `${API_BASE}/resumes/upload`;
+  const publicBase = API_BASE_URL || '/';
+  if (publicBase === '/' || publicBase === '') {
+    return '/resumes/upload';
+  }
+  return `${publicBase.replace(/\/+$/, '')}/api/resumes/upload`;
 }

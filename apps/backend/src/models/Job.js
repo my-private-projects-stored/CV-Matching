@@ -100,9 +100,17 @@ const jobSchema = new Schema(
     // Trạng thái tin tuyển dụng để điều khiển việc nhận hồ sơ.
     status: {
       type: String,
-      enum: ["active", "closed"],
+      enum: ["active", "closed", "deleted"],
       default: "active",
       required: [true, "Status is required"],
+      index: true,
+    },
+
+    // Timestamp lưu thời điểm xóa mềm; null nghĩa là chưa bị xóa.
+    deletedAt: {
+      type: Date,
+      default: null,
+      index: true,
     },
 
     // Lưu các thay đổi quan trọng để audit thao tác recruiter.

@@ -12,10 +12,12 @@ import {
   generateOutreachHandler,
   getMasterResumeHandler,
   getResumeHandler,
+  getResumeHistoryHandler,
   getResumeJobDescriptionHandler,
   improveResumeHandler,
   listResumesHandler,
   previewImproveResumeHandler,
+  restoreFromVersionHandler,
   retryResumeProcessingHandler,
   setMasterResumeHandler,
   updateCoverLetterHandler,
@@ -39,8 +41,10 @@ router.post("/upload", ...requireCandidateRole, upload.single("file"), uploadRes
 router.get("/list", listResumesHandler);
 router.get("/master", getMasterResumeHandler);
 router.get("/", getResumeHandler);
+router.get("/:id/history", getResumeHistoryHandler);
 router.post("/", ...requireCandidateRole, createResumeHandler);
 router.post("/:id/set-as-master", ...requireCandidateRole, setMasterResumeHandler);
+router.put("/:id/restore/:versionId", ...requireCandidateRole, restoreFromVersionHandler);
 router.post("/improve", ...requireCandidateRole, improveResumeHandler);
 router.post("/improve/preview", ...requireCandidateRole, previewImproveResumeHandler);
 router.post("/improve/confirm", ...requireCandidateRole, confirmImproveResumeHandler);

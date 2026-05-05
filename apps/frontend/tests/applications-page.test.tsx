@@ -1521,6 +1521,150 @@ describe('ApplicationsPage status changes filters', () => {
     });
   });
 
+  it('opens candidate profile panel from candidate history action and deep-links URL', async () => {
+    mockedAuthUser.id = 'candidate-1';
+    mockedAuthUser.role = 'candidate';
+    mockedSearchParams.set('candidate_id', 'candidate-1');
+    mockedFetchCandidateApplicationHistory.mockResolvedValue({
+      request_id: 'req-history-profile-open',
+      data: {
+        candidate_id: 'candidate-1',
+        applications: [
+          {
+            application_id: 'app-hist-1',
+            candidate_id: 'c-hist-1',
+            status: 'screening',
+            ai_status: 'completed',
+            job: {
+              id: 'job-1',
+              title: 'Platform Engineer',
+              status: 'active',
+              location: 'Hanoi',
+              category: 'IT',
+            },
+            resume: {
+              id: 'r-1',
+              title: 'Resume One',
+              processing_status: 'ready',
+            },
+            scores: { hybrid_score: 0.82 },
+            submitted_at: '2026-03-22T00:00:00.000Z',
+            updated_at: '2026-03-23T00:00:00.000Z',
+            status_audit: null,
+          },
+        ],
+        pagination: { page: 1, limit: 20, total: 1, total_pages: 1 },
+      },
+    });
+
+    mockedFetchCandidateProfileById.mockResolvedValue({
+      data: {
+        user_id: 'c-hist-1',
+        email: 'hist@example.com',
+        full_name: 'Candidate Hist',
+        role: 'candidate',
+        profile: {
+          headline: 'Hist Engineer',
+          summary: 'History candidate summary.',
+          phone: '',
+          location: '',
+          website: '',
+          portfolio_links: [],
+          skills: ['Node.js'],
+          experience: [],
+          education: [],
+          portfolio: [],
+        },
+        updated_at: '2026-03-23T00:00:00.000Z',
+      },
+    });
+
+    render(<ApplicationsPage />);
+
+    await waitFor(() => {
+      expect(mockedFetchCandidateApplicationHistory).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openProfile' }));
+
+    await waitFor(() => {
+      expect(mockedFetchCandidateProfileById).toHaveBeenCalledWith('c-hist-1');
+      expect(mockedPush).toHaveBeenCalled();
+      const latest = mockedPush.mock.calls[mockedPush.mock.calls.length - 1][0] as string;
+      expect(latest).toContain('candidate_id=');
+      expect(latest).toContain('application_id=app-hist-1');
+      expect(latest).toContain('candidate_focus=1');
+      expect(latest).toContain('flow_ctx=1');
+      expect(screen.getByText('applicationsPage.candidateProfile.title')).toBeInTheDocument();
+    });
+  });
+
+  it('opens candidate profile panel from recruiter status-changes history action and deep-links URL', async () => {
+    mockedAuthUser.id = 'recruiter-1';
+    mockedAuthUser.role = 'recruiter';
+
+    mockedFetchRecentStatusChanges.mockResolvedValue({
+      request_id: 'req-status-profile-open',
+      data: {
+        job: { id: 'job-1', title: 'Backend Engineer' },
+        changes: [
+          {
+            application_id: 'app-sc-1',
+            candidate: {
+              id: 'c-status-1',
+              full_name: 'Status Candidate',
+              email: 'status@example.com',
+            },
+            from_status: 'screening',
+            to_status: 'interview',
+            changed_at: '2026-03-24T00:00:00.000Z',
+            changed_by: 'recruiter@example.com',
+            current_status: 'interview',
+          },
+        ],
+        pagination: { page: 1, limit: 20, total: 1, total_pages: 1 },
+      },
+    });
+
+    mockedFetchCandidateProfileById.mockResolvedValue({
+      data: {
+        user_id: 'c-status-1',
+        email: 'status@example.com',
+        full_name: 'Status Candidate',
+        role: 'candidate',
+        profile: {
+          headline: 'Status Engineer',
+          summary: 'Status history summary text.',
+          phone: '',
+          location: '',
+          website: '',
+          portfolio_links: [],
+          skills: ['Node.js'],
+          experience: [],
+          education: [],
+          portfolio: [],
+        },
+        updated_at: '2026-03-23T00:00:00.000Z',
+      },
+    });
+
+    render(<ApplicationsPage />);
+
+    await loadRecruiterAndWaitStatusChanges('job-1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.statusChanges.profileButton' }));
+
+    await waitFor(() => {
+      expect(mockedFetchCandidateProfileById).toHaveBeenCalledWith('c-status-1');
+      const latest = mockedPush.mock.calls[mockedPush.mock.calls.length - 1][0] as string;
+      expect(latest).toContain('job_id=job-1');
+      expect(latest).toContain('application_id=app-sc-1');
+      expect(latest).toContain('sc_open=1');
+      expect(latest).toContain('flow_ctx=1');
+      expect(screen.getByText('applicationsPage.candidateProfile.title')).toBeInTheDocument();
+    });
+  });
+
   it('syncs and clears feedback panel flag in query from ranked candidate actions', async () => {
     render(<ApplicationsPage />);
 

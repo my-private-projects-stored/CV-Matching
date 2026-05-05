@@ -5,6 +5,17 @@ import User from "../models/User.js";
 const MAX_TEXT = 500;
 const MAX_LONG_TEXT = 5000;
 
+// Guardrail limits
+const MAX_EXPERIENCE_ITEMS = 20;
+const MAX_EDUCATION_ITEMS = 20;
+const MAX_PORTFOLIO_ITEMS = 50;
+const MAX_HEADLINE_LENGTH = 200;
+const MIN_SUMMARY_LENGTH = 20;
+const MAX_SUMMARY_LENGTH = MAX_LONG_TEXT;
+const MAX_EDUCATION_TEXT_LENGTH = 200;
+const MAX_PORTFOLIO_DESCRIPTION_LENGTH = 1000;
+const MAX_PORTFOLIO_URL_LENGTH = MAX_LONG_TEXT;
+
 function createHttpError(statusCode, message, errorCode) {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -79,6 +90,121 @@ function sanitizeCandidateProfile(input = {}) {
     education: normalizeEducation(input.education),
     portfolio: normalizePortfolio(input.portfolio),
   };
+}
+
+function validateCandidateProfileInput(input = {}) {
+  // Validate counts
+  if (Array.isArray(input.experience) && input.experience.length > MAX_EXPERIENCE_ITEMS) {
+    throw createHttpError(
+      400,
+      `Too many experience items: max ${MAX_EXPERIENCE_ITEMS}`,
+      'candidate_profile_too_many_experience_items'
+    );
+  }
+
+  if (Array.isArray(input.education) && input.education.length > MAX_EDUCATION_ITEMS) {
+    throw createHttpError(
+      400,
+      `Too many education items: max ${MAX_EDUCATION_ITEMS}`,
+      'candidate_profile_too_many_education_items'
+    );
+  }
+
+  if (Array.isArray(input.portfolio) && input.portfolio.length > MAX_PORTFOLIO_ITEMS) {
+    throw createHttpError(
+      400,
+      `Too many portfolio items: max ${MAX_PORTFOLIO_ITEMS}`,
+      'candidate_profile_too_many_portfolio_items'
+    );
+  }
+
+  // Headline length
+  if (String(input.headline || '').trim().length > MAX_HEADLINE_LENGTH) {
+    throw createHttpError(400, 'Headline too long', 'candidate_profile_headline_too_long');
+  }
+
+  // Summary length (too short or too long)
+  const summaryLen = String(input.summary || '').trim().length;
+  if (summaryLen > 0 && summaryLen < MIN_SUMMARY_LENGTH) {
+    throw createHttpError(400, 'Summary too short', 'candidate_profile_summary_too_short');
+  }
+  if (summaryLen > MAX_SUMMARY_LENGTH) {
+    throw createHttpError(400, 'Summary too long', 'candidate_profile_summary_too_long');
+  }
+
+  // Per-item length checks (experience summary)
+  if (Array.isArray(input.experience)) {
+    for (const item of input.experience) {
+      if (String(item?.summary || '').trim().length > MAX_LONG_TEXT) {
+        throw createHttpError(
+          400,
+          'Experience summary too long',
+          'candidate_profile_experience_summary_too_long'
+        );
+      }
+    }
+  }
+
+  // Per-item length checks (education)
+  if (Array.isArray(input.education)) {
+    for (const item of input.education) {
+      if (String(item?.school || '').trim().length > MAX_EDUCATION_TEXT_LENGTH) {
+        throw createHttpError(
+          400,
+          'Education school too long',
+          'candidate_profile_education_school_too_long'
+        );
+      }
+      if (String(item?.degree || '').trim().length > MAX_EDUCATION_TEXT_LENGTH) {
+        throw createHttpError(
+          400,
+          'Education degree too long',
+          'candidate_profile_education_degree_too_long'
+        );
+      }
+      if (String(item?.field || '').trim().length > MAX_EDUCATION_TEXT_LENGTH) {
+        throw createHttpError(
+          400,
+          'Education field too long',
+          'candidate_profile_education_field_too_long'
+        );
+      }
+      if (String(item?.summary || '').trim().length > MAX_LONG_TEXT) {
+        throw createHttpError(
+          400,
+          'Education summary too long',
+          'candidate_profile_education_summary_too_long'
+        );
+      }
+    }
+  }
+
+  // Per-item length checks (portfolio)
+  if (Array.isArray(input.portfolio)) {
+    for (const item of input.portfolio) {
+      if (String(item?.name || '').trim().length > 200) {
+        throw createHttpError(
+          400,
+          'Portfolio name too long',
+          'candidate_profile_portfolio_name_too_long'
+        );
+      }
+      if (String(item?.url || '').trim().length > MAX_PORTFOLIO_URL_LENGTH) {
+        throw createHttpError(
+          400,
+          'Portfolio url too long',
+          'candidate_profile_portfolio_url_too_long'
+        );
+      }
+      if (String(item?.description || '').trim().length > MAX_PORTFOLIO_DESCRIPTION_LENGTH) {
+        throw createHttpError(
+          400,
+          'Portfolio description too long',
+          'candidate_profile_portfolio_description_too_long'
+        );
+      }
+    }
+  }
 }
 
 function toCandidateProfileDto(user) {
@@ -156,6 +282,7 @@ export async function getCandidateProfileById(candidateUserId) {
 
 export async function updateMyCandidateProfile(userId, input = {}) {
   const user = await loadCandidateUser(userId);
+  validateCandidateProfileInput(input);
   user.candidateProfile = sanitizeCandidateProfile(input);
   await user.save();
   return toCandidateProfileDto(user);

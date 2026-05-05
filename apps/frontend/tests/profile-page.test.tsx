@@ -47,7 +47,7 @@ describe('ProfilePage', () => {
         role: 'candidate',
         profile: {
           headline: 'Frontend Engineer',
-          summary: 'Build UI systems.',
+          summary: 'Build scalable UI systems for enterprise apps.',
           phone: '555-0101',
           location: 'Hanoi',
           website: 'https://example.com',
@@ -69,7 +69,7 @@ describe('ProfilePage', () => {
         role: 'candidate',
         profile: {
           headline: 'Senior Frontend Engineer',
-          summary: 'Build UI systems.',
+          summary: 'Build scalable UI systems for enterprise apps.',
           phone: '555-0101',
           location: 'Hanoi',
           website: 'https://example.com',
@@ -183,7 +183,7 @@ describe('ProfilePage', () => {
     await waitFor(() => {
       expect(mockedUpdateMyCandidateProfile).toHaveBeenCalledWith({
         headline: 'Senior Frontend Engineer',
-        summary: 'Build UI systems.',
+        summary: 'Build scalable UI systems for enterprise apps.',
         phone: '555-0101',
         location: 'Hanoi',
         website: 'https://example.com',
@@ -221,6 +221,55 @@ describe('ProfilePage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('profile.saveSuccess')).toBeInTheDocument();
+    });
+  });
+
+  it('shows validation errors and prevents save when headline missing or summary too short', async () => {
+    mockedFetchMyCandidateProfile.mockResolvedValue({
+      data: {
+        user_id: 'candidate-1',
+        profile: {
+          headline: '',
+          summary: '',
+          phone: '',
+          location: '',
+          website: '',
+          portfolio_links: [],
+          skills: [],
+          experience: [],
+          education: [],
+          portfolio: [],
+        },
+      },
+    });
+
+    render(<ProfilePage />);
+
+    await waitFor(() => {
+      expect(mockedFetchMyCandidateProfile).toHaveBeenCalled();
+    });
+
+    // Attempt to save with empty headline
+    fireEvent.click(screen.getByRole('button', { name: 'profile.saveAction' }));
+
+    await waitFor(() => {
+      expect(mockedUpdateMyCandidateProfile).not.toHaveBeenCalled();
+      expect(screen.getByText('profile.errors.headlineRequired')).toBeInTheDocument();
+    });
+
+    // Fill headline but short summary
+    fireEvent.change(screen.getByPlaceholderText('profile.headlinePlaceholder'), {
+      target: { value: 'Short Headline' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('profile.summaryPlaceholder'), {
+      target: { value: 'too short' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'profile.saveAction' }));
+
+    await waitFor(() => {
+      expect(mockedUpdateMyCandidateProfile).not.toHaveBeenCalled();
+      expect(screen.getByText('profile.errors.summaryTooShort')).toBeInTheDocument();
     });
   });
 });

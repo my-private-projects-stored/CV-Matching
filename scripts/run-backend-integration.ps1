@@ -1,3 +1,8 @@
+## Script parameters
+param(
+    [string]$TestDbName = "it"
+)
+
 $ErrorActionPreference = "Stop"
 
 Set-Location "$PSScriptRoot\..\apps\backend"
@@ -57,6 +62,33 @@ function Resolve-FirstReachableMongoUri {
     return $null
 }
 
+function Normalize-MongoUriForIntegration {
+    param(
+        [string]$Uri,
+        [string]$DatabaseName = "it"
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Uri)) {
+        return $Uri
+    }
+
+    try {
+        $env:__CVM_MONGO_URI_RAW = $Uri
+        $env:__CVM_MONGO_DB_NAME = $DatabaseName
+        $normalized = & node -e "const raw = process.env.__CVM_MONGO_URI_RAW; const db = process.env.__CVM_MONGO_DB_NAME || 'it'; const url = new URL(raw); url.pathname = '/' + db; process.stdout.write(url.toString());"
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($normalized)) {
+            return $normalized.Trim()
+        }
+    } catch {
+        Write-Warning "Failed to normalize Mongo URI for integration DB name; using resolved URI as-is. $_"
+    } finally {
+        Remove-Item Env:__CVM_MONGO_URI_RAW -ErrorAction SilentlyContinue
+        Remove-Item Env:__CVM_MONGO_DB_NAME -ErrorAction SilentlyContinue
+    }
+
+    return $Uri
+}
+
 $mongoUriFromEnv = if (-not [string]::IsNullOrWhiteSpace($env:MONGO_URI)) { $env:MONGO_URI } else { $null }
 $workspaceRoot = Resolve-Path "$PSScriptRoot\.."
 $rootDotEnvPath = Join-Path $workspaceRoot ".env"
@@ -73,16 +105,20 @@ if ([string]::IsNullOrWhiteSpace($mongoRootPassword)) {
     $mongoRootPassword = "admin123"
 }
 
-$mongoUriFromComposeDefaults = "mongodb://$mongoRootUsername`:$mongoRootPassword@127.0.0.1:27017/?authSource=admin"
+$mongoUriFromComposeDefaults = "mongodb://$mongoRootUsername`:$mongoRootPassword@localhost:27017/?authSource=admin"
 $mongoUriFromBackendDotEnv = Get-EnvValueFromFile -FilePath $backendDotEnvPath -Key "MONGO_URI"
+$mongoUriNoAuthLocalhost = "mongodb://localhost:27017"
+$mongoUriNoAuthLocalhostDb = "mongodb://localhost:27017/it"
 $mongoUriNoAuthLocal = "mongodb://127.0.0.1:27017"
 $mongoUriNoAuthLocalDb = "mongodb://127.0.0.1:27017/cv_matching_db"
 
 $mongoUriCandidates = @(
+    $mongoUriFromComposeDefaults,
     $env:MONGO_URI_TEST,
     $mongoUriFromEnv,
-    $mongoUriFromComposeDefaults,
     $mongoUriFromBackendDotEnv,
+    $mongoUriNoAuthLocalhost,
+    $mongoUriNoAuthLocalhostDb,
     $mongoUriNoAuthLocal,
     $mongoUriNoAuthLocalDb
 ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
@@ -93,6 +129,14 @@ $resolvedMongoUri = Resolve-FirstReachableMongoUri -Candidates $mongoUriCandidat
 if (-not $resolvedMongoUri) {
     throw "Could not connect to Mongo with any known URI candidate."
 }
+
+$TestDbName = if ($TestDbName) { $TestDbName } else { "it" }
+if ($TestDbName.Length -gt 60) {
+    Write-Warning "Provided test DB name is too long for Mongo namespaces; truncating to 60 chars."
+    $TestDbName = $TestDbName.Substring(0,60)
+}
+
+$resolvedMongoUri = Normalize-MongoUriForIntegration -Uri $resolvedMongoUri -DatabaseName $TestDbName
 
 $env:MONGO_URI_TEST = $resolvedMongoUri
 $env:MONGO_URI = $resolvedMongoUri

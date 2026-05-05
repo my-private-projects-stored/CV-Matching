@@ -79,6 +79,10 @@ test(
       assert.equal(statusBefore.status, 200);
       assert.equal(statusBefore.json?.database_stats?.total_jobs, 0);
 
+      const languageGetPublic = await requestJson(baseUrl, "GET", "/config/language");
+      assert.equal(languageGetPublic.status, 200);
+      assert.equal(languageGetPublic.json?.ui_language, "en");
+
       const featureGet = await requestJson(baseUrl, "GET", "/config/features", undefined, recruiterToken);
       assert.equal(featureGet.status, 200);
       assert.equal(featureGet.json?.enable_cover_letter, false);

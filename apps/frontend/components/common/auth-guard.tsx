@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 
 import { useAuth } from '@/lib/context/auth-context';
 
-const PUBLIC_PATHS = new Set(['/','/login', '/signup']);
+const PUBLIC_PATHS = new Set(['/', '/login', '/signup', '/forgot-password', '/reset-password']);
 
 function canAccessPath(pathname: string, role?: string): boolean {
   const normalizedRole = String(role || '').toLowerCase();

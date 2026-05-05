@@ -5,13 +5,35 @@ import {
   enhanceResumeDescriptions,
   regenerateResumeItems,
 } from "../services/enrichment.service.js";
-import { assertAiGenerationAllowed } from "../services/config.service.js";
+import { assertAiGenerationAllowed, getLanguageConfig } from "../services/config.service.js";
+
+const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi"]);
+
+function resolveOutputLanguage(value, fallback = "en") {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (SUPPORTED_OUTPUT_LANGUAGES.has(normalized)) {
+    return normalized;
+  }
+
+  const fallbackNormalized = String(fallback || "").trim().toLowerCase();
+  if (SUPPORTED_OUTPUT_LANGUAGES.has(fallbackNormalized)) {
+    return fallbackNormalized;
+  }
+
+  return "en";
+}
 
 export async function analyzeResumeHandler(req, res, next) {
   try {
     await assertAiGenerationAllowed("enrichment_analyze");
 
-    const result = await analyzeResumeEnrichment(req.params.resumeId);
+    const configuredLanguage = await getLanguageConfig().catch(() => null);
+    const outputLanguage = resolveOutputLanguage(
+      req.body?.output_language,
+      configuredLanguage?.content_language
+    );
+
+    const result = await analyzeResumeEnrichment(req.params.resumeId, outputLanguage);
     if (!result) {
       return res.status(404).json({ detail: "Resume not found" });
     }
@@ -33,7 +55,13 @@ export async function enhanceResumeHandler(req, res, next) {
       return res.status(400).json({ detail: "resume_id is required" });
     }
 
-    const result = await enhanceResumeDescriptions({ resumeId, answers });
+    const configuredLanguage = await getLanguageConfig().catch(() => null);
+    const outputLanguage = resolveOutputLanguage(
+      req.body?.output_language,
+      configuredLanguage?.content_language
+    );
+
+    const result = await enhanceResumeDescriptions({ resumeId, answers, outputLanguage });
     if (!result) {
       return res.status(404).json({ detail: "Resume not found" });
     }
@@ -69,6 +97,12 @@ export async function regenerateItemsHandler(req, res, next) {
       instruction: String(req.body?.instruction || "").trim(),
     };
 
+    const configuredLanguage = await getLanguageConfig().catch(() => null);
+    const outputLanguage = resolveOutputLanguage(
+      req.body?.output_language,
+      configuredLanguage?.content_language
+    );
+
     if (!payload.resumeId) {
       return res.status(400).json({ detail: "resume_id is required" });
     }
@@ -77,7 +111,7 @@ export async function regenerateItemsHandler(req, res, next) {
       return res.status(400).json({ detail: "No items selected for regeneration" });
     }
 
-    const result = await regenerateResumeItems(payload);
+    const result = await regenerateResumeItems({ ...payload, outputLanguage });
     if (!result) {
       return res.status(404).json({ detail: "Resume not found" });
     }

@@ -41,7 +41,7 @@ type PageProps = {
 /**
  * Parse header font family
  */
-function parseHeaderFont(value: string | undefined): HeaderFontFamily {
+export function parseHeaderFont(value: string | undefined): HeaderFontFamily {
   if (value === 'serif' || value === 'sans-serif' || value === 'mono') {
     return value;
   }
@@ -51,7 +51,7 @@ function parseHeaderFont(value: string | undefined): HeaderFontFamily {
 /**
  * Parse body font family
  */
-function parseBodyFont(value: string | undefined): BodyFontFamily {
+export function parseBodyFont(value: string | undefined): BodyFontFamily {
   if (value === 'serif' || value === 'sans-serif' || value === 'mono') {
     return value;
   }
@@ -61,7 +61,7 @@ function parseBodyFont(value: string | undefined): BodyFontFamily {
 /**
  * Parse accent color
  */
-function parseAccentColor(value: string | undefined): AccentColor {
+export function parseAccentColor(value: string | undefined): AccentColor {
   if (value === 'blue' || value === 'green' || value === 'orange' || value === 'red') {
     return value;
   }
@@ -71,7 +71,7 @@ function parseAccentColor(value: string | undefined): AccentColor {
 /**
  * Parse boolean from string
  */
-function parseBoolean(value: string | undefined, defaultValue: boolean): boolean {
+export function parseBoolean(value: string | undefined, defaultValue: boolean): boolean {
   if (value === 'true') return true;
   if (value === 'false') return false;
   return defaultValue;
@@ -110,7 +110,7 @@ async function fetchResumeData(id: string): Promise<ResumeData> {
 /**
  * Parse spacing level from string, clamped to valid range 1-5
  */
-function parseSpacingLevel(value: string | undefined, defaultValue: SpacingLevel): SpacingLevel {
+export function parseSpacingLevel(value: string | undefined, defaultValue: SpacingLevel): SpacingLevel {
   if (!value) return defaultValue;
   const num = parseInt(value, 10);
   if (isNaN(num) || num < 1 || num > 5) return defaultValue;
@@ -120,7 +120,7 @@ function parseSpacingLevel(value: string | undefined, defaultValue: SpacingLevel
 /**
  * Parse margin value from string, clamped to valid range 5-25
  */
-function parseMargin(value: string | undefined, defaultValue: number): number {
+export function parseMargin(value: string | undefined, defaultValue: number): number {
   if (!value) return defaultValue;
   const num = parseInt(value, 10);
   if (isNaN(num)) return defaultValue;
@@ -130,7 +130,7 @@ function parseMargin(value: string | undefined, defaultValue: number): number {
 /**
  * Validate template type
  */
-function parseTemplate(value: string | undefined): TemplateType {
+export function parseTemplate(value: string | undefined): TemplateType {
   if (
     value === 'swiss-single' ||
     value === 'swiss-two-column' ||
@@ -145,7 +145,7 @@ function parseTemplate(value: string | undefined): TemplateType {
 /**
  * Validate page size
  */
-function parsePageSize(value: string | undefined): PageSize {
+export function parsePageSize(value: string | undefined): PageSize {
   if (value === 'A4' || value === 'LETTER') {
     return value;
   }

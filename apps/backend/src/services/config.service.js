@@ -326,6 +326,7 @@ export async function updateLlmConfig(input) {
       `Provider ${merged.provider} is not allowed in privacy_mode=${privacyConfig.privacy_mode}`
     );
     err.statusCode = 400;
+    err.error_code = "provider_blocked_by_privacy_mode";
     throw err;
   }
 

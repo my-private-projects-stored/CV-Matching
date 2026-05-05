@@ -12,6 +12,13 @@ function hasOwn(payload, key) {
   return Object.prototype.hasOwnProperty.call(payload, key);
 }
 
+function toBoolean(value) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes";
+}
+
 function normalizeOptionalDate(value) {
   if (value === null || value === undefined || String(value).trim() === "") {
     return null;
@@ -108,7 +115,13 @@ function normalizeJobPayload(payload = {}) {
 function buildJobListFilter(query = {}) {
   const filter = {};
 
-  if (query.status && ["active", "closed"].includes(query.status)) {
+  const includeDeleted = toBoolean(query.includeDeleted ?? query.include_deleted);
+
+  if (!includeDeleted) {
+    filter.status = { $ne: "deleted" };
+  }
+
+  if (query.status && ["active", "closed", "deleted"].includes(query.status)) {
     filter.status = query.status;
   }
 
@@ -195,7 +208,7 @@ export async function createJob(payload) {
     vector = await generateEmbedding(extractJobEmbeddingText(saved));
   }
 
-  if (Array.isArray(vector) && vector.length > 0 && saved.status !== "closed") {
+  if (Array.isArray(vector) && vector.length > 0 && saved.status === "active") {
     await upsertJobVector({
       qdrantId: saved.qdrantId,
       vector,
@@ -248,7 +261,7 @@ export async function updateJobById(jobId, payload) {
   const saved = await job.save();
   const mustRegenerate = shouldRegenerateJobEmbedding(jobData);
 
-  if (saved.status === "closed") {
+  if (saved.status !== "active") {
     await deleteJobVector(saved.qdrantId);
     saved.isAnalyzed = false;
     await saved.save();
@@ -282,14 +295,43 @@ export async function deleteJobById(jobId) {
   const job = await Job.findById(jobId);
   if (!job) return null;
 
+  if (job.status !== "deleted") {
+    const deletedAt = new Date();
+    const statusBefore = job.status;
+
+    job.status = "deleted";
+    job.deletedAt = deletedAt;
+    job.importantChangeHistory = [
+      ...(Array.isArray(job.importantChangeHistory) ? job.importantChangeHistory : []),
+      {
+        changedAt: deletedAt,
+        changedFields: ["status"],
+        changes: [
+          {
+            field: "status",
+            before: statusBefore,
+            after: "deleted",
+          },
+        ],
+        summary: "Soft deleted job",
+      },
+    ].slice(-50);
+
+    await job.save();
+  }
+
   await deleteJobVector(job.qdrantId);
-  await job.deleteOne();
   return job;
 }
 
-export async function getJobById(jobId) {
+export async function getJobById(jobId, options = {}) {
   const job = await Job.findById(jobId).lean();
   if (!job) return null;
+
+  const includeDeleted = Boolean(options.includeDeleted);
+  if (job.status === "deleted" && !includeDeleted) {
+    return null;
+  }
 
   const counts = await getApplicationCountsByJobIds([job._id]);
   return {

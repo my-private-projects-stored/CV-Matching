@@ -50,6 +50,13 @@ const userSchema = new Schema(
       type: Schema.Types.Mixed,
       default: {},
     },
+
+    // Version reset token để đảm bảo token reset mật khẩu chỉ dùng một lần.
+    passwordResetVersion: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true,

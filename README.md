@@ -137,8 +137,15 @@ PowerShell (repo root):
 ./scripts/run-backend-integration.ps1 2>&1 | Out-File -FilePath ./scripts/last-backend-integration.txt -Encoding utf8
 ```
 
+You can override the test database name (default: `it`) when needed, for example to ensure a short Mongo DB name:
+
+```powershell
+./scripts/run-backend-integration.ps1 -TestDbName it 2>&1 | Out-File -FilePath ./scripts/last-backend-integration.txt -Encoding utf8
+```
+
 What this wrapper does:
 - Detects a reachable Mongo URI and exports `MONGO_URI` + `MONGO_URI_TEST`
+- Prefers Docker-mapped Mongo via `localhost` and normalizes integration DB name to `it` to avoid long derived DB-name failures in integration suites
 - Starts required services (`redis`, `qdrant`, `worker-embedding-sbert`) with Docker Compose
 - Bootstraps Qdrant collections
 - Runs backend integration tests in `apps/backend`

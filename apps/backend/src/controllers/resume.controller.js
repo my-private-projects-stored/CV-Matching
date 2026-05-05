@@ -10,9 +10,11 @@ import {
   generateResumePdf,
   generateOutreachContent,
   getResumeByPublicId,
+  getResumeVersionHistory,
   improveResume,
   listResumeSummaries,
   previewResumeImprovement,
+  restoreFromVersion,
   retryResumeProcessing,
   setResumeAsMaster,
   toResumeFetchData,
@@ -162,6 +164,31 @@ export async function getMasterResumeHandler(req, res, next) {
   }
 }
 
+export async function getResumeHistoryHandler(req, res, next) {
+  try {
+    const resume = await getResumeByPublicId(req.params.id);
+    if (!resume) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    if (isCandidateRole(req) && !isOwnedByActor(resume, req)) {
+      return res.status(403).json({ message: "You can only access your own resume" });
+    }
+
+    const result = await getResumeVersionHistory(req.params.id);
+    if (!result) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    return res.status(200).json({
+      request_id: requestId(),
+      data: result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 export async function setMasterResumeHandler(req, res, next) {
   try {
     if (isCandidateRole(req)) {
@@ -184,6 +211,41 @@ export async function setMasterResumeHandler(req, res, next) {
       request_id: requestId(),
       message: "Master resume updated successfully",
       data: toResumeSummary(updated),
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function restoreFromVersionHandler(req, res, next) {
+  try {
+    const resumeId = req.params.id;
+    const versionId = req.params.versionId;
+
+    if (!resumeId || !versionId) {
+      return res.status(400).json({ message: "Resume ID and version ID are required" });
+    }
+
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(resumeId);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only restore your own resume" });
+      }
+    }
+
+    const restored = await restoreFromVersion(resumeId, versionId);
+    if (!restored) {
+      return res.status(404).json({ message: "Resume or version not found" });
+    }
+
+    return res.status(200).json({
+      request_id: requestId(),
+      message: "Resume restored successfully",
+      data: toResumeSummary(restored),
     });
   } catch (error) {
     return next(error);
@@ -285,7 +347,13 @@ export async function previewImproveResumeHandler(req, res, next) {
       }
     }
 
-    const result = await previewResumeImprovement(resumeId, jobId);
+    const configuredLanguage = await getLanguageConfig().catch(() => null);
+    const outputLanguage = resolveOutputLanguage(
+      req.body?.output_language,
+      configuredLanguage?.content_language
+    );
+
+    const result = await previewResumeImprovement(resumeId, jobId, outputLanguage);
     if (!result) {
       return res.status(404).json({ message: "Resume or job description not found" });
     }
@@ -320,11 +388,18 @@ export async function confirmImproveResumeHandler(req, res, next) {
       }
     }
 
+    const configuredLanguage = await getLanguageConfig().catch(() => null);
+    const outputLanguage = resolveOutputLanguage(
+      req.body?.output_language,
+      configuredLanguage?.content_language
+    );
+
     const result = await confirmResumeImprovement({
       resumeId,
       jobId,
       improvedData,
       improvements,
+      outputLanguage,
     });
 
     if (!result) {
@@ -359,7 +434,13 @@ export async function improveResumeHandler(req, res, next) {
       }
     }
 
-    const result = await improveResume(resumeId, jobId);
+    const configuredLanguage = await getLanguageConfig().catch(() => null);
+    const outputLanguage = resolveOutputLanguage(
+      req.body?.output_language,
+      configuredLanguage?.content_language
+    );
+
+    const result = await improveResume(resumeId, jobId, outputLanguage);
     if (!result) {
       return res.status(404).json({ message: "Resume or job description not found" });
     }

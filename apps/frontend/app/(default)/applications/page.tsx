@@ -1396,6 +1396,19 @@ export default function ApplicationsPage() {
     }, 0);
   }, []);
 
+  const openCandidateProfileFromStatusChanges = useCallback(
+    async (candidateId: string | null, applicationId: string) => {
+      const params = sanitizeFlowReturnSnapshot(searchParams);
+      setOrDeleteQueryParam(params, 'job_id', jobId.trim());
+      setOrDeleteQueryParam(params, 'application_id', applicationId);
+      setOrDeleteQueryParam(params, 'sc_open', '1');
+      setOrDeleteQueryParam(params, 'flow_ctx', '1');
+      router.push(buildPathWithQuery(pathname || '/applications', params));
+      await openCandidateProfile(candidateId, applicationId);
+    },
+    [jobId, openCandidateProfile, pathname, router, searchParams]
+  );
+
   const handleExportStatusChanges = useCallback(async () => {
     if (!jobId.trim()) {
       setError(t('applicationsPage.errors.jobIdRequired'));
@@ -2085,6 +2098,21 @@ export default function ApplicationsPage() {
                       date: new Date(item.changed_at).toLocaleString(),
                     })}
                   </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!item.candidate.id || isLoadingCandidateProfile}
+                      onClick={() =>
+                        void openCandidateProfileFromStatusChanges(
+                          item.candidate.id,
+                          item.application_id
+                        )
+                      }
+                    >
+                      {t('applicationsPage.statusChanges.profileButton')}
+                    </Button>
+                  </div>
                 </div>
               ))
             ) : (
@@ -2413,6 +2441,23 @@ export default function ApplicationsPage() {
                     }
                   >
                     {t('applicationsPage.candidateHistory.openJobInBoard')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Deep-link and open candidate profile for shareable URL
+                      setCandidateFocusEnabled(true);
+                      const params = sanitizeFlowReturnSnapshot(searchParams);
+                      setOrDeleteQueryParam(params, 'candidate_id', item.candidate_id || '');
+                      setOrDeleteQueryParam(params, 'application_id', item.application_id || '');
+                      setOrDeleteQueryParam(params, 'candidate_focus', '1');
+                      setOrDeleteQueryParam(params, 'flow_ctx', '1');
+                      router.push(buildPathWithQuery(pathname || '/applications', params));
+                      void openCandidateProfile(item.candidate_id || null, item.application_id);
+                    }}
+                  >
+                    {t('applicationsPage.candidateHistory.openProfile')}
                   </Button>
                   <Button
                     variant="outline"

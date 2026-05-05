@@ -158,6 +158,119 @@ test(
         recruiterToken
       );
       assert.equal(recruiterForbidden.status, 403);
+
+      // Guardrail: too many experience items should be rejected with explicit error_code
+      const manyExperience = Array.from({ length: 30 }).map((_, i) => ({
+        title: `Title ${i}`,
+        company: `Co ${i}`,
+        summary: 'Valid summary',
+      }));
+
+      const tooManyExp = await requestJson(
+        baseUrl,
+        "PUT",
+        "/candidate-profile/me",
+        { experience: manyExperience },
+        candidateToken
+      );
+      assert.equal(tooManyExp.status, 400);
+      assert.equal(tooManyExp.json?.error_code, 'candidate_profile_too_many_experience_items');
+
+      // Guardrail: too long summary should be rejected with explicit error_code
+      const longSummary = 'x'.repeat(6000);
+      const tooLongSummary = await requestJson(
+        baseUrl,
+        "PUT",
+        "/candidate-profile/me",
+        { summary: longSummary },
+        candidateToken
+      );
+      assert.equal(tooLongSummary.status, 400);
+      assert.equal(tooLongSummary.json?.error_code, 'candidate_profile_summary_too_long');
+
+      // Guardrail: too many education items should be rejected with explicit error_code
+      const manyEducation = Array.from({ length: 30 }).map((_, i) => ({
+        school: `School ${i}`,
+        degree: `Degree ${i}`,
+        field: `Field ${i}`,
+      }));
+
+      const tooManyEducation = await requestJson(
+        baseUrl,
+        "PUT",
+        "/candidate-profile/me",
+        { education: manyEducation },
+        candidateToken
+      );
+      assert.equal(tooManyEducation.status, 400);
+      assert.equal(
+        tooManyEducation.json?.error_code,
+        'candidate_profile_too_many_education_items'
+      );
+
+      // Guardrail: too many portfolio items should be rejected with explicit error_code
+      const manyPortfolio = Array.from({ length: 60 }).map((_, i) => ({
+        name: `Portfolio ${i}`,
+        url: `https://example.com/${i}`,
+      }));
+
+      const tooManyPortfolio = await requestJson(
+        baseUrl,
+        "PUT",
+        "/candidate-profile/me",
+        { portfolio: manyPortfolio },
+        candidateToken
+      );
+      assert.equal(tooManyPortfolio.status, 400);
+      assert.equal(
+        tooManyPortfolio.json?.error_code,
+        'candidate_profile_too_many_portfolio_items'
+      );
+
+      // Guardrail: too long education summary should be rejected with explicit error_code
+      const educationSummaryTooLong = await requestJson(
+        baseUrl,
+        "PUT",
+        "/candidate-profile/me",
+        {
+          education: [
+            {
+              school: 'State University',
+              degree: 'BSc',
+              field: 'CS',
+              summary: 'x'.repeat(6000),
+            },
+          ],
+        },
+        candidateToken
+      );
+      assert.equal(educationSummaryTooLong.status, 400);
+      assert.equal(
+        educationSummaryTooLong.json?.error_code,
+        'candidate_profile_education_summary_too_long'
+      );
+
+      // Guardrail: too long portfolio description should be rejected with explicit error_code
+      const portfolioDescriptionTooLong = await requestJson(
+        baseUrl,
+        "PUT",
+        "/candidate-profile/me",
+        {
+          portfolio: [
+            {
+              name: 'Main Portfolio',
+              url: 'https://portfolio.example.com',
+              description: 'x'.repeat(1200),
+            },
+          ],
+        },
+        candidateToken
+      );
+      assert.equal(portfolioDescriptionTooLong.status, 400);
+      assert.equal(
+        portfolioDescriptionTooLong.json?.error_code,
+        'candidate_profile_portfolio_description_too_long'
+      );
     } finally {
       await new Promise((resolve, reject) => {
         server.close((error) => {

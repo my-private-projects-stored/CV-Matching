@@ -2,10 +2,12 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 import User from "../models/User.js";
+import { sendPasswordResetEmail } from "./mailer.service.js";
 
 const AUTH_ROLES = new Set(["candidate", "recruiter", "admin"]);
 const DEFAULT_ACCESS_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const DEFAULT_RESET_EXPIRES_IN = process.env.JWT_RESET_EXPIRES_IN || "30m";
+const DEFAULT_APP_BASE_URL = process.env.APP_BASE_URL || process.env.FRONTEND_URL || "http://localhost:3000";
 const PASSWORD_MIN_LENGTH = 8;
 
 function createHttpError(statusCode, message) {
@@ -76,10 +78,32 @@ function signResetToken(user) {
       sub: String(user._id),
       email: user.email,
       type: "reset-password",
+      prv: Number(user.passwordResetVersion || 0),
     },
     getJwtSecret(),
     { expiresIn: DEFAULT_RESET_EXPIRES_IN }
   );
+}
+
+function buildResetPasswordLink(token) {
+  const url = new URL("/reset-password", DEFAULT_APP_BASE_URL);
+  url.searchParams.set("token", token);
+  return url.toString();
+}
+
+function buildResetEmail(user, token) {
+  const resetLink = buildResetPasswordLink(token);
+
+  return {
+    to: user.email,
+    subject: "Reset your password",
+    reset_link: resetLink,
+    text: [
+      "We received a request to reset your password.",
+      `Use this link to continue: ${resetLink}`,
+      "If you did not request this change, you can ignore this message.",
+    ].join("\n\n"),
+  };
 }
 
 export function verifyAccessToken(token) {
@@ -100,7 +124,10 @@ function verifyResetToken(token) {
   if (!payload || payload.type !== "reset-password" || !payload.sub) {
     throw createHttpError(400, "Invalid reset token");
   }
-  return String(payload.sub);
+  return {
+    userId: String(payload.sub),
+    resetVersion: Number(payload.prv || 0),
+  };
 }
 
 export async function signupUser(input = {}) {
@@ -182,8 +209,11 @@ export async function requestPasswordReset(input = {}) {
     return response;
   }
 
-  if (process.env.NODE_ENV !== "production") {
-    response.reset_token = signResetToken(user);
+  const resetToken = signResetToken(user);
+  await sendPasswordResetEmail(buildResetEmail(user, resetToken));
+
+  if (process.env.NODE_ENV === "test" || process.env.AUTH_DEBUG_RESET_TOKEN === "1") {
+    response.reset_token = resetToken;
   }
 
   return response;
@@ -197,19 +227,24 @@ export async function resetPassword(input = {}) {
     throw createHttpError(400, "Reset token is required");
   }
 
-  let userId;
+  let tokenPayload;
   try {
-    userId = verifyResetToken(token);
+    tokenPayload = verifyResetToken(token);
   } catch {
     throw createHttpError(400, "Invalid or expired reset token");
   }
 
-  const user = await User.findById(userId);
+  const user = await User.findById(tokenPayload.userId);
   if (!user) {
     throw createHttpError(404, "User not found");
   }
 
+  if (Number(user.passwordResetVersion || 0) !== Number(tokenPayload.resetVersion || 0)) {
+    throw createHttpError(400, "Invalid or expired reset token");
+  }
+
   user.password = await bcrypt.hash(nextPassword, 10);
+  user.passwordResetVersion = Number(user.passwordResetVersion || 0) + 1;
   await user.save();
 
   return { message: "Password has been reset successfully" };
@@ -239,6 +274,7 @@ export async function changePassword(input = {}) {
   }
 
   user.password = await bcrypt.hash(nextPassword, 10);
+  user.passwordResetVersion = Number(user.passwordResetVersion || 0) + 1;
   await user.save();
 
   return { message: "Password updated successfully" };

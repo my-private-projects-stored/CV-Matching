@@ -4,7 +4,7 @@ import { type TemplateSettings } from '@/lib/types/template-settings';
 import type { SupportedLanguage } from '@/lib/api/config';
 import { type Locale } from '@/i18n/config';
 import { logError } from '@/lib/utils/logger';
-import { API_BASE, apiPost, apiPatch, apiDelete, apiFetch } from './client';
+import { API_BASE, apiPost, apiPatch, apiPut, apiDelete, apiFetch } from './client';
 import { buildApiClientError } from './error';
 
 async function assertOk(res: Response, fallbackMessagePrefix: string): Promise<void> {
@@ -74,6 +74,8 @@ interface ResumeResponse {
     cover_letter?: string | null;
     outreach_message?: string | null;
     parent_id?: string | null; // For determining if resume is tailored
+    restored_from_version_id?: string | null;
+    restored_at?: string | null;
     title?: string | null;
   };
 }
@@ -111,12 +113,25 @@ export interface ResumeListItem {
   filename: string | null;
   is_master: boolean;
   parent_id: string | null;
+  restored_from_version_id?: string | null;
+  restored_at?: string | null;
   processing_status: 'pending' | 'processing' | 'ready' | 'failed';
   created_at: string;
   updated_at: string;
   title?: string | null;
   // Optional lightweight snippet of associated job description (populated client-side)
   jobSnippet?: string;
+}
+
+export interface ResumeHistoryResponse {
+  request_id: string;
+  data: {
+    resume_id: string;
+    candidate_id: string | null;
+    root_resume_id: string;
+    current_resume_id: string;
+    versions: ResumeListItem[];
+  };
 }
 
 interface ResumeSummaryResponse {
@@ -235,10 +250,25 @@ export async function fetchMasterResume(candidateId?: string): Promise<ResumeLis
   return payload.data;
 }
 
+export async function fetchResumeHistory(resumeId: string): Promise<ResumeHistoryResponse['data']> {
+  const res = await apiFetch(`/resumes/${encodeURIComponent(resumeId)}/history`);
+  await assertOk(res, 'Failed to load resume history');
+  const payload = (await res.json()) as ResumeHistoryResponse;
+  return payload.data;
+}
+
 export async function setResumeAsMaster(resumeId: string): Promise<ResumeListItem> {
   const normalizedId = normalizeResumeId(resumeId);
   const res = await apiPost(`/resumes/${encodeURIComponent(normalizedId)}/set-as-master`, {});
   await assertOk(res, 'Failed to set master resume');
+
+  const payload = (await res.json()) as ResumeSummaryResponse;
+  return payload.data;
+}
+
+export async function restoreResumeVersion(resumeId: string, versionId: string): Promise<ResumeListItem> {
+  const res = await apiPut(`/resumes/${encodeURIComponent(resumeId)}/restore/${encodeURIComponent(versionId)}`, {});
+  await assertOk(res, 'Failed to restore resume version');
 
   const payload = (await res.json()) as ResumeSummaryResponse;
   return payload.data;

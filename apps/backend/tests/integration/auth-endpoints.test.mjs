@@ -3,10 +3,14 @@ import assert from "node:assert/strict";
 
 import "dotenv/config";
 
+process.env.NODE_ENV = "test";
+
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
 
 import app from "../../src/app.js";
 import User from "../../src/models/User.js";
+import { installMockMailer } from "../helpers/mock-mailer.mjs";
 
 const RUN_INTEGRATION = process.env.RUN_INTEGRATION_TESTS === "1";
 
@@ -46,6 +50,7 @@ test(
   "auth endpoints contract: signup/login/me/change-password/forgot-reset",
   { skip: !RUN_INTEGRATION },
   async () => {
+    const mailerHarness = installMockMailer();
     const mongoUri = getTestMongoUri();
     await mongoose.connect(mongoUri);
     await User.deleteMany({});
@@ -129,7 +134,50 @@ test(
         forgotPassword.json?.message,
         "If the account exists, a reset instruction has been generated"
       );
-      assert.ok(forgotPassword.json?.reset_token);
+      assert.equal(mailerHarness.mockMailer.sentMessages.length, 1);
+      assert.equal(mailerHarness.mockMailer.sentMessages[0].to, "candidate.auth@example.com");
+      assert.equal(mailerHarness.mockMailer.sentMessages[0].subject, "Reset your password");
+      assert.match(mailerHarness.mockMailer.sentMessages[0].reset_link, /\/reset-password\?token=/);
+      const resetTokenFromEmail = new URL(mailerHarness.mockMailer.sentMessages[0].reset_link).searchParams.get("token");
+      assert.ok(resetTokenFromEmail);
+
+      const forgotPasswordUnknownAccount = await requestJson(baseUrl, "POST", "/auth/forgot-password", {
+        email: "unknown.candidate.auth@example.com",
+      });
+      assert.equal(forgotPasswordUnknownAccount.status, 200);
+      assert.equal(
+        forgotPasswordUnknownAccount.json?.message,
+        "If the account exists, a reset instruction has been generated"
+      );
+      assert.equal(mailerHarness.mockMailer.sentMessages.length, 1);
+
+      const changePasswordAfterForgot = await requestJson(
+        baseUrl,
+        "POST",
+        "/auth/change-password",
+        {
+          current_password: "NewStrongPass123",
+          new_password: "AnotherStrongPass123",
+        },
+        accessToken
+      );
+      assert.equal(changePasswordAfterForgot.status, 200);
+
+      const resetAfterPasswordChange = await requestJson(baseUrl, "POST", "/auth/reset-password", {
+        token: resetTokenFromEmail,
+        new_password: "ResetPass123",
+      });
+      assert.equal(resetAfterPasswordChange.status, 400);
+
+      const forgotPasswordAfterPasswordChange = await requestJson(baseUrl, "POST", "/auth/forgot-password", {
+        email: "candidate.auth@example.com",
+      });
+      assert.equal(forgotPasswordAfterPasswordChange.status, 200);
+      assert.equal(mailerHarness.mockMailer.sentMessages.length, 2);
+      const resetTokenAfterPasswordChange = new URL(
+        mailerHarness.mockMailer.sentMessages[1].reset_link
+      ).searchParams.get("token");
+      assert.ok(resetTokenAfterPasswordChange);
 
       const resetBadToken = await requestJson(baseUrl, "POST", "/auth/reset-password", {
         token: "invalid-token",
@@ -138,10 +186,33 @@ test(
       assert.equal(resetBadToken.status, 400);
 
       const resetPassword = await requestJson(baseUrl, "POST", "/auth/reset-password", {
-        token: forgotPassword.json?.reset_token,
+        token: resetTokenAfterPasswordChange,
         new_password: "ResetPass123",
       });
       assert.equal(resetPassword.status, 200);
+
+      const resetReuse = await requestJson(baseUrl, "POST", "/auth/reset-password", {
+        token: resetTokenAfterPasswordChange,
+        new_password: "ResetPass456",
+      });
+      assert.equal(resetReuse.status, 400);
+
+      const expiredToken = jwt.sign(
+        {
+          sub: String(signup.json?.user?.id),
+          email: "candidate.auth@example.com",
+          type: "reset-password",
+          prv: 999,
+        },
+        process.env.JWT_SECRET || "dev-only-jwt-secret-change-me",
+        { expiresIn: -10 }
+      );
+
+      const resetExpiredToken = await requestJson(baseUrl, "POST", "/auth/reset-password", {
+        token: expiredToken,
+        new_password: "ResetPass789",
+      });
+      assert.equal(resetExpiredToken.status, 400);
 
       const loginAfterReset = await requestJson(baseUrl, "POST", "/auth/login", {
         email: "candidate.auth@example.com",
@@ -149,6 +220,7 @@ test(
       });
       assert.equal(loginAfterReset.status, 200);
     } finally {
+      mailerHarness.reset();
       await new Promise((resolve, reject) => {
         server.close((error) => {
           if (error) {
