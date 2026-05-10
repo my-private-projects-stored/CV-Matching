@@ -279,14 +279,17 @@ export default function ProfilePage() {
 
   if (!isCandidate) {
     return (
-      <section className="min-h-screen bg-[#F0F0E8] p-6 md:p-10">
-        <Card variant="outline" className="max-w-2xl mx-auto">
+      <section className="space-y-8">
+        <Card variant="outline" className="mx-auto max-w-2xl bg-white">
           <CardHeader>
             <CardTitle>{t('profile.notCandidateTitle')}</CardTitle>
             <CardDescription>{t('profile.notCandidateDescription')}</CardDescription>
           </CardHeader>
           <div className="px-6 pb-6">
-            <Link href="/dashboard" className="text-blue-700 underline font-mono text-xs uppercase">
+            <Link
+              href="/dashboard"
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--primary)] underline"
+            >
               {t('nav.backToDashboard')}
             </Link>
           </div>
@@ -296,21 +299,36 @@ export default function ProfilePage() {
   }
 
   return (
-    <section className="min-h-screen bg-[#F0F0E8] p-6 md:p-10">
-      <Card variant="outline" className="max-w-3xl mx-auto">
-        <CardHeader>
-          <CardTitle>{t('profile.title')}</CardTitle>
-          <CardDescription>{t('profile.description')}</CardDescription>
-        </CardHeader>
+    <section className="space-y-8">
+      <div className="mx-auto max-w-4xl space-y-8">
+        <div className="rounded-3xl border border-[color:var(--border)] bg-white px-6 py-5 shadow-[0_18px_34px_rgba(15,27,45,0.12)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--text-subtle)]">
+            Hồ sơ ứng viên
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold text-[var(--foreground)] md:text-4xl">
+            {t('profile.title')}
+          </h1>
+          <p className="mt-2 text-sm text-[color:var(--text-muted)]">
+            {t('profile.description')}
+          </p>
+        </div>
 
-        <form className="space-y-4 px-6 pb-6" onSubmit={handleSubmit}>
+        <Card variant="outline" className="bg-white">
+          <CardHeader>
+            <CardTitle>{t('profile.title')}</CardTitle>
+            <CardDescription>{t('profile.description')}</CardDescription>
+          </CardHeader>
+
+          <form className="space-y-4 px-6 pb-6" onSubmit={handleSubmit}>
           <Input
             value={form.headline}
             onChange={(event) => setForm((prev) => ({ ...prev, headline: event.target.value }))}
             placeholder={t('profile.headlinePlaceholder')}
           />
           {fieldErrors.headline ? (
-            <p className="font-mono text-xs uppercase text-red-700">{fieldErrors.headline}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-700">
+              {fieldErrors.headline}
+            </p>
           ) : null}
 
           <Textarea
@@ -320,7 +338,9 @@ export default function ProfilePage() {
             rows={5}
           />
           {fieldErrors.summary ? (
-            <p className="font-mono text-xs uppercase text-red-700">{fieldErrors.summary}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-700">
+              {fieldErrors.summary}
+            </p>
           ) : null}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -356,16 +376,21 @@ export default function ProfilePage() {
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="font-mono text-xs uppercase text-gray-600">{t('profile.experienceTitle')}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                {t('profile.experienceTitle')}
+              </p>
               <Button type="button" variant="outline" onClick={addExperience}>
                 {t('profile.addExperienceAction')}
               </Button>
             </div>
             {form.experience.length ? (
               form.experience.map((item, index) => (
-                <div key={`experience-${index}`} className="border border-black bg-white p-3 space-y-2">
+                <div
+                  key={`experience-${index}`}
+                  className="space-y-2 rounded-2xl border border-[color:var(--border)] bg-white p-4"
+                >
                   <div className="flex items-center justify-between">
-                    <p className="font-mono text-[10px] uppercase text-gray-500">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                       {t('profile.experienceItemLabel', { index: index + 1 })}
                     </p>
                     <Button type="button" variant="outline" onClick={() => removeExperience(index)}>
@@ -410,7 +435,7 @@ export default function ProfilePage() {
                 </div>
               ))
             ) : (
-              <p className="font-mono text-xs uppercase text-gray-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                 {t('profile.experienceEmpty')}
               </p>
             )}
@@ -418,16 +443,21 @@ export default function ProfilePage() {
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="font-mono text-xs uppercase text-gray-600">{t('profile.educationTitle')}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                {t('profile.educationTitle')}
+              </p>
               <Button type="button" variant="outline" onClick={addEducation}>
                 {t('profile.addEducationAction')}
               </Button>
             </div>
             {form.education.length ? (
               form.education.map((item, index) => (
-                <div key={`education-${index}`} className="border border-black bg-white p-3 space-y-2">
+                <div
+                  key={`education-${index}`}
+                  className="space-y-2 rounded-2xl border border-[color:var(--border)] bg-white p-4"
+                >
                   <div className="flex items-center justify-between">
-                    <p className="font-mono text-[10px] uppercase text-gray-500">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                       {t('profile.educationItemLabel', { index: index + 1 })}
                     </p>
                     <Button type="button" variant="outline" onClick={() => removeEducation(index)}>
@@ -472,7 +502,7 @@ export default function ProfilePage() {
                 </div>
               ))
             ) : (
-              <p className="font-mono text-xs uppercase text-gray-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                 {t('profile.educationEmpty')}
               </p>
             )}
@@ -480,16 +510,21 @@ export default function ProfilePage() {
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="font-mono text-xs uppercase text-gray-600">{t('profile.portfolioTitle')}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                {t('profile.portfolioTitle')}
+              </p>
               <Button type="button" variant="outline" onClick={addPortfolio}>
                 {t('profile.addPortfolioAction')}
               </Button>
             </div>
             {form.portfolio.length ? (
               form.portfolio.map((item, index) => (
-                <div key={`portfolio-${index}`} className="border border-black bg-white p-3 space-y-2">
+                <div
+                  key={`portfolio-${index}`}
+                  className="space-y-2 rounded-2xl border border-[color:var(--border)] bg-white p-4"
+                >
                   <div className="flex items-center justify-between">
-                    <p className="font-mono text-[10px] uppercase text-gray-500">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                       {t('profile.portfolioItemLabel', { index: index + 1 })}
                     </p>
                     <Button type="button" variant="outline" onClick={() => removePortfolio(index)}>
@@ -515,26 +550,29 @@ export default function ProfilePage() {
                 </div>
               ))
             ) : (
-              <p className="font-mono text-xs uppercase text-gray-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                 {t('profile.portfolioEmpty')}
               </p>
             )}
           </div>
 
           {error ? (
-            <p className="font-mono text-xs uppercase text-red-700 border border-red-700 bg-red-50 px-3 py-2">
+            <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-red-700">
               {error}
             </p>
           ) : null}
 
           {success ? (
-            <p className="font-mono text-xs uppercase text-green-700 border border-green-700 bg-green-50 px-3 py-2">
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
               {success}
             </p>
           ) : null}
 
           <div className="flex items-center justify-between gap-3">
-            <Link href="/dashboard" className="text-blue-700 underline font-mono text-xs uppercase">
+            <Link
+              href="/dashboard"
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--primary)] underline"
+            >
               {t('nav.backToDashboard')}
             </Link>
             <Button type="submit" disabled={isLoading || isSaving}>
@@ -542,7 +580,8 @@ export default function ProfilePage() {
             </Button>
           </div>
         </form>
-      </Card>
+        </Card>
+      </div>
     </section>
   );
 }

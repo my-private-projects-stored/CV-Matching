@@ -609,23 +609,24 @@ export default function ProductFlowPage() {
   const summaryChanges = previewResult?.data?.diff_summary?.total_changes ?? 0;
 
   return (
-    <div className="min-h-screen bg-[#F6F5EE] p-4 md:p-8">
-      <div className="mx-auto max-w-5xl border border-black bg-white p-6 md:p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)]">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="font-serif text-3xl font-bold uppercase tracking-tight text-black">
+    <div className="space-y-8">
+      <div className="mx-auto max-w-6xl space-y-8">
+        <div className="flex flex-col gap-4 rounded-3xl border border-[color:var(--border)] bg-white px-6 py-5 shadow-[0_18px_34px_rgba(15,27,45,0.12)] md:flex-row md:items-center md:justify-between">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--text-subtle)]">
+              Quy trinh ung tu AI
+            </p>
+            <h1 className="text-3xl font-semibold text-[var(--foreground)] md:text-4xl">
               {t('flow.title')}
             </h1>
-            <p className="mt-2 font-mono text-xs uppercase text-gray-600">
-              {t('flow.subtitle')}
-            </p>
+            <p className="text-sm text-[color:var(--text-muted)]">{t('flow.subtitle')}</p>
             {openedFromFocusedJob ? (
-              <p className="mt-2 inline-block border border-blue-700 bg-blue-50 px-2 py-1 font-mono text-[10px] uppercase text-blue-800">
+              <p className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-800">
                 {t('flow.messages.openedFromFocusedJob')}
               </p>
             ) : null}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link href="/dashboard">
               <Button variant="outline">{t('nav.backToDashboard')}</Button>
             </Link>
@@ -667,16 +668,18 @@ export default function ProductFlowPage() {
           />
         </div>
 
-        <div className="mt-2 font-mono text-xs uppercase text-gray-600">
+        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
           {stepState.hasApplication
             ? t('flow.sections.applicationStatusReady')
             : t('flow.sections.applicationStatusPending')}
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          <section className="border border-black bg-[#F8F7F1] p-4">
-            <h2 className="font-mono text-sm font-bold uppercase">{t('flow.sections.stepA')}</h2>
-            <p className="mt-2 text-sm text-gray-700">
+        <div className="grid gap-6 lg:grid-cols-2">
+          <section className="rounded-2xl border border-[color:var(--border)] bg-white p-5 shadow-[0_16px_28px_rgba(15,27,45,0.08)]">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+              {t('flow.sections.stepA')}
+            </h2>
+            <p className="mt-2 text-sm text-[color:var(--text-muted)]">
               {t('flow.sections.stepADescription')}
             </p>
             <div className="mt-4">
@@ -687,15 +690,17 @@ export default function ProductFlowPage() {
                 trigger={<Button>{t('flow.actions.uploadMasterCv')}</Button>}
               />
             </div>
-            <p className="mt-3 font-mono text-xs text-gray-600">
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
               {t('flow.sections.currentMasterResume', {
                 value: masterResumeId || t('flow.sections.notSet'),
               })}
             </p>
           </section>
 
-          <section className="border border-black bg-[#F8F7F1] p-4">
-            <h2 className="font-mono text-sm font-bold uppercase">{t('flow.sections.stepB')}</h2>
+          <section className="rounded-2xl border border-[color:var(--border)] bg-white p-5 shadow-[0_16px_28px_rgba(15,27,45,0.08)]">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+              {t('flow.sections.stepB')}
+            </h2>
             <Textarea
               value={jobDescription}
               onChange={(e) => handleJobDescriptionChange(e.target.value)}
@@ -707,7 +712,7 @@ export default function ProductFlowPage() {
               <Button onClick={handleGeneratePreview} disabled={isGenerating || !masterResumeId}>
                 {isGenerating ? t('common.generating') : t('flow.actions.generatePreview')}
               </Button>
-              <span className="font-mono text-xs text-gray-600">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                 {jobId
                   ? t('flow.sections.jobIdLabelReady', { jobId })
                   : t('flow.sections.jobIdLabelPending')}
@@ -716,9 +721,11 @@ export default function ProductFlowPage() {
           </section>
         </div>
 
-        <section className="mt-6 border border-black bg-[#EEF6FF] p-4">
-          <h2 className="font-mono text-sm font-bold uppercase">{t('flow.sections.stepC')}</h2>
-          <p className="mt-2 text-sm text-gray-700">
+        <section className="rounded-2xl border border-[color:var(--border)] bg-blue-50 p-5 shadow-[0_16px_28px_rgba(15,27,45,0.08)]">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-700">
+            {t('flow.sections.stepC')}
+          </h2>
+          <p className="mt-2 text-sm text-blue-900/80">
             {t('flow.sections.previewSummaryPrefix')}{' '}
             <strong>{summaryChanges}</strong> {t('flow.sections.previewSummarySuffix')}
           </p>
@@ -762,9 +769,11 @@ export default function ProductFlowPage() {
             </Button>
           </div>
 
-          <div className="mt-4 border border-black bg-white p-3">
+          <div className="mt-4 rounded-2xl border border-[color:var(--border)] bg-white p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-mono text-xs font-bold uppercase">{t('flow.sessionHistory.title')}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                {t('flow.sessionHistory.title')}
+              </p>
               <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
@@ -784,11 +793,11 @@ export default function ProductFlowPage() {
                 </Button>
               </div>
             </div>
-            <p className="mt-1 font-mono text-xs text-gray-600">
+            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
               {t('flow.sessionHistory.count', { count: filteredSessionHistory.length })}
             </p>
             {historyFilter !== 'all' && (
-              <p className="mt-1 font-mono text-xs text-gray-600">
+              <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                 {t('flow.sessionHistory.filteredFromTotal', { count: applySessionHistory.length })}
               </p>
             )}
@@ -816,7 +825,9 @@ export default function ProductFlowPage() {
               </Button>
             </div>
             {filteredSessionHistory.length === 0 ? (
-              <p className="mt-2 text-xs text-gray-600">{t('flow.sessionHistory.empty')}</p>
+              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                {t('flow.sessionHistory.empty')}
+              </p>
             ) : (
               <ul className="mt-2 space-y-2">
                 {prioritizedSessionHistory.slice(0, 5).map((item, index) => {
@@ -827,36 +838,38 @@ export default function ProductFlowPage() {
                       key={`${item.createdAt}-${item.jobId}-${index}`}
                       ref={isTarget ? flowReturnTargetRef : null}
                       data-flow-return-target={isTarget ? 'true' : 'false'}
-                      className={`border p-2 ${
-                        isTarget ? 'border-blue-700 bg-blue-50 ring-1 ring-blue-300' : 'border-black/20'
+                      className={`rounded-xl border p-3 ${
+                        isTarget
+                          ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200'
+                          : 'border-[color:var(--border)] bg-white'
                       }`}
                     >
                       {isTarget ? (
-                        <p className="mb-1 font-mono text-[10px] uppercase text-blue-800">
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-blue-800">
                           {t('flow.sessionHistory.returnFocusBadge')}
                         </p>
                       ) : null}
-                      <p className="font-mono text-xs">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--foreground)]">
                         {t(
                           item.outcome === 'created'
                             ? 'flow.sessionHistory.statusCreated'
                             : 'flow.sessionHistory.statusDuplicate'
                         )}
                       </p>
-                      <p className="text-xs text-gray-700">
+                      <p className="text-xs text-[color:var(--text-muted)]">
                         {t('flow.sessionHistory.jobId', { jobId: item.jobId })}
                       </p>
-                      <p className="text-xs text-gray-700">
+                      <p className="text-xs text-[color:var(--text-muted)]">
                         {t('flow.sessionHistory.resumeId', { resumeId: item.resumeId })}
                       </p>
-                      <p className="text-xs text-gray-700">
+                      <p className="text-xs text-[color:var(--text-muted)]">
                         {item.applicationId
                           ? t('flow.sessionHistory.applicationId', {
                               applicationId: item.applicationId,
                             })
                           : t('flow.sessionHistory.applicationIdPending')}
                       </p>
-                      <p className="text-xs text-gray-700">
+                      <p className="text-xs text-[color:var(--text-muted)]">
                         {t('flow.sessionHistory.when', {
                           value: formatRelativeSessionTime(item.createdAt),
                         })}
@@ -963,12 +976,14 @@ export default function ProductFlowPage() {
         </section>
 
         {message && (
-          <div className="mt-4 border border-green-700 bg-green-50 p-3 text-sm text-green-900">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
             {message}
           </div>
         )}
         {error && (
-          <div className="mt-4 border border-red-700 bg-red-50 p-3 text-sm text-red-900">{error}</div>
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            {error}
+          </div>
         )}
       </div>
     </div>
@@ -988,10 +1003,14 @@ function StepCard({
 }) {
   return (
     <div
-      className={`border p-3 ${done ? 'border-green-800 bg-green-50' : 'border-black bg-[#F3F2EA]'}`}
+      className={`rounded-2xl border p-3 ${
+        done ? 'border-emerald-200 bg-emerald-50' : 'border-[color:var(--border)] bg-white'
+      }`}
     >
-      <p className="font-mono text-xs font-bold uppercase">{title}</p>
-      <p className={`mt-1 text-xs ${done ? 'text-green-800' : 'text-gray-600'}`}>
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+        {title}
+      </p>
+      <p className={`mt-1 text-xs ${done ? 'text-emerald-800' : 'text-[color:var(--text-subtle)]'}`}>
         {done ? doneLabel : pendingLabel}
       </p>
     </div>

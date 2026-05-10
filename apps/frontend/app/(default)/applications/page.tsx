@@ -1164,26 +1164,38 @@ export default function ApplicationsPage() {
     if (!summary) return null;
 
     return (
-      <Card variant="outline" className="space-y-3">
+      <Card variant="outline" className="space-y-4 bg-white">
         <CardTitle className="text-2xl">{t('applicationsPage.summary.title')}</CardTitle>
-        <CardDescription className="text-xs uppercase">
+        <CardDescription className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
           {t('applicationsPage.summary.totalApplications', { count: summary.total })}
         </CardDescription>
         <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
           {STATUS_OPTIONS.map((status) => (
-            <div key={status} className="border border-black bg-white p-2">
-              <p className="font-mono text-[10px] uppercase text-gray-500">{statusLabel(status)}</p>
-              <p className="text-lg font-bold">{summary.by_status[status] || 0}</p>
+            <div
+              key={status}
+              className="rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] p-3"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                {statusLabel(status)}
+              </p>
+              <p className="text-lg font-semibold text-[var(--foreground)]">
+                {summary.by_status[status] || 0}
+              </p>
             </div>
           ))}
         </div>
         <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
           {AI_STATUS_OPTIONS.map((status) => (
-            <div key={status} className="border border-black bg-blue-50 p-2">
-              <p className="font-mono text-[10px] uppercase text-blue-700">
+            <div
+              key={status}
+              className="rounded-2xl border border-[color:var(--border)] bg-blue-50 p-3"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-700">
                 {t('applicationsPage.summary.aiStatusLabel', { status: aiStatusLabel(status) })}
               </p>
-              <p className="text-lg font-bold text-blue-900">{summary.by_ai_status[status] || 0}</p>
+              <p className="text-lg font-semibold text-blue-900">
+                {summary.by_ai_status[status] || 0}
+              </p>
             </div>
           ))}
         </div>
@@ -1624,12 +1636,19 @@ export default function ApplicationsPage() {
   ]);
 
   return (
-    <div className="min-h-screen bg-[#F0F0E8] px-4 py-8 md:px-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black pb-4">
-          <div>
-            <h1 className="font-serif text-4xl uppercase tracking-tight">{t('applicationsPage.title')}</h1>
-            <p className="font-mono text-xs uppercase text-blue-700">{t('applicationsPage.subtitle')}</p>
+    <div className="space-y-8">
+      <div className="mx-auto max-w-7xl space-y-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-[color:var(--border)] bg-white px-6 py-5 shadow-[0_18px_34px_rgba(15,27,45,0.12)]">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--text-subtle)]">
+              Tuyển dụng AI
+            </p>
+            <h1 className="text-3xl font-semibold text-[var(--foreground)] md:text-4xl">
+              {t('applicationsPage.title')}
+            </h1>
+            <p className="text-sm text-[color:var(--text-muted)]">
+              {t('applicationsPage.subtitle')}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {isFlowContext ? (
@@ -1645,217 +1664,221 @@ export default function ApplicationsPage() {
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {isRecruiterOrAdmin ? (
-            <Card variant="outline" className="space-y-3">
-            <CardTitle className="text-xl">{t('applicationsPage.recruiterView.title')}</CardTitle>
-            <CardDescription className="text-xs uppercase">
-              {t('applicationsPage.recruiterView.description')}
-            </CardDescription>
-            <div className="flex gap-2">
-              <Input
-                placeholder={t('applicationsPage.recruiterView.jobIdPlaceholder')}
-                value={jobId}
-                onChange={(e) => {
-                  setJobId(e.target.value);
-                  if (focusApplicationId) {
-                    setFocusApplicationId('');
-                    setFocusOnlyMode(false);
-                  }
-                  setRankedPage(1);
-                  setStatusChangesPage(1);
-                }}
-              />
-              <select
-                className="h-10 border border-black bg-transparent px-2 text-xs uppercase rounded-none"
-                value={rankedStatusFilter}
-                onChange={(e) => {
-                  setRankedStatusFilter(e.target.value as ApplicationStatus | '');
-                  setRankedPage(1);
-                }}
-              >
-                <option value="">{t('applicationsPage.allStatus')}</option>
-                {STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status}>
-                    {statusLabel(status)}
-                  </option>
-                ))}
-              </select>
-              <Input
-                placeholder={t('applicationsPage.recruiterView.changedByFilterPlaceholder')}
-                value={rankedChangedByFilter}
-                onChange={(e) => {
-                  setRankedChangedByFilter(e.target.value);
-                  setRankedPage(1);
-                }}
-                className="w-[220px]"
-              />
-              <div className="flex items-center gap-2 border border-black bg-white px-2 h-10">
-                <span className="font-mono text-[10px] uppercase text-gray-600">
-                  {t('applicationsPage.recruiterView.changedAfterLabel')}
-                </span>
+            <Card variant="outline" className="space-y-4 bg-white">
+              <div>
+                <CardTitle className="text-xl">{t('applicationsPage.recruiterView.title')}</CardTitle>
+                <CardDescription className="text-xs uppercase tracking-[0.3em] text-[color:var(--text-subtle)]">
+                  {t('applicationsPage.recruiterView.description')}
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap gap-2">
                 <Input
-                  type="date"
-                  aria-label={t('applicationsPage.recruiterView.changedAfterLabel')}
-                  value={rankedChangedAfter}
+                  placeholder={t('applicationsPage.recruiterView.jobIdPlaceholder')}
+                  value={jobId}
                   onChange={(e) => {
-                    setRankedDatePreset('');
-                    setRankedChangedAfter(e.target.value);
+                    setJobId(e.target.value);
+                    if (focusApplicationId) {
+                      setFocusApplicationId('');
+                      setFocusOnlyMode(false);
+                    }
+                    setRankedPage(1);
+                    setStatusChangesPage(1);
+                  }}
+                />
+                <select
+                  className="h-10 rounded-xl border border-[color:var(--border)] bg-white px-2 text-xs"
+                  value={rankedStatusFilter}
+                  onChange={(e) => {
+                    setRankedStatusFilter(e.target.value as ApplicationStatus | '');
                     setRankedPage(1);
                   }}
-                  className="h-8 border-0 px-1 text-xs"
-                />
-              </div>
-              <div className="flex items-center gap-2 border border-black bg-white px-2 h-10">
-                <span className="font-mono text-[10px] uppercase text-gray-600">
-                  {t('applicationsPage.recruiterView.changedBeforeLabel')}
-                </span>
+                >
+                  <option value="">{t('applicationsPage.allStatus')}</option>
+                  {STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>
+                      {statusLabel(status)}
+                    </option>
+                  ))}
+                </select>
                 <Input
-                  type="date"
-                  aria-label={t('applicationsPage.recruiterView.changedBeforeLabel')}
-                  value={rankedChangedBefore}
+                  placeholder={t('applicationsPage.recruiterView.changedByFilterPlaceholder')}
+                  value={rankedChangedByFilter}
                   onChange={(e) => {
-                    setRankedDatePreset('');
-                    setRankedChangedBefore(e.target.value);
+                    setRankedChangedByFilter(e.target.value);
                     setRankedPage(1);
                   }}
-                  className="h-8 border-0 px-1 text-xs"
+                  className="w-[220px]"
                 />
+                <div className="flex items-center gap-2 rounded-xl border border-[color:var(--border)] bg-white px-3 h-10">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                    {t('applicationsPage.recruiterView.changedAfterLabel')}
+                  </span>
+                  <Input
+                    type="date"
+                    aria-label={t('applicationsPage.recruiterView.changedAfterLabel')}
+                    value={rankedChangedAfter}
+                    onChange={(e) => {
+                      setRankedDatePreset('');
+                      setRankedChangedAfter(e.target.value);
+                      setRankedPage(1);
+                    }}
+                    className="h-8 border-0 px-1 text-xs"
+                  />
+                </div>
+                <div className="flex items-center gap-2 rounded-xl border border-[color:var(--border)] bg-white px-3 h-10">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                    {t('applicationsPage.recruiterView.changedBeforeLabel')}
+                  </span>
+                  <Input
+                    type="date"
+                    aria-label={t('applicationsPage.recruiterView.changedBeforeLabel')}
+                    value={rankedChangedBefore}
+                    onChange={(e) => {
+                      setRankedDatePreset('');
+                      setRankedChangedBefore(e.target.value);
+                      setRankedPage(1);
+                    }}
+                    className="h-8 border-0 px-1 text-xs"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[color:var(--border)] bg-white px-3 py-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                    {t('applicationsPage.recruiterView.quickRangeLabel')}
+                  </span>
+                  {RANKED_DATE_PRESETS.map((preset) => (
+                    <Button
+                      key={preset}
+                      variant="outline"
+                      className={`h-7 px-2 text-[10px] ${rankedDatePreset === preset ? 'bg-blue-50 border-blue-400 text-blue-900' : ''}`}
+                      onClick={() => applyRankedDatePreset(preset)}
+                      disabled={isLoadingRanked}
+                    >
+                      {t(`applicationsPage.recruiterView.preset.${preset}`)}
+                    </Button>
+                  ))}
+                </div>
+                <Button onClick={activateRanked} disabled={isLoadingRanked}>
+                  {isLoadingRanked ? t('common.loading') : t('applicationsPage.load')}
+                </Button>
               </div>
-              <div className="flex items-center gap-2 border border-black bg-white px-2 h-10">
-                <span className="font-mono text-[10px] uppercase text-gray-600">
-                  {t('applicationsPage.recruiterView.quickRangeLabel')}
+              <div
+                className={`flex flex-wrap items-center gap-2 rounded-2xl border border-transparent px-3 py-2 transition-colors duration-300 ${
+                  isRankedSummaryAnimating ? 'bg-blue-50' : ''
+                }`}
+              >
+                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                  {t('applicationsPage.recruiterView.activeFiltersLabel')}
                 </span>
-                {RANKED_DATE_PRESETS.map((preset) => (
-                  <Button
-                    key={preset}
-                    variant="outline"
-                    className={`h-8 px-2 text-[10px] ${rankedDatePreset === preset ? 'bg-blue-50 border-blue-700 text-blue-900' : ''}`}
-                    onClick={() => applyRankedDatePreset(preset)}
-                    disabled={isLoadingRanked}
-                  >
-                    {t(`applicationsPage.recruiterView.preset.${preset}`)}
-                  </Button>
-                ))}
+                <Button
+                  variant="outline"
+                  onClick={clearRankedSummaryFilters}
+                  disabled={isLoadingRanked}
+                >
+                  {t('applicationsPage.recruiterView.clearSummaryButton')}
+                </Button>
+                {rankedFilterSummary.length ? (
+                  rankedFilterSummary.map((item) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      onClick={() => removeRankedFilterChip(item.id)}
+                      className="rounded-full border border-[color:var(--border)] bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
+                      aria-label={t('applicationsPage.recruiterView.removeFilterLabel', {
+                        filter: item.label,
+                      })}
+                    >
+                      {item.label}
+                    </button>
+                  ))
+                ) : (
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                    {t('applicationsPage.recruiterView.activeFiltersNone')}
+                  </span>
+                )}
               </div>
-              <Button onClick={activateRanked} disabled={isLoadingRanked}>
-                {isLoadingRanked ? t('common.loading') : t('applicationsPage.load')}
-              </Button>
-            </div>
-            <div
-              className={`flex flex-wrap items-center gap-2 transition-colors duration-300 ${
-                isRankedSummaryAnimating ? 'bg-blue-50' : ''
-              }`}
-            >
-              <span className="font-mono text-[10px] uppercase text-gray-600">
-                {t('applicationsPage.recruiterView.activeFiltersLabel')}
-              </span>
-              <Button
-                variant="outline"
-                onClick={clearRankedSummaryFilters}
-                disabled={isLoadingRanked}
-              >
-                {t('applicationsPage.recruiterView.clearSummaryButton')}
-              </Button>
-              {rankedFilterSummary.length ? (
-                rankedFilterSummary.map((item) => (
-                  <button
-                    type="button"
-                    key={item.id}
-                    onClick={() => removeRankedFilterChip(item.id)}
-                    className="font-mono text-[10px] uppercase border border-black bg-white px-2 py-1 hover:bg-[#E5E5E0]"
-                    aria-label={t('applicationsPage.recruiterView.removeFilterLabel', {
-                      filter: item.label,
-                    })}
-                  >
-                    {item.label}
-                  </button>
-                ))
-              ) : (
-                <span className="font-mono text-[10px] uppercase text-gray-500">
-                  {t('applicationsPage.recruiterView.activeFiltersNone')}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  disabled={rankedPage <= 1 || isLoadingRanked}
+                  onClick={() => setRankedPage((value) => Math.max(1, value - 1))}
+                >
+                  {t('applicationsPage.prev')}
+                </Button>
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                  {t('applicationsPage.pageLabel', { page: rankedPage, totalPages: rankedTotalPages })}
                 </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                disabled={rankedPage <= 1 || isLoadingRanked}
-                onClick={() => setRankedPage((value) => Math.max(1, value - 1))}
-              >
-                {t('applicationsPage.prev')}
-              </Button>
-              <span className="font-mono text-xs uppercase">
-                {t('applicationsPage.pageLabel', { page: rankedPage, totalPages: rankedTotalPages })}
-              </span>
-              <Button
-                variant="outline"
-                disabled={rankedPage >= rankedTotalPages || isLoadingRanked}
-                onClick={() => setRankedPage((value) => value + 1)}
-              >
-                {t('applicationsPage.next')}
-              </Button>
-            </div>
-            <p className="font-mono text-xs uppercase text-gray-600">
-              {t('applicationsPage.recruiterView.countCandidates', { count: rankedItems.length })}{' '}
-              {topSemantic !== null
-                ? t('applicationsPage.recruiterView.topSemantic', { score: topSemantic.toFixed(2) })
-                : ''}
-            </p>
+                <Button
+                  variant="outline"
+                  disabled={rankedPage >= rankedTotalPages || isLoadingRanked}
+                  onClick={() => setRankedPage((value) => value + 1)}
+                >
+                  {t('applicationsPage.next')}
+                </Button>
+              </div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                {t('applicationsPage.recruiterView.countCandidates', { count: rankedItems.length })}{' '}
+                {topSemantic !== null
+                  ? t('applicationsPage.recruiterView.topSemantic', { score: topSemantic.toFixed(2) })
+                  : ''}
+              </p>
             </Card>
           ) : null}
 
           {isCandidateOnly ? (
-            <Card variant="outline" className="space-y-3">
-            <CardTitle className="text-xl">{t('applicationsPage.candidateView.title')}</CardTitle>
-            <CardDescription className="text-xs uppercase">
-              {t('applicationsPage.candidateView.description')}
-            </CardDescription>
-            <div className="flex gap-2">
-              <Input
-                placeholder={t('applicationsPage.candidateView.candidateIdPlaceholder')}
-                value={candidateId}
-                readOnly
-              />
-              <select
-                className="h-10 border border-black bg-transparent px-2 text-xs uppercase rounded-none"
-                value={historyStatusFilter}
-                onChange={(e) => {
-                  setHistoryStatusFilter(e.target.value as ApplicationStatus | '');
-                  setHistoryPage(1);
-                }}
-              >
-                <option value="">{t('applicationsPage.allStatus')}</option>
-                {STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status}>
-                    {statusLabel(status)}
-                  </option>
-                ))}
-              </select>
-              <Button onClick={activateHistory} disabled={isLoadingHistory}>
-                {isLoadingHistory ? t('common.loading') : t('applicationsPage.load')}
-              </Button>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                disabled={historyPage <= 1 || isLoadingHistory}
-                onClick={() => setHistoryPage((value) => Math.max(1, value - 1))}
-              >
-                {t('applicationsPage.prev')}
-              </Button>
-              <span className="font-mono text-xs uppercase">
-                {t('applicationsPage.pageLabel', { page: historyPage, totalPages: historyTotalPages })}
-              </span>
-              <Button
-                variant="outline"
-                disabled={historyPage >= historyTotalPages || isLoadingHistory}
-                onClick={() => setHistoryPage((value) => value + 1)}
-              >
-                {t('applicationsPage.next')}
-              </Button>
-            </div>
-            <p className="font-mono text-xs uppercase text-gray-600">
-              {t('applicationsPage.candidateView.countApplications', { count: historyItems.length })}
-            </p>
+            <Card variant="outline" className="space-y-4 bg-white">
+              <div>
+                <CardTitle className="text-xl">{t('applicationsPage.candidateView.title')}</CardTitle>
+                <CardDescription className="text-xs uppercase tracking-[0.3em] text-[color:var(--text-subtle)]">
+                  {t('applicationsPage.candidateView.description')}
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Input
+                  placeholder={t('applicationsPage.candidateView.candidateIdPlaceholder')}
+                  value={candidateId}
+                  readOnly
+                />
+                <select
+                  className="h-10 rounded-xl border border-[color:var(--border)] bg-white px-2 text-xs"
+                  value={historyStatusFilter}
+                  onChange={(e) => {
+                    setHistoryStatusFilter(e.target.value as ApplicationStatus | '');
+                    setHistoryPage(1);
+                  }}
+                >
+                  <option value="">{t('applicationsPage.allStatus')}</option>
+                  {STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>
+                      {statusLabel(status)}
+                    </option>
+                  ))}
+                </select>
+                <Button onClick={activateHistory} disabled={isLoadingHistory}>
+                  {isLoadingHistory ? t('common.loading') : t('applicationsPage.load')}
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  disabled={historyPage <= 1 || isLoadingHistory}
+                  onClick={() => setHistoryPage((value) => Math.max(1, value - 1))}
+                >
+                  {t('applicationsPage.prev')}
+                </Button>
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                  {t('applicationsPage.pageLabel', { page: historyPage, totalPages: historyTotalPages })}
+                </span>
+                <Button
+                  variant="outline"
+                  disabled={historyPage >= historyTotalPages || isLoadingHistory}
+                  onClick={() => setHistoryPage((value) => value + 1)}
+                >
+                  {t('applicationsPage.next')}
+                </Button>
+              </div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                {t('applicationsPage.candidateView.countApplications', { count: historyItems.length })}
+              </p>
             </Card>
           ) : null}
         </div>
@@ -1863,7 +1886,7 @@ export default function ApplicationsPage() {
         {isRecruiterOrAdmin ? renderSummary() : null}
 
         {isRecruiterOrAdmin ? (
-          <Card ref={statusChangesCardRef} variant="outline" className="space-y-4">
+          <Card ref={statusChangesCardRef} variant="outline" className="space-y-4 bg-white">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="text-2xl">{t('applicationsPage.statusChanges.title')}</CardTitle>
             <div className="flex items-center gap-2">
@@ -1901,7 +1924,7 @@ export default function ApplicationsPage() {
           </div>
           {statusChangesFocusApplicationId.trim() ? (
             <div className="flex flex-wrap items-center gap-2">
-              <p className="font-mono text-[11px] uppercase text-blue-900">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-900">
                 {statusChangesFocusedVisible
                   ? t('applicationsPage.statusChanges.focusedApplicationVisible')
                   : isSeekingFocusedStatusChanges
@@ -1923,7 +1946,7 @@ export default function ApplicationsPage() {
           ) : null}
           <div className="flex flex-wrap gap-2">
             <select
-              className="h-10 border border-black bg-transparent px-2 text-xs uppercase rounded-none"
+              className="h-10 rounded-xl border border-[color:var(--border)] bg-white px-2 text-xs"
               value={statusChangesFilter}
               onChange={(e) => {
                 setStatusChangesFilter(e.target.value as ApplicationStatus | '');
@@ -1945,8 +1968,8 @@ export default function ApplicationsPage() {
                 setStatusChangesPage(1);
               }}
             />
-            <div className="flex items-center gap-2 border border-black bg-white px-2 h-10">
-              <span className="font-mono text-[10px] uppercase text-gray-600">
+            <div className="flex items-center gap-2 rounded-xl border border-[color:var(--border)] bg-white px-3 h-10">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                 {t('applicationsPage.statusChanges.changedAfterLabel')}
               </span>
               <Input
@@ -1961,8 +1984,8 @@ export default function ApplicationsPage() {
                 className="h-8 border-0 p-0 text-xs"
               />
             </div>
-            <div className="flex items-center gap-2 border border-black bg-white px-2 h-10">
-              <span className="font-mono text-[10px] uppercase text-gray-600">
+            <div className="flex items-center gap-2 rounded-xl border border-[color:var(--border)] bg-white px-3 h-10">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                 {t('applicationsPage.statusChanges.changedBeforeLabel')}
               </span>
               <Input
@@ -1979,14 +2002,16 @@ export default function ApplicationsPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-[10px] uppercase text-gray-600">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
               {t('applicationsPage.statusChanges.quickRangeLabel')}
             </span>
             {STATUS_CHANGES_PRESETS.map((preset) => (
               <Button
                 key={preset}
                 variant="outline"
-                className={statusChangesPreset === preset ? 'bg-blue-50 border-blue-700 text-blue-700' : ''}
+                className={
+                  statusChangesPreset === preset ? 'bg-blue-50 border-blue-400 text-blue-700' : ''
+                }
                 onClick={() => applyStatusChangesPreset(preset)}
                 disabled={isLoadingStatusChanges}
               >
@@ -1999,7 +2024,7 @@ export default function ApplicationsPage() {
               isStatusChangesSummaryAnimating ? 'bg-blue-50' : ''
             }`}
           >
-            <span className="font-mono text-[10px] uppercase text-gray-600">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
               {t('applicationsPage.statusChanges.activeFiltersLabel')}
             </span>
             <Button
@@ -2015,7 +2040,7 @@ export default function ApplicationsPage() {
                   type="button"
                   key={item.id}
                   onClick={() => removeStatusChangesFilterChip(item.id)}
-                  className="font-mono text-[10px] uppercase border border-black bg-white px-2 py-1 hover:bg-[#E5E5E0]"
+                  className="rounded-full border border-[color:var(--border)] bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--foreground)] hover:bg-[var(--surface-muted)]"
                   aria-label={t('applicationsPage.statusChanges.removeFilterLabel', {
                     filter: item.label,
                   })}
@@ -2024,7 +2049,7 @@ export default function ApplicationsPage() {
                 </button>
               ))
             ) : (
-              <span className="font-mono text-[10px] uppercase text-gray-500">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                 {t('applicationsPage.statusChanges.activeFiltersNone')}
               </span>
             )}
@@ -2037,7 +2062,7 @@ export default function ApplicationsPage() {
             >
               {t('applicationsPage.prev')}
             </Button>
-            <span className="font-mono text-xs uppercase">
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
               {t('applicationsPage.pageLabel', {
                 page: statusChangesPage,
                 totalPages: statusChangesTotalPages,
@@ -2050,7 +2075,7 @@ export default function ApplicationsPage() {
             >
               {t('applicationsPage.next')}
             </Button>
-            <span className="font-mono text-xs uppercase text-gray-600">
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
               {t('applicationsPage.statusChanges.countChanges', { count: statusChangesTotal })}
             </span>
           </div>
@@ -2067,33 +2092,35 @@ export default function ApplicationsPage() {
                   data-status-change-focused={
                     item.application_id === statusChangesFocusApplicationId ? 'true' : 'false'
                   }
-                  className={`border p-3 ${
+                  className={`rounded-2xl border p-4 ${
                     item.application_id === statusChangesFocusApplicationId
-                      ? 'border-blue-700 bg-blue-50 ring-1 ring-blue-300'
-                      : 'border-black bg-white'
+                      ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200'
+                      : 'border-[color:var(--border)] bg-white'
                   }`}
                 >
                   {item.application_id === statusChangesFocusApplicationId ? (
-                    <p className="font-mono text-[10px] uppercase text-blue-800 mb-1">
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-blue-800">
                       {t('applicationsPage.statusChanges.focusBadge')}
                     </p>
                   ) : null}
-                  <p className="font-bold">{item.candidate.full_name}</p>
-                  <p className="font-mono text-[11px] uppercase text-gray-600">
+                  <p className="text-base font-semibold text-[var(--foreground)]">
+                    {item.candidate.full_name}
+                  </p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                     {item.candidate.email || t('applicationsPage.rankedCandidates.notAvailable')}
                   </p>
-                  <p className="font-mono text-[11px] uppercase text-blue-700 mt-1">
+                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-700">
                     {t('applicationsPage.statusChanges.transitionLine', {
                       from: statusLabel(item.from_status || item.to_status),
                       to: statusLabel(item.to_status),
                     })}
                   </p>
-                  <p className="font-mono text-[11px] uppercase text-gray-600">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                     {t('applicationsPage.statusChanges.changedByLine', {
                       by: item.changed_by || t('common.unknown'),
                     })}
                   </p>
-                  <p className="font-mono text-[11px] uppercase text-gray-600">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                     {t('applicationsPage.statusChanges.changedAtLine', {
                       date: new Date(item.changed_at).toLocaleString(),
                     })}
@@ -2116,7 +2143,7 @@ export default function ApplicationsPage() {
                 </div>
               ))
             ) : (
-              <p className="font-mono text-xs uppercase text-gray-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                 {t('applicationsPage.statusChanges.empty')}
               </p>
             )}
@@ -2132,7 +2159,7 @@ export default function ApplicationsPage() {
         ) : null}
 
         {isRecruiterOrAdmin ? (
-          <Card variant="outline" className="space-y-4">
+          <Card variant="outline" className="space-y-4 bg-white">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="text-2xl">{t('applicationsPage.rankedCandidates.title')}</CardTitle>
             {focusApplicationId ? (
@@ -2159,7 +2186,7 @@ export default function ApplicationsPage() {
             ) : null}
           </div>
           {focusApplicationId ? (
-            <p className="font-mono text-[11px] uppercase text-blue-900">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-900">
               {focusedRankedItem
                 ? t('applicationsPage.rankedCandidates.focusedApplication')
                 : isSeekingFocusedApplication
@@ -2168,12 +2195,12 @@ export default function ApplicationsPage() {
             </p>
           ) : null}
           {focusOnlyMode && focusedRankedItem ? (
-            <p className="font-mono text-[11px] uppercase text-blue-900">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-900">
               {t('applicationsPage.rankedCandidates.focusedApplicationOnlyMode')}
             </p>
           ) : null}
-          <div className="flex flex-wrap items-center gap-2 border border-black bg-[#E7EEF9] p-2">
-            <label className="inline-flex items-center gap-2 font-mono text-[11px] uppercase">
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] p-3">
+            <label className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
               <input
                 type="checkbox"
                 checked={
@@ -2198,13 +2225,13 @@ export default function ApplicationsPage() {
               />
               {t('applicationsPage.rankedCandidates.selectAllCurrentPage')}
             </label>
-            <span className="font-mono text-[11px] uppercase text-blue-900">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-900">
               {t('applicationsPage.rankedCandidates.selectedCount', {
                 count: selectedRankedApplicationIds.length,
               })}
             </span>
             <select
-              className="h-10 border border-black bg-white px-2 text-xs uppercase rounded-none"
+              className="h-10 rounded-xl border border-[color:var(--border)] bg-white px-2 text-xs"
               value={bulkRankedStatus}
               onChange={(e) => setBulkRankedStatus(e.target.value as ApplicationStatus | '')}
               disabled={isApplyingBulkStatus || isUndoingBulkStatus}
@@ -2240,7 +2267,7 @@ export default function ApplicationsPage() {
                 : t('applicationsPage.rankedCandidates.undoBulkStatusButton')}
             </Button>
             {bulkRankedStatusResult ? (
-              <span className="font-mono text-[11px] uppercase text-blue-900">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-900">
                 {t('applicationsPage.rankedCandidates.bulkResultLine', {
                   requested: bulkRankedStatusResult.requestedCount,
                   matched: bulkRankedStatusResult.matchedCount,
@@ -2251,7 +2278,7 @@ export default function ApplicationsPage() {
               </span>
             ) : null}
             {bulkRankedUndoResult ? (
-              <span className="font-mono text-[11px] uppercase text-green-700">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
                 {t('applicationsPage.rankedCandidates.bulkUndoResultLine', {
                   reverted: bulkRankedUndoResult.revertedCount,
                 })}
@@ -2264,19 +2291,19 @@ export default function ApplicationsPage() {
                 key={item.application_id}
                 ref={item.application_id === focusApplicationId ? focusedCardRef : null}
                 data-focused={item.application_id === focusApplicationId ? 'true' : 'false'}
-                className={`border p-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between ${
+                className={`flex flex-col gap-3 rounded-2xl border p-4 md:flex-row md:items-center md:justify-between ${
                   item.application_id === focusApplicationId
-                    ? 'border-blue-700 bg-blue-50 ring-2 ring-blue-300'
-                    : 'border-black bg-white'
+                    ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200'
+                    : 'border-[color:var(--border)] bg-white'
                 }`}
               >
                 <div>
                   {item.application_id === focusApplicationId ? (
-                    <p className="font-mono text-[10px] uppercase text-blue-800 mb-1">
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-blue-800">
                       {t('applicationsPage.rankedCandidates.focusBadge')}
                     </p>
                   ) : null}
-                  <label className="inline-flex items-center gap-2 font-mono text-[11px] uppercase text-gray-600 mb-2">
+                  <label className="mb-2 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                     <input
                       type="checkbox"
                       checked={selectedRankedApplicationIds.includes(item.application_id)}
@@ -2293,14 +2320,16 @@ export default function ApplicationsPage() {
                     />
                     {t('applicationsPage.rankedCandidates.selectForBulk')}
                   </label>
-                  <p className="font-bold">{item.candidate.full_name}</p>
-                  <p className="text-xs uppercase text-gray-600">
+                  <p className="text-base font-semibold text-[var(--foreground)]">
+                    {item.candidate.full_name}
+                  </p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                     {item.candidate.email || t('applicationsPage.rankedCandidates.notAvailable')}
                   </p>
-                  <p className="font-mono text-[11px] uppercase text-gray-500 mt-1">
+                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                     {item.resume.title || t('applicationsPage.rankedCandidates.notAvailable')}
                   </p>
-                  <p className="font-mono text-xs mt-1 uppercase text-blue-700">
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
                     {t('applicationsPage.rankedCandidates.scoreLine', {
                       hybrid: item.scores.hybrid_score.toFixed(2),
                       semantic: item.scores.semantic_score.toFixed(2),
@@ -2308,7 +2337,7 @@ export default function ApplicationsPage() {
                     })}
                   </p>
                   {item.status_audit ? (
-                    <p className="font-mono text-[11px] uppercase text-gray-500 mt-1">
+                    <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                       {t('applicationsPage.rankedCandidates.statusAuditLine', {
                         from: statusLabel(item.status_audit.from_status || item.status),
                         to: statusLabel(item.status_audit.to_status),
@@ -2320,7 +2349,7 @@ export default function ApplicationsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <select
-                    className={`h-10 border px-2 text-xs uppercase rounded-none ${badgeClass(item.status)}`}
+                    className={`h-10 rounded-xl border px-2 text-xs ${badgeClass(item.status)}`}
                     value={item.status}
                     onChange={(e) =>
                       handleStatusChange(item.application_id, e.target.value as ApplicationStatus)
@@ -2366,7 +2395,7 @@ export default function ApplicationsPage() {
             ))}
 
             {!displayedRankedItems.length ? (
-              <p className="font-mono text-xs uppercase text-gray-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                 {t('applicationsPage.rankedCandidates.empty')}
               </p>
             ) : null}
@@ -2375,11 +2404,11 @@ export default function ApplicationsPage() {
         ) : null}
 
         {isCandidateOnly ? (
-          <Card variant="outline" className="space-y-4">
+          <Card variant="outline" className="space-y-4 bg-white">
           <CardTitle className="text-2xl">{t('applicationsPage.candidateHistory.title')}</CardTitle>
           {candidateFocusEnabled && focusApplicationId.trim() ? (
             <div className="flex flex-wrap items-center gap-2">
-              <p className="font-mono text-[11px] uppercase text-blue-900">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-900">
                 {focusedHistoryItem
                   ? t('applicationsPage.candidateHistory.focusedApplicationVisible')
                   : isSeekingFocusedHistoryItem
@@ -2409,24 +2438,26 @@ export default function ApplicationsPage() {
                 data-candidate-history-focused={
                   candidateFocusEnabled && item.application_id === focusApplicationId ? 'true' : 'false'
                 }
-                className={`border p-3 ${
+                className={`rounded-2xl border p-4 ${
                   candidateFocusEnabled && item.application_id === focusApplicationId
-                    ? 'border-blue-700 bg-blue-50 ring-1 ring-blue-300'
-                    : 'border-black bg-white'
+                    ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200'
+                    : 'border-[color:var(--border)] bg-white'
                 }`}
               >
                 {candidateFocusEnabled && item.application_id === focusApplicationId ? (
-                  <p className="font-mono text-[10px] uppercase text-blue-800 mb-1">
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-blue-800">
                     {t('applicationsPage.candidateHistory.focusBadge')}
                   </p>
                 ) : null}
-                <p className="font-bold">{item.job.title}</p>
-                <p className="text-xs uppercase text-gray-600">
+                <p className="text-base font-semibold text-[var(--foreground)]">
+                  {item.job.title}
+                </p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   {item.job.location || t('applicationsPage.candidateHistory.notAvailable')} |{' '}
                   {item.job.category || t('applicationsPage.candidateHistory.notAvailable')} |{' '}
                   {statusLabel(item.status)}
                 </p>
-                <p className="font-mono text-xs uppercase text-blue-700 mt-1">
+                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
                   {t('applicationsPage.candidateHistory.hybridLine', {
                     score: item.scores.hybrid_score.toFixed(2),
                   })}
@@ -2474,7 +2505,7 @@ export default function ApplicationsPage() {
             ))}
 
             {!historyItems.length ? (
-              <p className="font-mono text-xs uppercase text-gray-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                 {t('applicationsPage.candidateHistory.empty')}
               </p>
             ) : null}
@@ -2483,7 +2514,7 @@ export default function ApplicationsPage() {
         ) : null}
 
         {feedback ? (
-          <Card variant="outline" className="space-y-3">
+          <Card variant="outline" className="space-y-3 bg-white">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle className="text-2xl">{t('applicationsPage.feedback.title')}</CardTitle>
               <Button
@@ -2498,27 +2529,31 @@ export default function ApplicationsPage() {
                 {t('common.close')}
               </Button>
             </div>
-            <CardDescription className="text-xs uppercase">
+            <CardDescription className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
               {t('applicationsPage.feedback.statusLine', {
                 status: statusLabel(feedback.status),
                 aiStatus: aiStatusLabel(feedback.ai_status),
               })}
             </CardDescription>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="border border-black bg-white p-3">
-                <p className="font-mono text-xs uppercase text-gray-500">{t('applicationsPage.feedback.hybrid')}</p>
-                <p className="text-2xl font-bold">{feedback.scores.hybrid_score.toFixed(2)}</p>
+              <div className="rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                  {t('applicationsPage.feedback.hybrid')}
+                </p>
+                <p className="text-2xl font-semibold text-[var(--foreground)]">
+                  {feedback.scores.hybrid_score.toFixed(2)}
+                </p>
               </div>
-              <div className="border border-black bg-white p-3">
-                <p className="font-mono text-xs uppercase text-gray-500">
+              <div className="rounded-2xl border border-[color:var(--border)] bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   {t('applicationsPage.feedback.matchedKeywords')}
                 </p>
                 <p className="text-sm">
                   {feedback.explainability.matched_keywords.join(', ') || t('applicationsPage.feedback.none')}
                 </p>
               </div>
-              <div className="border border-black bg-white p-3">
-                <p className="font-mono text-xs uppercase text-gray-500">
+              <div className="rounded-2xl border border-[color:var(--border)] bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   {t('applicationsPage.feedback.missingKeywords')}
                 </p>
                 <p className="text-sm">
@@ -2526,8 +2561,8 @@ export default function ApplicationsPage() {
                 </p>
               </div>
             </div>
-            <div className="border border-black bg-blue-50 p-3">
-              <p className="font-mono text-xs uppercase text-blue-700 mb-2">
+            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
                 {t('applicationsPage.feedback.recommendations')}
               </p>
               <ul className="list-disc pl-6 text-sm space-y-1">
@@ -2540,7 +2575,7 @@ export default function ApplicationsPage() {
         ) : null}
 
         {candidateProfile ? (
-          <Card variant="outline" className="space-y-3">
+          <Card variant="outline" className="space-y-3 bg-white">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle className="text-2xl">
                 {t('applicationsPage.candidateProfile.title')}
@@ -2557,7 +2592,7 @@ export default function ApplicationsPage() {
                 {t('common.close')}
               </Button>
             </div>
-            <CardDescription className="text-xs uppercase">
+            <CardDescription className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
               {t('applicationsPage.candidateProfile.subtitle', {
                 name:
                   candidateProfile.full_name ||
@@ -2567,7 +2602,7 @@ export default function ApplicationsPage() {
             </CardDescription>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <p className="font-mono text-xs uppercase text-gray-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   {t('applicationsPage.candidateProfile.headlineLabel')}
                 </p>
                 <p className="text-sm">
@@ -2576,7 +2611,7 @@ export default function ApplicationsPage() {
                 </p>
               </div>
               <div className="space-y-2">
-                <p className="font-mono text-xs uppercase text-gray-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   {t('applicationsPage.candidateProfile.summaryLabel')}
                 </p>
                 <p className="text-sm">
@@ -2587,7 +2622,7 @@ export default function ApplicationsPage() {
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <p className="font-mono text-xs uppercase text-gray-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   {t('applicationsPage.candidateProfile.contactLabel')}
                 </p>
                 <p className="text-sm">
@@ -2600,7 +2635,7 @@ export default function ApplicationsPage() {
                 </p>
                 {candidateProfile.profile.website ? (
                   <a
-                    className="text-sm text-blue-700 underline"
+                    className="text-sm text-[color:var(--primary)] underline"
                     href={candidateProfile.profile.website}
                     target="_blank"
                     rel="noreferrer"
@@ -2614,7 +2649,7 @@ export default function ApplicationsPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <p className="font-mono text-xs uppercase text-gray-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   {t('applicationsPage.candidateProfile.skillsLabel')}
                 </p>
                 <p className="text-sm">
@@ -2622,7 +2657,7 @@ export default function ApplicationsPage() {
                     ? candidateProfile.profile.skills.join(', ')
                     : t('applicationsPage.candidateProfile.emptyValue')}
                 </p>
-                <p className="font-mono text-xs uppercase text-gray-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   {t('applicationsPage.candidateProfile.portfolioLinksLabel')}
                 </p>
                 <p className="text-sm">
@@ -2634,7 +2669,7 @@ export default function ApplicationsPage() {
             </div>
             <div className="space-y-3">
               <div className="space-y-2">
-                <p className="font-mono text-xs uppercase text-gray-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   {t('applicationsPage.candidateProfile.experienceTitle')}
                 </p>
                 {candidateProfile.profile.experience.length ? (
@@ -2645,15 +2680,22 @@ export default function ApplicationsPage() {
                         .join(' - ');
                       const companyLine = [item.company, item.location].filter(Boolean).join(' | ');
                       return (
-                        <div key={`${item.title}-${index}`} className="border border-black bg-white p-2">
-                          <p className="font-semibold">
+                        <div
+                          key={`${item.title}-${index}`}
+                          className="rounded-2xl border border-[color:var(--border)] bg-white p-3"
+                        >
+                          <p className="font-semibold text-[var(--foreground)]">
                             {item.title || t('applicationsPage.candidateProfile.emptyValue')}
                           </p>
                           {companyLine ? (
-                            <p className="text-xs uppercase text-gray-600">{companyLine}</p>
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                              {companyLine}
+                            </p>
                           ) : null}
                           {dateRange ? (
-                            <p className="text-xs uppercase text-gray-500">{dateRange}</p>
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                              {dateRange}
+                            </p>
                           ) : null}
                           {item.summary ? <p className="text-sm mt-1">{item.summary}</p> : null}
                         </div>
@@ -2667,7 +2709,7 @@ export default function ApplicationsPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <p className="font-mono text-xs uppercase text-gray-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   {t('applicationsPage.candidateProfile.educationTitle')}
                 </p>
                 {candidateProfile.profile.education.length ? (
@@ -2678,15 +2720,22 @@ export default function ApplicationsPage() {
                         .join(' - ');
                       const degreeLine = [item.degree, item.field].filter(Boolean).join(' | ');
                       return (
-                        <div key={`${item.school}-${index}`} className="border border-black bg-white p-2">
-                          <p className="font-semibold">
+                        <div
+                          key={`${item.school}-${index}`}
+                          className="rounded-2xl border border-[color:var(--border)] bg-white p-3"
+                        >
+                          <p className="font-semibold text-[var(--foreground)]">
                             {item.school || t('applicationsPage.candidateProfile.emptyValue')}
                           </p>
                           {degreeLine ? (
-                            <p className="text-xs uppercase text-gray-600">{degreeLine}</p>
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                              {degreeLine}
+                            </p>
                           ) : null}
                           {dateRange ? (
-                            <p className="text-xs uppercase text-gray-500">{dateRange}</p>
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                              {dateRange}
+                            </p>
                           ) : null}
                           {item.summary ? <p className="text-sm mt-1">{item.summary}</p> : null}
                         </div>
@@ -2700,19 +2749,22 @@ export default function ApplicationsPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <p className="font-mono text-xs uppercase text-gray-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   {t('applicationsPage.candidateProfile.portfolioTitle')}
                 </p>
                 {candidateProfile.profile.portfolio.length ? (
                   <div className="space-y-2">
                     {candidateProfile.profile.portfolio.map((item, index) => (
-                      <div key={`${item.name}-${index}`} className="border border-black bg-white p-2">
-                        <p className="font-semibold">
+                      <div
+                        key={`${item.name}-${index}`}
+                        className="rounded-2xl border border-[color:var(--border)] bg-white p-3"
+                      >
+                        <p className="font-semibold text-[var(--foreground)]">
                           {item.name || t('applicationsPage.candidateProfile.emptyValue')}
                         </p>
                         {item.url ? (
                           <a
-                            className="text-xs uppercase text-blue-700 underline"
+                            className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--primary)] underline"
                             href={item.url}
                             target="_blank"
                             rel="noreferrer"
@@ -2737,7 +2789,7 @@ export default function ApplicationsPage() {
         ) : null}
 
         {selectedStatusHistory ? (
-          <Card variant="outline" className="space-y-3">
+          <Card variant="outline" className="space-y-3 bg-white">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle className="text-2xl">
                 {t('applicationsPage.statusHistory.title', {
@@ -2756,7 +2808,7 @@ export default function ApplicationsPage() {
                 {t('common.close')}
               </Button>
             </div>
-            <CardDescription className="text-xs uppercase">
+            <CardDescription className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
               {t('applicationsPage.statusHistory.currentStatus', {
                 status: statusLabel(selectedStatusHistory.currentStatus),
               })}
@@ -2764,20 +2816,25 @@ export default function ApplicationsPage() {
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {selectedStatusHistory.entries.length ? (
                 selectedStatusHistory.entries.map((entry, index) => (
-                  <div key={`${entry.changed_at}-${index}`} className="border border-black bg-white p-3">
-                    <p className="font-mono text-[11px] uppercase text-blue-700">
+                  <div
+                    key={`${entry.changed_at}-${index}`}
+                    className="rounded-2xl border border-[color:var(--border)] bg-white p-3"
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-700">
                       {statusLabel(entry.from_status || 'new')} {'->'} {statusLabel(entry.to_status)}
                     </p>
-                    <p className="font-mono text-[11px] uppercase text-gray-600 mt-1">
-                      {t('applicationsPage.statusHistory.changedAt')}: {new Date(entry.changed_at).toLocaleString()}
+                    <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                      {t('applicationsPage.statusHistory.changedAt')}:{' '}
+                      {new Date(entry.changed_at).toLocaleString()}
                     </p>
-                    <p className="font-mono text-[11px] uppercase text-gray-600">
-                      {t('applicationsPage.statusHistory.changedBy')}: {entry.changed_by || t('common.unknown')}
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                      {t('applicationsPage.statusHistory.changedBy')}:{' '}
+                      {entry.changed_by || t('common.unknown')}
                     </p>
                   </div>
                 ))
               ) : (
-                <p className="font-mono text-xs uppercase text-gray-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   {t('applicationsPage.statusHistory.empty')}
                 </p>
               )}

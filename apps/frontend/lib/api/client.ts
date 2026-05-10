@@ -59,8 +59,25 @@ function readAccessTokenFromStorage(): string | null {
   }
 
   try {
-    const parsed = JSON.parse(raw) as { accessToken?: string };
-    const accessToken = String(parsed?.accessToken || '').trim();
+    const parsed = JSON.parse(raw) as {
+      accessToken?: string;
+      access_token?: string;
+      token?: string;
+      session?: {
+        accessToken?: string;
+        access_token?: string;
+        token?: string;
+      };
+    };
+    const accessToken = String(
+      parsed?.accessToken ||
+        parsed?.access_token ||
+        parsed?.token ||
+        parsed?.session?.accessToken ||
+        parsed?.session?.access_token ||
+        parsed?.session?.token ||
+        ''
+    ).trim();
     return accessToken || null;
   } catch {
     return null;
@@ -179,9 +196,5 @@ export async function apiDelete(endpoint: string): Promise<Response> {
  * Builds the full upload URL for file uploads.
  */
 export function getUploadUrl(): string {
-  const publicBase = API_BASE_URL || '/';
-  if (publicBase === '/' || publicBase === '') {
-    return '/resumes/upload';
-  }
-  return `${publicBase.replace(/\/+$/, '')}/api/resumes/upload`;
+  return `${API_BASE}/resumes/upload`;
 }

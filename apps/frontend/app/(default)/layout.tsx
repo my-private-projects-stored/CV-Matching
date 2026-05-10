@@ -4,6 +4,8 @@ import { LanguageProvider } from '@/lib/context/language-context';
 import { LocalizedErrorBoundary } from '@/components/common/error-boundary';
 import { AuthGuard } from '@/components/common/auth-guard';
 import { AuthProvider } from '@/lib/context/auth-context';
+import { AuthBar } from '@/components/common/auth-bar';
+import { SideNav } from '@/components/common/side-nav';
 
 export default function DefaultLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,7 +15,15 @@ export default function DefaultLayout({ children }: { children: React.ReactNode 
           <ResumePreviewProvider>
             <LocalizedErrorBoundary>
               <AuthGuard>
-                <main className="min-h-screen flex flex-col">{children}</main>
+                <div className="min-h-screen flex flex-col app-shell">
+                  <AuthBar />
+                  <div className="flex flex-1">
+                    <SideNav />
+                    <main className="flex min-h-[calc(100vh-72px)] flex-1 flex-col px-6 py-8 lg:px-10">
+                      {children}
+                    </main>
+                  </div>
+                </div>
               </AuthGuard>
             </LocalizedErrorBoundary>
           </ResumePreviewProvider>

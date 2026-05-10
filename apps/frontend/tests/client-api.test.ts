@@ -165,6 +165,25 @@ describe('api client module', () => {
     expect(headers.get('Authorization')).toBe('Bearer token-from-storage');
   });
 
+  it('apiFetch auto-attaches bearer token from legacy storage field access_token', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('window', {
+      localStorage: {
+        getItem: vi.fn(() => JSON.stringify({ access_token: 'legacy-token-from-storage' })),
+      },
+    });
+
+    const { apiFetch } = await loadClientModule();
+
+    await apiFetch('/secured', { method: 'GET' });
+
+    const call = fetchMock.mock.calls[0];
+    expect(call[0]).toBe('/api/secured');
+    const headers = new Headers((call[1] as RequestInit).headers);
+    expect(headers.get('Authorization')).toBe('Bearer legacy-token-from-storage');
+  });
+
   it('apiFetch aborts when request exceeds timeout', async () => {
     vi.useFakeTimers();
 

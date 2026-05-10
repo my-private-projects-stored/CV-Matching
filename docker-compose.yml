@@ -83,6 +83,19 @@ services:
       PORT: "3001"
     ports:
       - "3001:3001"
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./apps/backend
+          target: /workspace
+          ignore:
+            - node_modules/
+            - coverage/
+            - .git/
+        - action: rebuild
+          path: ./apps/backend/package.json
+        - action: rebuild
+          path: ./apps/backend/package-lock.json
     depends_on:
       mongo:
         condition: service_healthy
@@ -121,8 +134,26 @@ services:
       NODE_ENV: development
       NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
       INTERNAL_API_BASE_URL: http://gateway-backend:3001
+      WATCHPACK_POLLING: "true"
+      WATCHPACK_POLLING_INTERVAL: "1000"
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "1000"
     ports:
       - "3000:3000"
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/frontend
+          target: /workspace
+          ignore:
+            - node_modules/
+            - .next/
+            - coverage/
+            - .git/
+        - action: rebuild
+          path: ./apps/frontend/package.json
+        - action: rebuild
+          path: ./apps/frontend/package-lock.json
     depends_on:
       gateway-backend:
         condition: service_healthy

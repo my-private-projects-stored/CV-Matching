@@ -9,6 +9,7 @@ import {
   type DragEvent,
   type InputHTMLAttributes,
 } from 'react';
+import { apiFetch } from '@/lib/api/client';
 import { logError } from '@/lib/utils/logger';
 
 export type FileMetadata = {
@@ -227,7 +228,7 @@ export const useFileUpload = (
       markUploadStarted();
 
       try {
-        const response = await fetch(uploadUrl, {
+        const response = await apiFetch(uploadUrl, {
           method: 'POST',
           body: formData,
         });

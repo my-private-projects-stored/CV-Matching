@@ -13,7 +13,7 @@ interface TemplateSelectorProps {
  * Template Selector Component
  *
  * Visual thumbnail buttons for selecting resume templates.
- * Swiss design: Square corners, high contrast, monospace labels.
+ * Enterprise design: Rounded corners, soft contrast, semantic tokens.
  */
 export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ value, onChange }) => {
   const { t } = useTranslations();
@@ -42,10 +42,10 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ value, onCha
         <button
           key={template.id}
           onClick={() => onChange(template.id)}
-          className={`group flex flex-col items-center p-3 border-2 transition-all ${
+          className={`group flex flex-col items-center rounded-xl border p-3 transition-all ${
             value === template.id
-              ? 'border-blue-700 bg-white shadow-[3px_3px_0px_0px_#1D4ED8]'
-              : 'border-black bg-white hover:bg-[#F0F0E8] hover:shadow-[2px_2px_0px_0px_#000]'
+              ? 'border-blue-500 bg-white shadow-[0_10px_20px_rgba(37,99,235,0.18)]'
+              : 'border-[color:var(--border)] bg-white hover:bg-[var(--surface-muted)]'
           }`}
           title={templateLabels[template.id].description}
         >
@@ -56,8 +56,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ value, onCha
 
           {/* Template Name */}
           <span
-            className={`font-mono text-[10px] uppercase tracking-wider font-bold ${
-              value === template.id ? 'text-blue-700' : 'text-gray-700'
+            className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${
+              value === template.id ? 'text-blue-700' : 'text-[color:var(--text-subtle)]'
             }`}
           >
             {templateLabels[template.id].name}

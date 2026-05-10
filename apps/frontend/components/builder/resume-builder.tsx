@@ -631,17 +631,12 @@ const ResumeBuilderContent = () => {
 
   return (
     <div
-      className="h-screen w-full bg-[#F0F0E8] flex justify-center items-center p-4 md:p-8"
-      style={{
-        backgroundImage:
-          'linear-gradient(rgba(29, 78, 216, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(29, 78, 216, 0.1) 1px, transparent 1px)',
-        backgroundSize: '40px 40px',
-      }}
+      className="min-h-screen w-full bg-[var(--surface-muted)] p-4 md:p-8"
     >
       {/* Main Container */}
-      <div className="w-full h-full max-w-[90%] md:max-w-[95%] xl:max-w-[1800px] border border-black bg-[#F0F0E8] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] flex flex-col">
+      <div className="mx-auto flex w-full max-w-[95%] flex-col rounded-3xl border border-[color:var(--border)] bg-white shadow-[0_20px_36px_rgba(15,27,45,0.12)]">
         {/* Header Section */}
-        <div className="border-b border-black p-6 md:p-8 bg-[#F0F0E8] no-print">
+        <div className="border-b border-[color:var(--border)] bg-white p-6 md:p-8 no-print">
           {/* Top Row: Back button and Actions */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <div>
@@ -653,16 +648,15 @@ const ResumeBuilderContent = () => {
                 <ArrowLeft className="w-4 h-4" />
                 {t('nav.backToDashboard')}
               </Button>
-              <h1 className="font-serif text-3xl md:text-5xl text-black tracking-tight leading-[0.95] uppercase">
+              <h1 className="text-3xl font-semibold text-[var(--foreground)] md:text-5xl">
                 {t('nav.builder')}
               </h1>
               <div className="mt-3 flex items-center gap-3">
-                <p className="text-sm font-mono text-blue-700 uppercase tracking-wide font-bold">
-                  {'// '}
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[color:var(--primary)]">
                   {resumeId ? t('builder.editMode') : t('builder.createAndPreview')}
                 </p>
                 {hasUnsavedChanges && (
-                  <span className="flex items-center gap-1 text-xs font-mono text-amber-600 bg-amber-50 px-2 py-1 border border-amber-200">
+                  <span className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
                     <AlertTriangle className="w-3 h-3" />
                     {t('builder.unsavedDraft')}
                   </span>
@@ -772,13 +766,13 @@ const ResumeBuilderContent = () => {
         </div>
 
         {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 bg-black gap-[1px] flex-1 min-h-0">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 bg-[var(--surface-muted)] p-4 lg:grid-cols-2">
           {/* Left Panel: Editor */}
-          <div className="bg-[#F0F0E8] p-6 md:p-8 overflow-y-auto no-print">
+          <div className="rounded-2xl border border-[color:var(--border)] bg-white p-6 md:p-8 overflow-y-auto no-print">
             <div className="max-w-3xl mx-auto space-y-6">
-              <div className="flex items-center gap-2 border-b-2 border-black pb-2">
-                <div className="w-3 h-3 bg-blue-700"></div>
-                <h2 className="font-mono text-lg font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-2 border-b border-[color:var(--border)] pb-2">
+                <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                <h2 className="text-lg font-semibold uppercase tracking-[0.2em]">
                   {activeTab === 'resume' && t('builder.leftPanel.editorPanel')}
                   {activeTab === 'cover-letter' && t('builder.leftPanel.coverLetterEditor')}
                   {activeTab === 'outreach' && t('builder.leftPanel.outreachEditor')}
@@ -835,20 +829,20 @@ const ResumeBuilderContent = () => {
               {/* JD Match Info Panel */}
               {activeTab === 'jd-match' && (
                 <div className="space-y-4">
-                  <div className="border-2 border-black bg-white p-4">
-                    <h3 className="font-mono text-sm font-bold uppercase mb-2">
+                  <div className="rounded-2xl border border-[color:var(--border)] bg-white p-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.2em] mb-2">
                       {t('builder.jdMatch.aboutTitle')}
                     </h3>
-                    <p className="text-sm text-gray-600 leading-relaxed">
+                    <p className="text-sm text-[color:var(--text-muted)] leading-relaxed">
                       {t('builder.jdMatch.aboutDescription')}
                     </p>
                   </div>
 
-                  <div className="border-2 border-black bg-[#F0F0E8] p-4">
-                    <h3 className="font-mono text-sm font-bold uppercase mb-2">
+                  <div className="rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] p-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.2em] mb-2">
                       {t('builder.jdMatch.highlightedKeywordsTitle')}
                     </h3>
-                    <p className="text-sm text-gray-600 leading-relaxed">
+                    <p className="text-sm text-[color:var(--text-muted)] leading-relaxed">
                       {(() => {
                         const template = t(
                           'builder.jdMatch.highlightedKeywordsDescriptionTemplate'
@@ -868,11 +862,11 @@ const ResumeBuilderContent = () => {
                     </p>
                   </div>
 
-                  <div className="border-2 border-black bg-white p-4">
-                    <h3 className="font-mono text-sm font-bold uppercase mb-2">
+                  <div className="rounded-2xl border border-[color:var(--border)] bg-white p-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.2em] mb-2">
                       {t('builder.jdMatch.tipsTitle')}
                     </h3>
-                    <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                    <ul className="space-y-1 list-disc list-inside text-sm text-[color:var(--text-muted)]">
                       <li>{t('builder.jdMatch.tips.items.addMissingKeywords')}</li>
                       <li>{t('builder.jdMatch.tips.items.focusTechnicalSkills')}</li>
                       <li>{t('builder.jdMatch.tips.items.matchActionVerbs')}</li>
@@ -884,9 +878,9 @@ const ResumeBuilderContent = () => {
           </div>
 
           {/* Right Panel: Preview with Tabs */}
-          <div className="bg-[#E5E5E0] overflow-hidden flex flex-col no-print">
+          <div className="flex flex-col overflow-hidden rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] no-print">
             {/* Tabs Header */}
-            <div className="px-6 pt-3 shrink-0 bg-[#E5E5E0]">
+            <div className="shrink-0 bg-[var(--surface-muted)] px-6 pt-3">
               <RetroTabs
                 tabs={[
                   { id: 'resume', label: t('builder.previewTabs.resume') },
@@ -968,8 +962,8 @@ const ResumeBuilderContent = () => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-[#F0F0E8] flex justify-between items-center font-mono text-xs text-blue-700 border-t border-black no-print">
-          <span className="uppercase font-bold flex items-center gap-2">
+        <div className="flex items-center justify-between border-t border-[color:var(--border)] bg-[var(--surface-muted)] p-4 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--primary)] no-print">
+          <span className="flex items-center gap-2">
             <Image
               src="/logo.svg"
               alt="Resume Matcher"
@@ -981,16 +975,16 @@ const ResumeBuilderContent = () => {
           </span>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-700"></div>
-              <span className="uppercase">
+              <div className="h-2 w-2 rounded-full bg-emerald-600"></div>
+              <span>
                 {templateSettings.template === 'swiss-single' ||
                 templateSettings.template === 'modern'
                   ? t('builder.footer.singleColumn')
                   : t('builder.footer.twoColumn')}
               </span>
             </div>
-            <span className="text-gray-400">|</span>
-            <span className="uppercase">
+            <span className="text-[color:var(--text-subtle)]">|</span>
+            <span>
               {templateSettings.pageSize === 'A4' ? 'A4' : t('builder.pageSize.usLetter')}
             </span>
           </div>

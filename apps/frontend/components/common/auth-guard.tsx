@@ -66,8 +66,12 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
   if (isLoading && !isPublicPath) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F0F0E8]">
-        <p className="font-mono text-xs uppercase tracking-wide text-blue-700">Loading session...</p>
+      <div className="min-h-screen flex items-center justify-center app-shell">
+        <div className="rounded-2xl border border-[color:var(--border)] bg-white px-6 py-4 shadow-[0_12px_24px_rgba(15,27,45,0.18)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--text-subtle)]">
+            Loading session...
+          </p>
+        </div>
       </div>
     );
   }

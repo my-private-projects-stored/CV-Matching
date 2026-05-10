@@ -1,4 +1,4 @@
-import {
+﻿import {
   getQdrantClient,
   QDRANT_COLLECTIONS,
   QDRANT_DISTANCE,
@@ -83,18 +83,30 @@ export async function upsertResumeVector({ qdrantId, vector, payload = {} }) {
 
 export async function deleteJobVector(qdrantId) {
   const client = getQdrantClient();
-  await client.delete(QDRANT_COLLECTIONS.JOBS, {
-    wait: true,
-    points: [qdrantId],
-  });
+  try {
+    await client.delete(QDRANT_COLLECTIONS.JOBS, {
+      wait: true,
+      points: [qdrantId],
+    });
+  } catch (error) {
+    if (!isNotFoundError(error)) {
+      console.warn("[qdrant] deleteJobVector error, continuing", error?.message || error);
+    }
+  }
 }
 
 export async function deleteResumeVector(qdrantId) {
   const client = getQdrantClient();
-  await client.delete(QDRANT_COLLECTIONS.RESUMES, {
-    wait: true,
-    points: [qdrantId],
-  });
+  try {
+    await client.delete(QDRANT_COLLECTIONS.RESUMES, {
+      wait: true,
+      points: [qdrantId],
+    });
+  } catch (error) {
+    if (!isNotFoundError(error)) {
+      console.warn("[qdrant] deleteResumeVector error, continuing", error?.message || error);
+    }
+  }
 }
 
 export async function searchResumeVectorsByJobVector({ vector, limit = 10, scoreThreshold = 0 }) {
@@ -120,3 +132,4 @@ export async function searchJobVectorsByResumeVector({ vector, limit = 10, score
     with_payload: true,
   });
 }
+

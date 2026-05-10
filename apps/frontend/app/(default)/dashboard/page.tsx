@@ -1,6 +1,5 @@
 'use client';
 
-import { SwissGrid } from '@/components/home/swiss-grid';
 import { ResumeUploadDialog } from '@/components/dashboard/resume-upload-dialog';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -332,28 +331,28 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Configuration Warning Banner */}
       {isRecruiterOrAdmin && masterResumeId && !isLlmConfigured && !statusLoading && (
-        <div className="border-2 border-warning bg-amber-50 p-4 shadow-sw-default mb-6 flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-[0_12px_20px_rgba(120,53,15,0.12)]">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-warning" />
+            <AlertTriangle className="h-5 w-5 text-amber-600" />
             <div>
-              <p className="font-mono text-sm font-bold uppercase tracking-wider text-amber-800">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-800">
                 {t('dashboard.llmNotConfiguredTitle')}
               </p>
-              <p className="font-mono text-xs text-amber-700 mt-0.5">
+              <p className="mt-0.5 text-xs text-amber-700">
                 {t('dashboard.llmNotConfiguredMessage')}
               </p>
             </div>
           </div>
           <Link href="/settings">
-            <Button variant="outline" size="sm" className="border-warning text-amber-700">
-              <Settings className="w-4 h-4 mr-2" />
+            <Button variant="outline" size="sm" className="border-amber-200 text-amber-700">
+              <Settings className="mr-2 h-4 w-4" />
               {t('nav.settings')}
             </Button>
           </Link>
         </div>
       )}
 
-      <SwissGrid>
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
         {/* 1. Master Resume Logic */}
         {!masterResumeId ? (
           // LLM Not Configured or Upload State
@@ -361,22 +360,22 @@ export default function DashboardPage() {
             <Link href="/settings" className="block h-full">
               <Card
                 variant="interactive"
-                className="aspect-square h-full border-dashed border-warning bg-amber-50"
+                className="aspect-square h-full rounded-2xl border border-dashed border-amber-200 bg-amber-50"
               >
                 <div className="flex-1 flex flex-col justify-between">
-                  <div className="w-14 h-14 border-2 border-warning bg-white flex items-center justify-center mb-4">
-                    <AlertTriangle className="w-7 h-7 text-warning" />
+                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-200 bg-white">
+                    <AlertTriangle className="h-7 w-7 text-amber-600" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg uppercase text-amber-800 mb-2">
+                    <CardTitle className="mb-2 text-lg font-semibold text-amber-800">
                       {t('dashboard.setupRequiredTitle')}
                     </CardTitle>
-                    <CardDescription className="text-amber-700 text-xs">
+                    <CardDescription className="text-xs text-amber-700">
                       {t('dashboard.setupRequiredMessage')}
                     </CardDescription>
-                    <div className="flex items-center gap-2 mt-4 text-amber-700 group-hover:text-amber-900">
-                      <Settings className="w-4 h-4" />
-                      <span className="font-mono text-xs font-bold uppercase">
+                    <div className="mt-4 flex items-center gap-2 text-amber-700 group-hover:text-amber-900">
+                      <Settings className="h-4 w-4" />
+                      <span className="text-xs font-semibold uppercase tracking-[0.2em]">
                         {t('nav.goToSettings')}
                       </span>
                     </div>
@@ -390,19 +389,16 @@ export default function DashboardPage() {
               onOpenChange={setIsUploadDialogOpen}
               onUploadComplete={handleUploadComplete}
               trigger={
-                <Card
-                  variant="interactive"
-                  className="aspect-square h-full hover:bg-primary hover:text-canvas"
-                >
+                <Card variant="interactive" className="aspect-square h-full rounded-2xl">
                   <div className="flex-1 flex flex-col justify-between pointer-events-none">
-                    <div className="w-14 h-14 border-2 border-current flex items-center justify-center mb-4">
-                      <span className="text-2xl leading-none relative top-[-2px]">+</span>
+                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] text-[var(--text-subtle)]">
+                      <span className="relative top-[-2px] text-2xl leading-none">+</span>
                     </div>
                     <div>
-                      <CardTitle className="text-xl uppercase">
+                      <CardTitle className="text-xl font-semibold">
                         {t('dashboard.initializeMasterResume')}
                       </CardTitle>
-                      <CardDescription className="mt-2 opacity-60 group-hover:opacity-100 text-current">
+                      <CardDescription className="mt-2 text-sm text-[color:var(--text-subtle)]">
                         {'// '}
                         {t('dashboard.initializeSequence')}
                       </CardDescription>
@@ -416,13 +412,13 @@ export default function DashboardPage() {
           // Master Resume Exists
           <Card
             variant="interactive"
-            className="aspect-square h-full"
+            className="aspect-square h-full rounded-2xl"
             onClick={() => router.push(`/resumes/${masterResumeId}`)}
           >
             <div className="flex-1 flex flex-col h-full">
               <div className="flex justify-between items-start mb-6">
-                <div className="w-16 h-16 border-2 border-black bg-blue-700 text-white flex items-center justify-center">
-                  <span className="font-mono font-bold text-lg">M</span>
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-200 bg-blue-600 text-white shadow-[0_10px_20px_rgba(37,99,235,0.18)]">
+                  <span className="text-lg font-semibold">M</span>
                 </div>
                 <div className="flex gap-1">
                   {(processingStatus === 'failed' || processingStatus === 'processing') && (
@@ -430,15 +426,15 @@ export default function DashboardPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 hover:bg-blue-100 hover:text-blue-700 z-10 rounded-none relative"
+                        className="relative z-10 h-8 w-8 rounded-xl hover:bg-blue-100 hover:text-blue-700"
                         onClick={handleRetryProcessing}
                         disabled={isRetrying}
                         title={t('dashboard.retryProcessing')}
                       >
                         {isRetrying ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <RefreshCw className="w-4 h-4" />
+                          <RefreshCw className="h-4 w-4" />
                         )}
                       </Button>
                     </>
@@ -446,12 +442,12 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <CardTitle className="text-lg group-hover:text-primary">
+              <CardTitle className="text-lg font-semibold group-hover:text-primary">
                 {t('dashboard.masterResume')}
               </CardTitle>
 
               <div
-                className={`text-xs font-mono mt-auto pt-4 flex flex-col gap-2 uppercase ${getStatusDisplay().color}`}
+                className={`mt-auto flex flex-col gap-2 pt-4 text-xs uppercase tracking-[0.2em] ${getStatusDisplay().color}`}
               >
                 <div className="flex items-center gap-1">
                   {getStatusDisplay().icon}
@@ -462,7 +458,7 @@ export default function DashboardPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-xs h-7 rounded-none border-black"
+                      className="h-7 text-xs"
                       onClick={handleRetryProcessing}
                       disabled={isRetrying}
                     >
@@ -473,7 +469,7 @@ export default function DashboardPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-xs h-7 rounded-none border-red-600 text-red-600 hover:bg-red-50"
+                      className="h-7 text-xs text-red-600 hover:bg-red-50"
                       onClick={handleDeleteAndReupload}
                     >
                       {t('dashboard.deleteAndReupload')}
@@ -495,27 +491,27 @@ export default function DashboardPage() {
             <Card
               key={resume.resume_id}
               variant="interactive"
-              className="aspect-square h-full bg-canvas"
+              className="aspect-square h-full rounded-2xl bg-canvas"
               onClick={() => router.push(`/resumes/${resume.resume_id}`)}
             >
               <div className="flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-6">
                   <div
-                    className="w-12 h-12 border-2 border-black flex items-center justify-center"
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:var(--border)]"
                     style={{ backgroundColor: color.bg, color: color.fg }}
                   >
-                    <span className="font-mono font-bold">{getMonogram(title)}</span>
+                    <span className="text-sm font-semibold">{getMonogram(title)}</span>
                   </div>
-                  <span className="font-mono text-xs text-gray-500 uppercase">
+                  <span className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                     {resume.processing_status}
                   </span>
                 </div>
                 <CardTitle className="text-lg">
-                  <span className="block font-serif text-base font-bold leading-tight mb-1 w-full line-clamp-2">
+                  <span className="mb-1 block w-full line-clamp-2 text-base font-semibold leading-tight">
                     {title}
                   </span>
                 </CardTitle>
-                <CardDescription className="mt-auto pt-4 uppercase">
+                <CardDescription className="mt-auto pt-4 text-xs uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   {t('dashboard.edited', {
                     date: formatDate(resume.updated_at || resume.created_at),
                   })}{' '}
@@ -525,7 +521,7 @@ export default function DashboardPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-xs h-7 rounded-none border-black"
+                    className="h-7 text-xs"
                     disabled={isSettingAsMaster}
                     onClick={(e) => handleSetAsMaster(e, resume.resume_id)}
                   >
@@ -549,11 +545,13 @@ export default function DashboardPage() {
           <div className="flex-1 flex flex-col items-center justify-center text-center h-full">
             <Button
               onClick={() => router.push('/jobs')}
-              className="w-20 h-20 bg-green-700 text-white border-2 border-black shadow-sw-default hover:bg-green-800 hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none transition-all rounded-none"
+              className="h-20 w-20 rounded-2xl bg-emerald-600 text-white shadow-[0_12px_20px_rgba(16,185,129,0.25)] hover:bg-emerald-700"
             >
-              <Briefcase className="w-8 h-8" />
+              <Briefcase className="h-8 w-8" />
             </Button>
-            <p className="text-xs font-mono mt-4 uppercase text-green-700">Browse Jobs</p>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+              Browse Jobs
+            </p>
           </div>
         </Card>
 
@@ -566,11 +564,11 @@ export default function DashboardPage() {
                   ? router.push('/applications')
                   : router.push('/profile')
               }
-              className="w-20 h-20 bg-amber-700 text-white border-2 border-black shadow-sw-default hover:bg-amber-800 hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none transition-all rounded-none"
+              className="h-20 w-20 rounded-2xl bg-amber-600 text-white shadow-[0_12px_20px_rgba(217,119,6,0.25)] hover:bg-amber-700"
             >
-              <Users className="w-8 h-8" />
+              <Users className="h-8 w-8" />
             </Button>
-            <p className="text-xs font-mono mt-4 uppercase text-amber-700">
+            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
               {isRecruiterOrAdmin ? t('applicationsPage.title') : t('nav.profile')}
             </p>
           </div>
@@ -588,11 +586,11 @@ export default function DashboardPage() {
                     : '/applications';
                 router.push(url);
               }}
-              className="w-20 h-20 bg-black text-white border-2 border-black shadow-sw-default hover:bg-gray-900 hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none transition-all rounded-none"
+              className="h-20 w-20 rounded-2xl bg-slate-900 text-white shadow-[0_12px_20px_rgba(15,23,42,0.25)] hover:bg-slate-800"
             >
-              <History className="w-8 h-8" />
+              <History className="h-8 w-8" />
             </Button>
-            <p className="text-xs font-mono mt-4 uppercase text-black">
+            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">
               {isRecruiterOrAdmin ? t('applicationsPage.title') : 'My History'}
             </p>
           </div>
@@ -604,11 +602,11 @@ export default function DashboardPage() {
             <Button
               onClick={() => router.push('/tailor')}
               disabled={!isTailorEnabled}
-              className="w-20 h-20 bg-blue-700 text-white border-2 border-black shadow-sw-default hover:bg-blue-800 hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none transition-all rounded-none"
+              className="h-20 w-20 rounded-2xl bg-blue-600 text-white shadow-[0_12px_20px_rgba(37,99,235,0.25)] hover:bg-blue-700 disabled:bg-[var(--surface-muted)] disabled:text-[color:var(--text-subtle)]"
             >
-              <Plus className="w-8 h-8" />
+              <Plus className="h-8 w-8" />
             </Button>
-            <p className="text-xs font-mono mt-4 uppercase text-green-700">
+            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
               {t('dashboard.createResume')}
             </p>
           </div>
@@ -619,11 +617,13 @@ export default function DashboardPage() {
           <div className="flex-1 flex flex-col items-center justify-center text-center h-full">
             <Button
               onClick={() => router.push('/flow')}
-              className="w-20 h-20 bg-violet-700 text-white border-2 border-black shadow-sw-default hover:bg-violet-800 hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none transition-all rounded-none"
+              className="h-20 w-20 rounded-2xl bg-violet-600 text-white shadow-[0_12px_20px_rgba(124,58,237,0.25)] hover:bg-violet-700"
             >
-              <Plus className="w-8 h-8" />
+              <Plus className="h-8 w-8" />
             </Button>
-            <p className="text-xs font-mono mt-4 uppercase text-violet-700">{t('nav.flow')}</p>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-violet-700">
+              {t('nav.flow')}
+            </p>
           </div>
         </Card>
 
@@ -656,7 +656,7 @@ export default function DashboardPage() {
           onConfirm={confirmDeleteAndReupload}
           variant="danger"
         />
-      </SwissGrid>
+      </div>
     </div>
   );
 }

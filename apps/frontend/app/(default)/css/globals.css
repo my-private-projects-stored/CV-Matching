@@ -40,19 +40,19 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Swiss Style Tokens */
-  --color-canvas: #f0f0e8;
-  --color-ink: #000000;
-  --color-success: #15803d;
-  --color-warning: #f97316;
+  /* Enterprise Platform Tokens */
+  --color-canvas: #f6f7fb;
+  --color-ink: #0f1b2d;
+  --color-success: #11845b;
+  --color-warning: #c77417;
 
-  --shadow-sw-sm: 2px 2px 0px 0px #000000;
-  --shadow-sw-default: 4px 4px 0px 0px #000000;
-  --shadow-sw-card: 6px 6px 0px 0px #000000;
+  --shadow-elev-1: 0 8px 20px rgba(15, 27, 45, 0.12);
+  --shadow-elev-2: 0 16px 36px rgba(15, 27, 45, 0.18);
 
   /* Fonts */
-  --font-sans: 'Geist Sans', sans-serif;
-  --font-mono: 'Space Grotesk', monospace;
+  --font-sans: 'Manrope', sans-serif;
+  --font-display: 'Fraunces', serif;
+  --font-mono: 'IBM Plex Mono', monospace;
 
   /* Animations */
   --animate-gradient: gradient 8s linear infinite;
@@ -65,76 +65,82 @@
 }
 
 :root {
-  --font-mono: 'Geist Mono', monospace;
-  --font-sans: 'Geist', sans-serif;
-  --radius: 0.625rem;
+  --radius: 0.9rem;
 
-  /* Swiss International Style Palette */
-  --background: #f0f0e8; /* Canvas */
-  --foreground: #000000; /* Ink */
+  /* Enterprise Recruitment Palette */
+  --background: #f6f7fb;
+  --foreground: #0f1b2d;
 
-  --card: #f0f0e8;
-  --card-foreground: #000000;
+  --surface: #ffffff;
+  --surface-muted: #eef2f7;
+  --surface-strong: #0f1b2d;
+  --surface-elevated: #ffffff;
+  --surface-glass: rgba(255, 255, 255, 0.7);
 
-  --popover: #f0f0e8;
-  --popover-foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #0f1b2d;
 
-  --primary: #1d4ed8; /* Hyper Blue */
+  --popover: #ffffff;
+  --popover-foreground: #0f1b2d;
+
+  --primary: #155eef;
   --primary-foreground: #ffffff;
 
-  --secondary: #e5e5e0; /* Panel Grey */
-  --secondary-foreground: #000000;
+  --secondary: #dfe6f2;
+  --secondary-foreground: #0f1b2d;
 
-  --muted: #e5e5e0;
-  --muted-foreground: #6b7280;
+  --muted: #eef2f7;
+  --muted-foreground: #4b5b78;
 
-  --accent: #e5e5e0;
-  --accent-foreground: #000000;
+  --accent: #14b8a6;
+  --accent-foreground: #062f2a;
 
-  --destructive: #dc2626; /* Alert Red */
+  --destructive: #d94848;
   --destructive-foreground: #ffffff;
 
-  --border: #000000;
-  --input: #f0f0e8;
-  --ring: #1d4ed8;
+  --border: #d3dbe7;
+  --input: #ffffff;
+  --ring: #155eef;
 
-  --chart-1: #1d4ed8;
-  --chart-2: #15803d;
-  --chart-3: #f97316;
-  --chart-4: #dc2626;
-  --chart-5: #000000;
+  --chart-1: #155eef;
+  --chart-2: #14b8a6;
+  --chart-3: #f59e0b;
+  --chart-4: #d94848;
+  --chart-5: #111827;
 
-  --sidebar: #e5e5e0;
-  --sidebar-foreground: #000000;
-  --sidebar-primary: #1d4ed8;
+  --sidebar: #0f1b2d;
+  --sidebar-foreground: #e8edf5;
+  --sidebar-primary: #155eef;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #d8d8d2;
-  --sidebar-accent-foreground: #000000;
-  --sidebar-border: #000000;
-  --sidebar-ring: #1d4ed8;
+  --sidebar-accent: #1d2a44;
+  --sidebar-accent-foreground: #f8fafc;
+  --sidebar-border: #23324d;
+  --sidebar-ring: #155eef;
+
+  --text-muted: #5a6a86;
+  --text-subtle: #7c8aa3;
 }
 
 .dark {
-  /* Minimal Dark Mode mapping for now - Swiss Style is predominantly light/brutalist */
-  --background: #1a1a1a;
-  --foreground: #ffffff;
-  --card: #2a2a2a;
-  --card-foreground: #ffffff;
-  --popover: #2a2a2a;
-  --popover-foreground: #ffffff;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-  --secondary: #2a2a2a;
-  --secondary-foreground: #ffffff;
-  --muted: #2a2a2a;
-  --muted-foreground: #a3a3a3;
-  --accent: #2a2a2a;
-  --accent-foreground: #ffffff;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #404040;
-  --input: #2a2a2a;
-  --ring: #3b82f6;
+  --background: #0b1220;
+  --foreground: #eef2f8;
+  --card: #121a2b;
+  --card-foreground: #eef2f8;
+  --popover: #121a2b;
+  --popover-foreground: #eef2f8;
+  --primary: #4c8bff;
+  --primary-foreground: #0b1220;
+  --secondary: #1c2436;
+  --secondary-foreground: #eef2f8;
+  --muted: #1c2436;
+  --muted-foreground: #a3adbf;
+  --accent: #2dd4bf;
+  --accent-foreground: #0b1220;
+  --destructive: #f87171;
+  --destructive-foreground: #0b1220;
+  --border: #273248;
+  --input: #121a2b;
+  --ring: #4c8bff;
 }
 
 @layer base {
@@ -143,9 +149,28 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
   }
   button {
     font-family: var(--font-mono);
+  }
+}
+
+@layer utilities {
+  .app-shell {
+    background: radial-gradient(circle at top, rgba(21, 94, 239, 0.12), transparent 55%),
+      linear-gradient(180deg, #f6f7fb 0%, #eef3fb 60%, #e9f0fb 100%);
+  }
+
+  .glass-panel {
+    background: var(--surface-glass);
+    border: 1px solid rgba(211, 219, 231, 0.6);
+    box-shadow: var(--shadow-elev-1);
+    backdrop-filter: blur(14px);
+  }
+
+  .ink-divider {
+    border-color: rgba(15, 27, 45, 0.08);
   }
 }
 

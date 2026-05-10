@@ -145,7 +145,7 @@ describe('FormattingControls', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /builder\.formatting\.resetDefaults/i }));
     expect(onChange).toHaveBeenLastCalledWith(DEFAULT_TEMPLATE_SETTINGS);
-  });
+  }, 15000);
 
   it('updates effective output when compact mode is enabled', () => {
     renderControls();

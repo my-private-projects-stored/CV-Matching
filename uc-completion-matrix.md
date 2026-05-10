@@ -1,5 +1,5 @@
 # UC Completion Matrix - Smart CV Matching System
-**Date:** 2026-05-05 | **Total UCs:** 30 | **Done:** 30 | **Partial:** 0 | **Missing:** 0
+**Date:** 2026-05-01 | **Total UCs:** 30 | **Done:** 19 | **Partial:** 11 | **Missing:** 0
 
 ---
 
@@ -127,16 +127,16 @@
 ### UC-BASIC-03: Quên mật khẩu
 | Aspect | Status | Details |
 |--------|--------|---------|
-| **Overall Status** | ✅ **DONE** | End-to-end flow implemented with mock mailer harness |
+| **Overall Status** | ⚠️ **PARTIAL** | API exists, frontend UI incomplete |
 | **Forgot Password API** | ✅ | `POST /api/auth/forgot-password` implemented |
 | **Reset Token Generation** | ✅ | Token created + expiry |
-| **Email Sending** | ✅ | Mock mailer harness verifies reset email delivery |
+| **Email Sending** | ⚠️ | Logic present but not fully tested in CI |
 | **Reset Password API** | ✅ | `POST /api/auth/reset-password` implemented |
 | **Token Validation** | ✅ | Expiry check + single-use |
-| **Frontend Flow** | ✅ | Forgot/reset password pages linked from login |
-| **Test - Full Flow** | ✅ | `apps/backend/tests/integration/auth-endpoints.test.mjs` + frontend page tests |
+| **Frontend Flow** | ❌ | UI not fully hooked up |
+| **Test - Full Flow** | ⚠️ | `apps/backend/tests/integration/auth-endpoints.test.mjs` (partial) |
 | **Error Cases** | ✅ | Expired token, invalid email handling |
-| **Status** | ✅ | Mocked email delivery + reset flow verified |
+| **Status** | 🔴 | **Gap:** Needs frontend email input + verification page |
 
 ---
 
@@ -192,13 +192,13 @@
 ### UC-BASIC-08: Quản lý thông tin công ty
 | Aspect | Status | Details |
 |--------|--------|---------|
-| **Overall Status** | ✅ **DONE** | Branding + public display implemented |
-| **Backend API** | ✅ | `apps/backend/src/routes/config.routes.js` - GET/PUT /api/config/company-profile |
+| **Overall Status** | ⚠️ **PARTIAL** | API implemented, UI minimal |
+| **Backend API** | ✅ | `apps/backend/src/routes/config.routes.js` - PUT /api/config/company-profile |
 | **Database Storage** | ✅ | Config model with company_profile fields |
-| **Frontend Form** | ✅ | Settings page captures branding fields |
-| **Public Display** | ✅ | Job board shows company banner + branding |
-| **Test** | ✅ | `apps/frontend/tests/jobs-page.test.tsx`, `apps/frontend/tests/config-api.test.ts` |
-| **Status** | ✅ | Company branding display validated |
+| **Frontend Form** | ⚠️ | Basic form in settings, incomplete branding UI |
+| **Public Display** | ⚠️ | Job listings show basic company info |
+| **Test** | ⚠️ | `apps/backend/tests/integration/config-endpoints.test.mjs` (partial) |
+| **Status** | 🟡 | **Gap:** Need enhanced branding/logo display on jobs |
 
 ---
 
@@ -230,14 +230,14 @@
 ### UC-BASIC-11: Xóa/đóng tin tuyển dụng
 | Aspect | Status | Details |
 |--------|--------|---------|
-| **Overall Status** | ✅ **DONE** | Soft-delete + audit trail implemented |
+| **Overall Status** | ⚠️ **PARTIAL** | Delete implemented, soft-delete/audit incomplete |
 | **Delete API** | ✅ | `DELETE /api/jobs/:id` |
-| **Soft Delete** | ✅ | Implemented via `status=deleted` + `deletedAt` |
-| **Status Field** | ✅ | Supports `active/closed/deleted` |
-| **Audit Trail** | ✅ | Deletion recorded in `importantChangeHistory` |
+| **Soft Delete** | ⚠️ | Physical delete (should be soft) |
+| **Status Field** | ⚠️ | No explicit "closed" status |
+| **Audit Trail** | ⚠️ | No deletion audit log |
 | **Frontend** | ✅ | Delete button in jobs UI |
-| **Test** | ✅ | Soft-delete integration contract added in `apps/backend/tests/integration/job-update-endpoints.test.mjs` |
-| **Status** | ✅ | Soft-delete contract is implemented in service/controller/model |
+| **Test** | ⚠️ | `apps/backend/tests/integration/job-update-endpoints.test.mjs` (basic) |
+| **Status** | 🟡 | **Gap:** Needs soft-delete + audit trail implementation |
 
 ---
 
@@ -272,20 +272,13 @@
 ### UC-RM-01: Candidate quản lý Master Resume
 | Aspect | Status | Details |
 |--------|--------|---------|
-| **Overall Status** | ✅ **DONE** | Hoàn thành 100% |
+| **Overall Status** | ⚠️ **PARTIAL** | Core API works, versioning incomplete |
 | **Master Resume API** | ✅ | `GET /api/resumes/master`, `POST /api/resumes/:id/set-as-master` |
 | **Resume Create** | ✅ | `POST /api/resumes` |
-| **Version Tracking** | ✅ | Updated/created timestamps and parent resume linking |
-| **Version History API** | ✅ | `GET /api/resumes/:id/history` - Backend service returns chronological versions |
-| **Restore API** | ✅ | `PUT /api/resumes/:id/restore/:versionId` - Backend service copies version content |
-| **Frontend Version History UI** | ✅ | `apps/frontend/components/builder/resume-version-history.tsx` - Timeline with version list |
-| **Frontend Restore Button** | ✅ | Restore button with confirmation modal in version history panel |
-| **Frontend Restore Handler** | ✅ | `handleRestoreVersion` in resume viewer page - reloads resume after restore |
-| **Test - Backend History** | ✅ | `apps/backend/tests/unit/resume-history.service.test.mjs` - PASS |
-| **Test - Backend Restore** | ✅ | `apps/backend/tests/unit/resume-restore.service.test.mjs` - 4 tests PASS |
-| **Test - Frontend Timeline** | ✅ | `apps/frontend/tests/resume-version-history.test.tsx` - PASS |
-| **i18n Support** | ✅ | Translations added for EN and VI |
-| **Status** | ✅ | **Complete:** History view + Restore action fully implemented and tested |
+| **Version Tracking** | ⚠️ | Updated/created timestamps only |
+| **Frontend UI** | ⚠️ | Resume list view exists, versioning UI minimal |
+| **Test** | ⚠️ | `apps/backend/tests/integration/master-resume-endpoints.test.mjs` (basic) |
+| **Status** | 🟡 | **Gap:** Needs version history UI + rollback |
 
 ---
 
@@ -307,52 +300,51 @@
 ### UC-RM-03: Resume Builder live preview + chỉnh sửa
 | Aspect | Status | Details |
 |--------|--------|---------|
-| **Overall Status** | ✅ **DONE** | Live preview + editing fully tested |
+| **Overall Status** | ⚠️ **PARTIAL** | Components exist, tests incomplete |
 | **Builder Component** | ✅ | `apps/frontend/components/builder/resume-builder.tsx` |
 | **Form Component** | ✅ | `apps/frontend/components/builder/resume-form.tsx` |
 | **Preview Sync** | ✅ | Real-time update on edit |
 | **State Management** | ✅ | Context-based state |
 | **Section Editing** | ✅ | Add/edit sections |
-| **Component Tests** | ✅ | Focused live preview regression test (`apps/frontend/tests/builder-regression.test.tsx` - 3 tests PASS) |
-| **DnD Smoke Tests** | ✅ | Full drag-and-drop smoke coverage (`apps/frontend/tests/builder-dnd-smoke.test.tsx` - 4 tests PASS) |
-| **Test Coverage** | ✅ | Regression + smoke coverage complete |
+| **Unit Tests** | ⚠️ | Basic tests exist, coverage <50% |
+| **Component Tests** | ⚠️ | Minimal, need live preview assertions |
+| **Status** | 🟡 | **Gap:** Need comprehensive test coverage for live preview |
 
 ---
 
 ### UC-RM-04: Quản lý section nâng cao
 | Aspect | Status | Details |
 |--------|--------|---------|
-| **Overall Status** | ✅ **DONE** | Drag-and-drop + section operations fully tested |
+| **Overall Status** | ⚠️ **PARTIAL** | Components built, test coverage low |
 | **Section Header** | ✅ | `apps/frontend/components/builder/section-header.tsx` |
 | **Rename Section** | ✅ | Implemented |
-| **Reorder (Drag/Drop)** | ✅ | `draggable-section-wrapper.tsx` + button handlers |
+| **Reorder (Drag/Drop)** | ✅ | `draggable-section-wrapper.tsx` |
 | **Hide/Show** | ✅ | Toggle visibility |
 | **Custom Sections** | ✅ | `add-section-dialog.tsx` |
 | **Delete Confirmation** | ✅ | Prompt before delete |
-| **Component Tests** | ✅ | Section-operation regression test (`apps/frontend/tests/builder-regression.test.tsx` - 3 tests PASS) |
-| **DnD Smoke Tests** | ✅ | Move up/down button operations (`apps/frontend/tests/builder-dnd-smoke.test.tsx` - 4 tests PASS) |
-| **Test Coverage** | ✅ | Regression + smoke coverage complete |
+| **Component Tests** | ⚠️ | Basic tests, need drag/drop assertions |
+| **Status** | 🟡 | **Gap:** Need regression test for section operations |
 
 ---
 
 ### UC-RM-05: Chọn template resume
 | Aspect | Status | Details |
 |--------|--------|---------|
-| **Overall Status** | ✅ **DONE** | Selector + preview + persistence validated |
+| **Overall Status** | ⚠️ **PARTIAL** | Selector exists, templates limited |
 | **Template Selector** | ✅ | `apps/frontend/components/builder/template-selector.tsx` |
-| **Template List** | ✅ | 4 templates available |
+| **Template List** | ✅ | 2-3 templates available |
 | **Visual Preview** | ✅ | Shows template sample |
 | **Template Switching** | ✅ | Updates layout dynamically |
 | **Persistence** | ✅ | Saves template choice |
-| **Test** | ✅ | `apps/frontend/tests/template-selector.test.tsx` |
-| **Status** | ✅ | Template selection contract validated |
+| **Test** | ⚠️ | Basic switching test, needs assertions |
+| **Status** | 🟡 | **Gap:** Need more template variants + tests |
 
 ---
 
 ### UC-RM-06: Formatting controls
 | Aspect | Status | Details |
 |--------|--------|---------|
-| **Overall Status** | ✅ **DONE** | Controls + print parsing validated |
+| **Overall Status** | ⚠️ **PARTIAL** | Buttons exist, not fully functional |
 | **Formatting Component** | ✅ | `apps/frontend/components/builder/formatting-controls.tsx` |
 | **Page Size (A4/Letter)** | ✅ | Toggle available |
 | **Margins** | ✅ | Predefined options |
@@ -360,8 +352,8 @@
 | **Font Family** | ✅ | Font selector |
 | **Compact Mode** | ✅ | Toggle available |
 | **Print Settings** | ✅ | Applied in print view |
-| **Frontend Tests** | ✅ | `formatting-controls.test.tsx`, `template-settings-output.test.ts`, `print-resume-parse.test.ts` |
-| **Status** | ✅ | Formatting contract covered in tests |
+| **Frontend Tests** | ⚠️ | Basic tests, need print output validation |
+| **Status** | 🟡 | **Gap:** Need print test assertions |
 
 ---
 
@@ -395,15 +387,15 @@
 ### UC-RM-09: Cover Letter + Email Generator
 | Aspect | Status | Details |
 |--------|--------|---------|
-| **Overall Status** | ✅ **DONE** | API + E2E contract tests complete |
+| **Overall Status** | ⚠️ **PARTIAL** | API implemented, test coverage incomplete |
 | **Cover Letter API** | ✅ | `POST /api/resumes/:id/generate-cover-letter` |
 | **Outreach Email API** | ✅ | `POST /api/resumes/:id/generate-outreach` |
 | **Update APIs** | ✅ | `PATCH /api/resumes/:id/cover-letter` |
 | **Editor Components** | ✅ | `cover-letter-editor.tsx`, `outreach-editor.tsx` |
 | **Preview** | ✅ | `cover-letter-preview.tsx` |
-| **Test - Cover Letter** | ✅ | `apps/backend/tests/integration/cover-outreach-e2e.test.mjs` |
-| **Test - Email** | ✅ | `apps/backend/tests/integration/cover-outreach-e2e.test.mjs` |
-| **Status** | ✅ | Generator E2E flow validated |
+| **Test - Cover Letter** | ⚠️ | Basic test, needs comprehensive coverage |
+| **Test - Email** | ⚠️ | Minimal test coverage |
+| **Status** | 🟡 | **Gap:** Need E2E test for generators |
 
 ---
 
@@ -424,30 +416,30 @@
 ### UC-RM-11: Multi-language (UI + AI Content)
 | Aspect | Status | Details |
 |--------|--------|---------|
-| **Overall Status** | ✅ **DONE** | UI + AI content language enforced |
+| **Overall Status** | ⚠️ **PARTIAL** | i18n framework exists, content language incomplete |
 | **i18n Framework** | ✅ | next-intl integration |
 | **UI Languages** | ✅ | EN, VI, ZH message files |
 | **UI Switching** | ✅ | Language selector in settings |
-| **AI Output Language** | ✅ | Content language enforced across generators |
+| **AI Output Language** | ⚠️ | Config exists, not consistently applied |
 | **Language Persistence** | ✅ | Saved in config |
-| **Frontend Test** | ✅ | `apps/frontend/tests/settings-page.test.tsx` |
-| **Backend Test** | ✅ | `language-output-endpoints.test.mjs`, `tailor-endpoints.test.mjs`, `enrichment-endpoints.test.mjs` |
-| **Status** | ✅ | AI output language is enforced and tested |
+| **Frontend Test** | ⚠️ | `apps/frontend/tests/settings-page.test.tsx` (basic) |
+| **Backend Test** | ⚠️ | `apps/backend/tests/integration/config-endpoints.test.mjs` (partial) |
+| **Status** | 🟡 | **Gap:** Need AI content language enforcement in prompts |
 
 ---
 
 ### UC-RM-12: Cấu hình Privacy + AI Provider
 | Aspect | Status | Details |
 |--------|--------|---------|
-| **Overall Status** | ✅ **DONE** | Hoàn thành 100% |
+| **Overall Status** | ⚠️ **PARTIAL** | Config API exists, UI minimal |
 | **Privacy Config API** | ✅ | `PUT /api/config/privacy` |
 | **LLM Provider Config** | ✅ | `PUT /api/config/llm-api-key` |
 | **API Key Management** | ✅ | Encrypted storage |
 | **Provider Test** | ✅ | `POST /api/config/llm-test` |
-| **Local/Cloud Toggle** | ✅ | Privacy mode selector in settings |
-| **Frontend Form** | ✅ | Settings page provider/privacy section |
-| **Test** | ✅ | `apps/backend/tests/integration/config-endpoints.test.mjs` + `apps/frontend/tests/settings-page.test.tsx` |
-| **Status** | ✅ | Provider selection, privacy mode, and config persistence are implemented |
+| **Local/Cloud Toggle** | ⚠️ | Config exists, UI minimal |
+| **Frontend Form** | ⚠️ | Basic form in settings |
+| **Test** | ⚠️ | `apps/backend/tests/integration/config-endpoints.test.mjs` (partial) |
+| **Status** | 🟡 | **Gap:** Need provider selection UI + documentation |
 
 ---
 
@@ -456,19 +448,31 @@
 | Category | Done | Partial | Missing | Total | Completion % |
 |----------|------|---------|---------|-------|--------------|
 | **UC-CORE** | 5 | 0 | 0 | 5 | 100% |
-| **UC-BASIC** | 13 | 0 | 0 | 13 | 100% |
-| **UC-RM** | 12 | 0 | 0 | 12 | 100% |
-| **TOTAL** | **30** | **0** | **0** | **30** | **100%** |
+| **UC-BASIC** | 10 | 3 | 0 | 13 | 77% |
+| **UC-RM** | 4 | 8 | 0 | 12 | 33% |
+| **TOTAL** | **19** | **11** | **0** | **30** | **63%** |
 
 ---
 
 ## TOP GAPS TO CLOSE
 
-### 🟢 COMPLETE
-1. No remaining gaps. All UCs are complete.
+### 🔴 HIGH PRIORITY (Blockers - 3-4 days)
+1. **UC-BASIC-03** - Forgot password frontend (Missing email input page)
+2. **UC-BASIC-11** - Soft delete + audit trail (Missing implementation)
+3. **UC-RM-03/04** - Builder test coverage (Missing comprehensive tests)
+
+### 🟡 MEDIUM PRIORITY (UX - 5-6 days)
+4. **UC-RM-01** - Version history UI
+5. **UC-RM-05/06** - Template & formatting test assertions
+6. **UC-RM-09** - Generator E2E tests
+7. **UC-RM-11** - Language content enforcement
+8. **UC-RM-12** - Provider selection UI
+
+### 🟢 LOW PRIORITY (Polish - 1-2 days)
+9. **UC-BASIC-08** - Company profile branding display
 
 ---
 
-**Last Updated:** 2026-05-05  
-**Project Status:** 100% Complete (30/30 Done)  
-**Roadmap:** Complete
+**Last Updated:** 2026-05-01  
+**Project Status:** 63% Complete (19/30 Done)  
+**Roadmap:** 7-10 days to 100% completion

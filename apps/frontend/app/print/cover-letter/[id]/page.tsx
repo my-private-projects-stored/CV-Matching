@@ -59,7 +59,7 @@ async function fetchCoverLetterData(resumeId: string): Promise<CoverLetterData> 
   };
 }
 
-function parsePageSize(value: string | undefined): PageSize {
+export function parsePageSize(value: string | undefined): PageSize {
   if (value === 'A4' || value === 'LETTER') {
     return value;
   }

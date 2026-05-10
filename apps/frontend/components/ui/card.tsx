@@ -8,18 +8,18 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = 'default', noPadding = false, ...props }, ref) => {
-    const baseStyles = 'rounded-none flex flex-col relative overflow-hidden';
+    const baseStyles = 'rounded-2xl flex flex-col relative overflow-hidden border border-[color:var(--border)]';
 
     const variants = {
-      default: 'bg-canvas',
+      default: 'bg-[var(--surface)]',
       interactive: cn(
-        'bg-canvas border-2 border-transparent', // Initial state
+        'bg-[var(--surface)] border border-transparent', // Initial state
         'transition-all duration-200 ease-in-out',
         'cursor-pointer group',
-        'hover:z-20 hover:border-ink hover:shadow-sw-default hover:-translate-y-[2px] hover:-translate-x-[2px]'
+        'hover:z-20 hover:border-[color:var(--border)] hover:shadow-[0_18px_34px_rgba(15,27,45,0.18)] hover:-translate-y-1'
       ),
-      outline: 'bg-canvas border-2 border-ink',
-      ghost: 'bg-transparent border-none shadow-none',
+      outline: 'bg-[var(--surface)] border border-[color:var(--border)]',
+      ghost: 'bg-transparent border border-transparent shadow-none',
     };
 
     // Dashboard specific style that was common:
@@ -49,7 +49,7 @@ const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTML
   ({ className, ...props }, ref) => (
     <h3
       ref={ref}
-      className={cn('font-serif text-2xl font-semibold leading-none tracking-tight', className)}
+      className={cn('font-[var(--font-display)] text-2xl font-semibold leading-tight tracking-tight', className)}
       {...props}
     />
   )
@@ -60,7 +60,7 @@ const CardDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => (
-  <p ref={ref} className={cn('text-sm text-gray-500 font-mono', className)} {...props} />
+  <p ref={ref} className={cn('text-sm text-[color:var(--text-muted)]', className)} {...props} />
 ));
 CardDescription.displayName = 'CardDescription';
 

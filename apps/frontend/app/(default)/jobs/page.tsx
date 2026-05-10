@@ -804,12 +804,19 @@ export default function JobsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F0F0E8] px-4 py-8 md:px-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black pb-4">
-          <div>
-            <h1 className="font-serif text-4xl uppercase tracking-tight">{t('jobsPage.title')}</h1>
-            <p className="font-mono text-xs uppercase text-blue-700">{t('jobsPage.subtitle')}</p>
+    <div className="space-y-8">
+      <div className="mx-auto max-w-7xl space-y-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-[color:var(--border)] bg-white px-6 py-5 shadow-[0_18px_34px_rgba(15,27,45,0.12)]">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--text-subtle)]">
+              Tuyển dụng doanh nghiệp
+            </p>
+            <h1 className="text-3xl font-semibold text-[var(--foreground)] md:text-4xl">
+              {t('jobsPage.title')}
+            </h1>
+            <p className="text-sm text-[color:var(--text-muted)]">
+              {t('jobsPage.subtitle')}
+            </p>
           </div>
           <Link href="/dashboard">
             <Button variant="outline">{t('nav.backToDashboard')}</Button>
@@ -817,12 +824,12 @@ export default function JobsPage() {
         </div>
 
         {showCompanyProfile ? (
-          <Card variant="outline" noPadding className="border-2 bg-white">
+          <Card variant="outline" noPadding className="bg-white">
             <div style={{ backgroundColor: brandPrimaryColor }} className="h-1 w-full" />
-            <div className="flex flex-col gap-4 p-4 md:flex-row md:items-start md:justify-between">
+            <div className="flex flex-col gap-4 px-5 py-4 md:flex-row md:items-start md:justify-between">
               <div className="flex flex-1 items-start gap-4">
                 {companyLogoUrl ? (
-                  <div className="h-14 w-14 shrink-0 border border-black bg-white p-1">
+                  <div className="h-14 w-14 shrink-0 rounded-2xl border border-[color:var(--border)] bg-white p-2">
                     <img
                       src={companyLogoUrl}
                       alt={`${companyName || t('jobsPage.companyProfileFallbackName')} logo`}
@@ -830,19 +837,19 @@ export default function JobsPage() {
                     />
                   </div>
                 ) : null}
-                <div className="space-y-1">
-                  <p className="font-mono text-[10px] uppercase text-gray-600">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--text-subtle)]">
                     {t('jobsPage.companyProfileLabel')}
                   </p>
-                  <h2 className="font-serif text-2xl">
+                  <h2 className="text-xl font-semibold text-[var(--foreground)]">
                     {companyName || t('jobsPage.companyProfileFallbackName')}
                   </h2>
                   {companyOverview ? (
-                    <p className="text-sm text-gray-700">{companyOverview}</p>
+                    <p className="text-sm text-[color:var(--text-muted)]">{companyOverview}</p>
                   ) : null}
                 </div>
               </div>
-              <div className="flex flex-col gap-2 text-xs font-mono uppercase text-gray-600">
+              <div className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                 {companyMetaItems.map((item) => (
                   <span key={item.label}>
                     {item.label}: {item.value}
@@ -853,7 +860,7 @@ export default function JobsPage() {
                     href={companyWebsite}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-700 hover:underline"
+                    className="text-[color:var(--primary)] hover:underline"
                   >
                     {t('jobsPage.companyProfileWebsite')}: {formatWebsiteDisplay(companyWebsite)}
                   </a>
@@ -863,7 +870,7 @@ export default function JobsPage() {
           </Card>
         ) : null}
 
-        <Card variant="outline" className="space-y-4">
+        <Card variant="outline" className="space-y-4 bg-white">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
             <Input
               placeholder={t('common.search')}
@@ -872,7 +879,7 @@ export default function JobsPage() {
             />
 
             <select
-              className="h-10 border border-black bg-transparent px-3 text-sm rounded-none"
+              className="h-10 rounded-xl border border-[color:var(--border)] bg-white px-3 text-sm"
               value={filters.category}
               onChange={(e) => updateFilters({ category: e.target.value as JobCategory | '' })}
             >
@@ -883,7 +890,7 @@ export default function JobsPage() {
             </select>
 
             <select
-              className="h-10 border border-black bg-transparent px-3 text-sm rounded-none"
+              className="h-10 rounded-xl border border-[color:var(--border)] bg-white px-3 text-sm"
               value={filters.status}
               onChange={(e) => updateFilters({ status: e.target.value as JobStatus | '' })}
             >
@@ -900,7 +907,7 @@ export default function JobsPage() {
           </div>
         </Card>
 
-        <div className="flex items-center justify-between font-mono text-xs uppercase text-gray-700">
+        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
           <span>{isLoading ? t('common.loading') : t('jobsPage.totalJobs', { count: total })}</span>
           <Button
             variant="ghost"
@@ -914,7 +921,7 @@ export default function JobsPage() {
         </div>
 
         {error ? (
-          <Card variant="outline" className="border-red-700 bg-red-50">
+          <Card variant="outline" className="border-red-300 bg-red-50">
             <CardTitle className="text-red-700">{t('common.error')}</CardTitle>
             <CardDescription className="text-red-700">{error}</CardDescription>
           </Card>
@@ -925,12 +932,12 @@ export default function JobsPage() {
             variant="outline"
             className={
               applyMessage.type === 'success'
-                ? 'border-green-700 bg-green-50'
-                : 'border-red-700 bg-red-50'
+                ? 'border-emerald-200 bg-emerald-50'
+                : 'border-red-200 bg-red-50'
             }
           >
             <CardDescription
-              className={applyMessage.type === 'success' ? 'text-green-800' : 'text-red-800'}
+              className={applyMessage.type === 'success' ? 'text-emerald-800' : 'text-red-800'}
             >
               {applyMessage.text}
             </CardDescription>
@@ -942,12 +949,12 @@ export default function JobsPage() {
             variant="outline"
             className={
               managementMessage.type === 'success'
-                ? 'border-green-700 bg-green-50'
-                : 'border-red-700 bg-red-50'
+                ? 'border-emerald-200 bg-emerald-50'
+                : 'border-red-200 bg-red-50'
             }
           >
             <CardDescription
-              className={managementMessage.type === 'success' ? 'text-green-800' : 'text-red-800'}
+              className={managementMessage.type === 'success' ? 'text-emerald-800' : 'text-red-800'}
             >
               {managementMessage.text}
             </CardDescription>
@@ -955,7 +962,7 @@ export default function JobsPage() {
         ) : null}
 
         {focusJobId ? (
-          <Card variant="outline" className="border-blue-700 bg-blue-50">
+          <Card variant="outline" className="border-blue-200 bg-blue-50">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardDescription className="text-blue-800">
                 {focusedJobVisible
@@ -1006,135 +1013,149 @@ export default function JobsPage() {
                 ref={job._id === focusJobId ? focusedJobCardRef : null}
                 data-jobs-focused={job._id === focusJobId ? 'true' : 'false'}
               >
-              <Card
-                variant="interactive"
-                className={`min-h-[260px] ${
-                  job._id === focusJobId ? 'border-blue-700 bg-blue-50 ring-1 ring-blue-300' : ''
-                }`}
-              >
-                <div className="space-y-3">
-                  {job._id === focusJobId ? (
-                    <p className="font-mono text-[10px] uppercase text-blue-800">
-                      {t('jobsPage.focusBadge')}
+                <Card
+                  variant="interactive"
+                  className={`min-h-[260px] rounded-3xl border border-[color:var(--border)] bg-white p-5 shadow-[0_16px_30px_rgba(15,27,45,0.08)] ${
+                    job._id === focusJobId ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200' : ''
+                  }`}
+                >
+                  <div className="space-y-3">
+                    {job._id === focusJobId ? (
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-blue-800">
+                        {t('jobsPage.focusBadge')}
+                      </p>
+                    ) : null}
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-full border border-[color:var(--border)] bg-[var(--surface-muted)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                        {job.category}
+                      </span>
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                        {job.status}
+                      </span>
+                    </div>
+
+                    <CardTitle className="text-2xl leading-tight text-[var(--foreground)]">
+                      {job.title}
+                    </CardTitle>
+                    <CardDescription className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                      {job.location} | {job.experienceLevel}
+                    </CardDescription>
+
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                      {t('jobsPage.applicants', { count: job.applications_count ?? 0 })}
                     </p>
-                  ) : null}
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs uppercase text-blue-700">{job.category}</span>
-                    <span className="font-mono text-xs uppercase text-gray-600">{job.status}</span>
+
+                    <p className="line-clamp-4 text-sm text-[color:var(--text-muted)]">
+                      {job.description}
+                    </p>
+
+                    {job.applicationDeadline ? (
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">
+                        {t('jobsPage.deadlineLabel')}: {formatDate(job.applicationDeadline)}
+                      </p>
+                    ) : null}
+
+                    {job.importantChangeHistory?.length ? (
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                        {t('jobsPage.lastChangeLabel', {
+                          date: formatDate(
+                            job.importantChangeHistory[job.importantChangeHistory.length - 1]!.changedAt
+                          ),
+                        })}
+                      </p>
+                    ) : null}
+
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                      {t('jobsPage.updated', { date: formatDate(job.updatedAt) })}
+                    </p>
+
+                    {isRecruiterOrAdmin ? (
+                      <Link
+                        href={buildApplicationsJobHref(job._id)}
+                        className="inline-block text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--primary)] hover:underline"
+                      >
+                        {t('jobsPage.viewRankedCandidates')}
+                      </Link>
+                    ) : null}
+
+                    {isRecruiterOrAdmin ? (
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={disableCardActions || !job.importantChangeHistory?.length}
+                          onClick={() => openHistoryDialog(job)}
+                        >
+                          {t('jobsPage.viewHistory')}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={disableCardActions}
+                          onClick={() => openEditDialog(job)}
+                        >
+                          {t('jobsPage.editJob')}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={disableCardActions}
+                          onClick={() => void handleToggleJobStatus(job)}
+                        >
+                          {isToggling
+                            ? t('jobsPage.updatingJob')
+                            : job.status === 'active'
+                              ? t('jobsPage.closeJob')
+                              : t('jobsPage.reopenJob')}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={disableCardActions}
+                          onClick={() => void handleDeleteJob(job._id)}
+                        >
+                          {isDeleting ? t('jobsPage.deletingJob') : t('jobsPage.deleteJob')}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          disabled={disableCardActions || job.status === 'closed'}
+                          onClick={() => handleTailorAndApply(job)}
+                        >
+                          {t('jobsPage.tailorAndApply')}
+                        </Button>
+                        <Button
+                          variant="success"
+                          disabled={
+                            isApplyingJobId === job._id || disableCardActions || job.status === 'closed'
+                          }
+                          onClick={() => handleApply(job._id)}
+                        >
+                          {job.status === 'closed'
+                            ? t('jobsPage.closedUnavailable')
+                            : isApplyingJobId === job._id
+                              ? t('jobsPage.applying')
+                              : t('jobsPage.applyWithMaster')}
+                        </Button>
+                      </div>
+                    )}
                   </div>
-
-                  <CardTitle className="text-2xl leading-tight">{job.title}</CardTitle>
-                  <CardDescription className="text-xs uppercase text-gray-600">
-                    {job.location} | {job.experienceLevel}
-                  </CardDescription>
-
-                  <p className="font-mono text-[11px] uppercase text-green-700">
-                    {t('jobsPage.applicants', { count: job.applications_count ?? 0 })}
-                  </p>
-
-                  <p className="line-clamp-4 text-sm text-gray-800">{job.description}</p>
-
-                  {job.applicationDeadline ? (
-                    <p className="font-mono text-[11px] uppercase text-orange-700">
-                      {t('jobsPage.deadlineLabel')}: {formatDate(job.applicationDeadline)}
-                    </p>
-                  ) : null}
-
-                  {job.importantChangeHistory?.length ? (
-                    <p className="font-mono text-[11px] uppercase text-gray-600">
-                      {t('jobsPage.lastChangeLabel', {
-                        date: formatDate(
-                          job.importantChangeHistory[job.importantChangeHistory.length - 1]!.changedAt
-                        ),
-                      })}
-                    </p>
-                  ) : null}
-
-                  <p className="font-mono text-[11px] uppercase text-gray-500">
-                    {t('jobsPage.updated', { date: formatDate(job.updatedAt) })}
-                  </p>
-
-                  {isRecruiterOrAdmin ? (
-                    <Link
-                      href={buildApplicationsJobHref(job._id)}
-                      className="inline-block font-mono text-[11px] uppercase text-blue-700 hover:underline"
-                    >
-                      {t('jobsPage.viewRankedCandidates')}
-                    </Link>
-                  ) : null}
-
-                  {isRecruiterOrAdmin ? (
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={disableCardActions || !job.importantChangeHistory?.length}
-                        onClick={() => openHistoryDialog(job)}
-                      >
-                        {t('jobsPage.viewHistory')}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        disabled={disableCardActions}
-                        onClick={() => openEditDialog(job)}
-                      >
-                        {t('jobsPage.editJob')}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={disableCardActions}
-                        onClick={() => void handleToggleJobStatus(job)}
-                      >
-                        {isToggling
-                          ? t('jobsPage.updatingJob')
-                          : job.status === 'active'
-                            ? t('jobsPage.closeJob')
-                            : t('jobsPage.reopenJob')}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        disabled={disableCardActions}
-                        onClick={() => void handleDeleteJob(job._id)}
-                      >
-                        {isDeleting ? t('jobsPage.deletingJob') : t('jobsPage.deleteJob')}
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        disabled={disableCardActions || job.status === 'closed'}
-                        onClick={() => handleTailorAndApply(job)}
-                      >
-                        {t('jobsPage.tailorAndApply')}
-                      </Button>
-                      <Button
-                        variant="success"
-                        disabled={isApplyingJobId === job._id || disableCardActions || job.status === 'closed'}
-                        onClick={() => handleApply(job._id)}
-                      >
-                        {job.status === 'closed'
-                          ? t('jobsPage.closedUnavailable')
-                          : isApplyingJobId === job._id
-                            ? t('jobsPage.applying')
-                            : t('jobsPage.applyWithMaster')}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </Card>
+                </Card>
               </div>
             );
           })}
         </div>
 
         {!isLoading && jobs.length === 0 && !error ? (
-          <Card variant="outline">
-            <CardTitle className="text-2xl">{t('jobsPage.noJobsTitle')}</CardTitle>
-            <CardDescription>{t('jobsPage.noJobsDescription')}</CardDescription>
+          <Card variant="outline" className="bg-white">
+            <CardTitle className="text-2xl text-[var(--foreground)]">
+              {t('jobsPage.noJobsTitle')}
+            </CardTitle>
+            <CardDescription className="text-[color:var(--text-muted)]">
+              {t('jobsPage.noJobsDescription')}
+            </CardDescription>
           </Card>
         ) : null}
 
@@ -1170,7 +1191,7 @@ export default function JobsPage() {
                   <Label htmlFor="job-edit-category">{t('jobsPage.categoryLabel')}</Label>
                   <select
                     id="job-edit-category"
-                    className="h-10 w-full border border-black bg-transparent px-3 text-sm rounded-none"
+                    className="h-10 w-full rounded-xl border border-[color:var(--border)] bg-white px-3 text-sm"
                     value={editForm.category}
                     onChange={(e) => updateEditField('category', e.target.value as JobCategory)}
                   >
@@ -1281,7 +1302,7 @@ export default function JobsPage() {
                     id="job-history-field-filter"
                     value={historyFieldFilter}
                     onChange={(e) => setHistoryFieldFilter(e.target.value)}
-                    className="h-10 w-full border border-black bg-transparent px-3 text-sm rounded-none"
+                    className="h-10 w-full rounded-xl border border-[color:var(--border)] bg-white px-3 text-sm"
                   >
                     <option value="all">{t('jobsPage.historyFilterAll')}</option>
                     {historyFieldOptions.map((field) => (
@@ -1305,28 +1326,35 @@ export default function JobsPage() {
                         ) || [];
 
                       return (
-                        <Card key={`${entry.changedAt}-${index}`} variant="outline" className="space-y-2">
-                          <p className="font-mono text-[11px] uppercase text-gray-600">
+                        <Card
+                          key={`${entry.changedAt}-${index}`}
+                          variant="outline"
+                          className="space-y-2 bg-white"
+                        >
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                             {formatDateTime(entry.changedAt)}
                           </p>
-                          <p className="text-sm text-gray-800">
+                          <p className="text-sm text-[color:var(--text-muted)]">
                             {entry.summary || t('jobsPage.historyFallbackSummary')}
                           </p>
-                          <p className="font-mono text-[11px] uppercase text-blue-700">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--primary)]">
                             {t('jobsPage.changedFieldsLabel')}: {entry.changedFields.join(', ') || '-'}
                           </p>
 
                           {entryChanges.length ? (
                             <div className="space-y-2 pt-1">
                               {entryChanges.map((change, changeIndex) => (
-                                <div key={`${change.field}-${changeIndex}`} className="border border-black p-2">
-                                  <p className="font-mono text-[11px] uppercase text-gray-700">
+                                <div
+                                  key={`${change.field}-${changeIndex}`}
+                                  className="rounded-xl border border-[color:var(--border)] bg-[var(--surface-muted)] p-3"
+                                >
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                                     {change.field}
                                   </p>
                                   <p className="text-xs text-red-700">
                                     {t('jobsPage.beforeLabel')}: {change.before ?? t('common.unknown')}
                                   </p>
-                                  <p className="text-xs text-green-700">
+                                  <p className="text-xs text-emerald-700">
                                     {t('jobsPage.afterLabel')}: {change.after ?? t('common.unknown')}
                                   </p>
                                 </div>
@@ -1357,7 +1385,7 @@ export default function JobsPage() {
           >
             {t('jobsPage.prev')}
           </Button>
-          <span className="font-mono text-xs uppercase">
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
             {t('jobsPage.pageLabel', { page, totalPages })}
           </span>
           <Button
