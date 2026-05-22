@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Loader2, CheckCircle2, Sparkles, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,11 +13,11 @@ function LoadingStep({ message, submessage }: LoadingStepProps) {
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-6">
       <div className="relative">
-        <Loader2 className="w-12 h-12 animate-spin text-black" />
+        <Loader2 className="w-12 h-12 animate-spin text-[var(--foreground)]" />
       </div>
       <div className="text-center">
-        <p className="text-xl font-mono font-bold">{message}</p>
-        {submessage && <p className="text-sm text-gray-500 mt-2 font-mono">{submessage}</p>}
+        <p className="text-xl font-semibold">{message}</p>
+        {submessage && <p className="text-sm text-[color:var(--text-subtle)] mt-2">{submessage}</p>}
       </div>
     </div>
   );
@@ -67,8 +67,8 @@ export function CompleteStep({ onClose, updatedCount }: CompleteStepProps) {
         <CheckCircle2 className="w-16 h-16 text-green-600" />
       </div>
       <div className="text-center">
-        <p className="text-2xl font-mono font-bold">{t('enrichment.complete.title')}</p>
-        <p className="text-sm text-gray-500 mt-2 font-mono">
+        <p className="text-2xl font-semibold">{t('enrichment.complete.title')}</p>
+        <p className="text-sm text-[color:var(--text-subtle)] mt-2">
           {hasUpdatedCount
             ? updatedCount === 1
               ? t('enrichment.complete.updatedCountSingular', { count: updatedCount })
@@ -97,8 +97,8 @@ export function NoImprovementsStep({ onClose, summary }: NoImprovementsStepProps
         <CheckCircle2 className="w-16 h-16 text-green-600" />
       </div>
       <div className="text-center max-w-md">
-        <p className="text-2xl font-mono font-bold">{t('enrichment.noImprovements.title')}</p>
-        <p className="text-sm text-gray-500 mt-2 font-mono">
+        <p className="text-2xl font-semibold">{t('enrichment.noImprovements.title')}</p>
+        <p className="text-sm text-[color:var(--text-subtle)] mt-2">
           {summary || t('enrichment.noImprovements.defaultDescription')}
         </p>
       </div>
@@ -124,8 +124,8 @@ export function ErrorStep({ error, onRetry, onClose }: ErrorStepProps) {
         <AlertCircle className="w-16 h-16 text-red-500" />
       </div>
       <div className="text-center max-w-md">
-        <p className="text-xl font-mono font-bold">{t('enrichment.error.title')}</p>
-        <p className="text-sm text-red-600 mt-2 font-mono bg-red-50 p-3 border border-red-200">
+        <p className="text-xl font-semibold">{t('enrichment.error.title')}</p>
+        <p className="text-sm text-red-700 mt-2 bg-red-50 p-3 border border-red-200 rounded-xl">
           {error}
         </p>
       </div>

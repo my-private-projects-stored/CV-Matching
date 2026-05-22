@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import {
@@ -83,12 +83,12 @@ export const AddSectionDialog: React.FC<AddSectionDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] p-0 gap-0 rounded-none">
-        <DialogHeader className="p-6 pb-4 border-b border-black">
-          <DialogTitle className="font-serif text-xl font-bold uppercase tracking-tight">
+      <DialogContent className="sm:max-w-[500px] gap-0 p-0">
+        <DialogHeader className="border-b border-[color:var(--border)] p-6 pb-4">
+          <DialogTitle className="text-xl font-semibold tracking-tight">
             {t('builder.customSections.dialogTitle')}
           </DialogTitle>
-          <DialogDescription className="font-mono text-xs text-gray-600 mt-2">
+          <DialogDescription className="mt-2 text-xs">
             {t('builder.customSections.dialogDescription')}
           </DialogDescription>
         </DialogHeader>
@@ -96,7 +96,7 @@ export const AddSectionDialog: React.FC<AddSectionDialogProps> = ({
         <div className="p-6 space-y-6">
           {/* Section Name */}
           <div className="space-y-2">
-            <Label className="font-mono text-xs uppercase tracking-wider text-gray-500">
+            <Label className="text-xs uppercase tracking-[0.2em]">
               {t('builder.customSections.sectionNameLabel')}
             </Label>
             <Input
@@ -104,14 +104,13 @@ export const AddSectionDialog: React.FC<AddSectionDialogProps> = ({
               onChange={(e) => setDisplayName(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t('builder.customSections.sectionNamePlaceholder')}
-              className="rounded-none border-black"
               autoFocus
             />
           </div>
 
           {/* Section Type */}
           <div className="space-y-3">
-            <Label className="font-mono text-xs uppercase tracking-wider text-gray-500">
+            <Label className="text-xs uppercase tracking-[0.2em]">
               {t('builder.customSections.sectionTypeLabel')}
             </Label>
             <div className="space-y-2">
@@ -120,30 +119,30 @@ export const AddSectionDialog: React.FC<AddSectionDialogProps> = ({
                   key={item.type}
                   type="button"
                   onClick={() => setSectionType(item.type)}
-                  className={`w-full p-4 border text-left transition-colors ${
+                  className={`w-full rounded-xl border p-4 text-left transition-colors ${
                     sectionType === item.type
-                      ? 'border-black bg-gray-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
-                      : 'border-gray-300 hover:border-gray-400'
+                      ? 'border-[color:var(--primary)] bg-[var(--surface-muted)] shadow-[0_12px_24px_rgba(15,27,45,0.14)]'
+                      : 'border-[color:var(--border)] hover:bg-[var(--surface-muted)]'
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div
-                      className={`p-2 border ${
+                      className={`rounded-lg border p-2 ${
                         sectionType === item.type
-                          ? 'border-black bg-white'
-                          : 'border-gray-300 bg-gray-50'
+                          ? 'border-[color:var(--primary)] bg-white text-[var(--primary)]'
+                          : 'border-[color:var(--border)] bg-[var(--surface-muted)] text-[color:var(--text-subtle)]'
                       }`}
                     >
                       {item.icon}
                     </div>
                     <div className="flex-1">
                       <div className="font-sans font-medium text-sm">{item.label}</div>
-                      <div className="font-mono text-xs text-gray-500 mt-0.5">
+                      <div className="mt-0.5 text-xs text-[color:var(--text-subtle)]">
                         {item.description}
                       </div>
                     </div>
                     {sectionType === item.type && (
-                      <div className="w-4 h-4 border-2 border-black bg-black" />
+                      <div className="h-4 w-4 rounded-full border border-[color:var(--primary)] bg-[var(--primary)]" />
                     )}
                   </div>
                 </button>
@@ -152,13 +151,11 @@ export const AddSectionDialog: React.FC<AddSectionDialogProps> = ({
           </div>
         </div>
 
-        <DialogFooter className="p-4 bg-[#F0F0E8] border-t border-black flex-row justify-end gap-3">
+        <DialogFooter className="flex-row justify-end gap-3 border-t border-[color:var(--border)] bg-[var(--surface-muted)] p-4">
           <DialogClose asChild>
-            <Button variant="outline" className="rounded-none border-black">
-              {t('common.cancel')}
-            </Button>
+            <Button variant="outline">{t('common.cancel')}</Button>
           </DialogClose>
-          <Button onClick={handleSubmit} disabled={!displayName.trim()} className="rounded-none">
+          <Button onClick={handleSubmit} disabled={!displayName.trim()}>
             <Plus className="w-4 h-4 mr-2" />
             {t('builder.addSection')}
           </Button>
@@ -186,7 +183,7 @@ export const AddSectionButton: React.FC<AddSectionButtonProps> = ({ onAdd }) => 
       <Button
         variant="outline"
         onClick={() => setOpen(true)}
-        className="w-full rounded-none border-dashed border-2 border-black py-6 hover:bg-gray-50 hover:border-solid transition-all"
+        className="w-full border-2 border-dashed border-[color:var(--border)] py-6 hover:bg-[var(--surface-muted)]"
       >
         <Plus className="w-5 h-5 mr-2" />
         {t('builder.customSections.addCustomSectionButton')}

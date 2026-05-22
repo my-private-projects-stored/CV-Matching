@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, Suspense, useCallback, useMemo } from 'react';
 import Image from 'next/image';
@@ -630,9 +630,7 @@ const ResumeBuilderContent = () => {
   };
 
   return (
-    <div
-      className="min-h-screen w-full bg-[var(--surface-muted)] p-4 md:p-8"
-    >
+    <div className="min-h-screen w-full bg-[var(--surface-muted)] p-4 md:p-8">
       {/* Main Container */}
       <div className="mx-auto flex w-full max-w-[95%] flex-col rounded-3xl border border-[color:var(--border)] bg-white shadow-[0_20px_36px_rgba(15,27,45,0.12)]">
         {/* Header Section */}
@@ -771,7 +769,7 @@ const ResumeBuilderContent = () => {
           <div className="rounded-2xl border border-[color:var(--border)] bg-white p-6 md:p-8 overflow-y-auto no-print">
             <div className="max-w-3xl mx-auto space-y-6">
               <div className="flex items-center gap-2 border-b border-[color:var(--border)] pb-2">
-                <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                <div className="w-3 h-3 rounded-full bg-[var(--primary)]"></div>
                 <h2 className="text-lg font-semibold uppercase tracking-[0.2em]">
                   {activeTab === 'resume' && t('builder.leftPanel.editorPanel')}
                   {activeTab === 'cover-letter' && t('builder.leftPanel.coverLetterEditor')}

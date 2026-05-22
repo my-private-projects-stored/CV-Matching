@@ -1,6 +1,4 @@
-export function createSearchParams(
-  query?: string | URLSearchParams | null
-): URLSearchParams {
+export function createSearchParams(query?: string | URLSearchParams | null): URLSearchParams {
   if (!query) {
     return new URLSearchParams();
   }
@@ -67,7 +65,10 @@ function normalizeJobsFilterValue(key: JobsFilterKey, value: string | null): str
   return normalized;
 }
 
-export function applyJobsFilterPrecedence(params: URLSearchParams, contextQuery?: string | URLSearchParams | null): void {
+export function applyJobsFilterPrecedence(
+  params: URLSearchParams,
+  contextQuery?: string | URLSearchParams | null
+): void {
   const topLevel = createSearchParams(contextQuery);
   const jobsReturn = createSearchParams(topLevel.get('jobs_return_query'));
   const keys: JobsFilterKey[] = ['search', 'status', 'page', 'location'];
@@ -122,7 +123,10 @@ const APPLICATIONS_RETURN_PRECEDENCE: Record<ApplicationsReturnKey, Applications
   fb_open: ['flow-return', 'top-level'],
 };
 
-function normalizeApplicationsReturnValue(key: ApplicationsReturnKey, value: string | null): string {
+function normalizeApplicationsReturnValue(
+  key: ApplicationsReturnKey,
+  value: string | null
+): string {
   const normalized = (value || '').trim();
   if (!normalized) {
     return '';
@@ -164,7 +168,11 @@ function normalizeApplicationsReturnValue(key: ApplicationsReturnKey, value: str
   }
 
   if (key === 'flow_panel') {
-    if (normalized !== 'status-history' && normalized !== 'status-changes' && normalized !== 'feedback') {
+    if (
+      normalized !== 'status-history' &&
+      normalized !== 'status-changes' &&
+      normalized !== 'feedback'
+    ) {
       return '';
     }
   }

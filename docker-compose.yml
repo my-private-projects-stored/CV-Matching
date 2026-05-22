@@ -136,6 +136,7 @@ services:
       INTERNAL_API_BASE_URL: http://gateway-backend:3001
       WATCHPACK_POLLING: "true"
       WATCHPACK_POLLING_INTERVAL: "1000"
+      NEXT_WEBPACK_USEPOLLING: "1"
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "1000"
     ports:

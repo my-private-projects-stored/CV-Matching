@@ -1,5 +1,5 @@
-import { ResumeBuilder } from '@/components/builder/resume-builder';
+import { DemoBuilderPage } from '@/components/demo/demo-ui';
 
 export default function BuilderPage() {
-  return <ResumeBuilder />;
+  return <DemoBuilderPage />;
 }

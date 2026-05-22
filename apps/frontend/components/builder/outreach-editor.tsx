@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
@@ -49,15 +49,15 @@ export function OutreachEditor({
   return (
     <div className={cn('flex flex-col h-full', className)}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b-2 border-black bg-[#F5F5F0]">
+      <div className="flex items-center justify-between p-4 border-b border-[color:var(--border)] bg-[var(--surface-muted)]">
         <div className="flex items-center gap-2">
           <Mail className="w-4 h-4" />
-          <h2 className="font-mono text-sm font-bold uppercase tracking-wider">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.2em]">
             {t('outreach.title')}
           </h2>
         </div>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-xs text-gray-500">
+          <span className="text-xs text-[color:var(--text-subtle)]">
             {t('builder.contentStats.wordsChars', { wordCount, charCount })}
           </span>
           <Button size="sm" variant="outline" onClick={onSave} disabled={isSaving}>
@@ -87,19 +87,19 @@ export function OutreachEditor({
           onChange={(e) => onChange(e.target.value)}
           placeholder={t('outreach.editor.placeholder')}
           className={cn(
-            'w-full h-full min-h-[250px] p-4',
-            'font-mono text-sm leading-relaxed',
-            'border-2 border-black bg-white',
+            'w-full h-full min-h-[250px] p-4 rounded-2xl',
+            'text-sm leading-relaxed text-[var(--foreground)]',
+            'border border-[color:var(--border)] bg-white',
             'resize-none',
-            'focus:outline-none focus:ring-2 focus:ring-blue-700 focus:ring-offset-2',
-            'placeholder:text-gray-400'
+            'focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2',
+            'placeholder:text-[color:var(--text-subtle)]'
           )}
         />
       </div>
 
       {/* Footer Tips */}
-      <div className="p-4 border-t border-gray-200 bg-[#F5F5F0]">
-        <p className="font-mono text-xs text-gray-500">{t('outreach.editor.tip')}</p>
+      <div className="p-4 border-t border-[color:var(--border)] bg-[var(--surface-muted)]">
+        <p className="text-xs text-[color:var(--text-subtle)]">{t('outreach.editor.tip')}</p>
       </div>
     </div>
   );

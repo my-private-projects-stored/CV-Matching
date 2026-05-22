@@ -56,8 +56,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       'disabled:pointer-events-none disabled:opacity-50',
       // SVG icon sizing
       "[&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0",
-      // Rounded UI
-      'rounded-full'
+      // Design system radius
+      'rounded-[7px] active:scale-[0.98]'
     );
 
     // Variant styles - each has distinct purpose and color
@@ -66,49 +66,50 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       // Use for: Save, Submit, Create, Primary CTA
       default: cn(
         'bg-[color:var(--primary)] text-white',
-        'shadow-[0_12px_24px_rgba(21,94,239,0.3)]',
-        'hover:-translate-y-0.5 hover:shadow-[0_16px_28px_rgba(21,94,239,0.4)]'
+        'shadow-[0_1px_3px_rgba(29,78,216,0.20)]',
+        'relative overflow-hidden before:pointer-events-none before:absolute before:inset-0 before:bg-[linear-gradient(135deg,rgba(255,255,255,0.10),transparent_55%)]',
+        'hover:bg-[var(--blue-800)] hover:shadow-[0_4px_18px_rgba(29,78,216,0.32)]'
       ),
 
       // DESTRUCTIVE - Alert Red (#DC2626 / red-600)
       // Use for: Delete, Remove, Destroy, Dangerous actions
       destructive: cn(
-        'bg-[color:var(--destructive)] text-white',
-        'shadow-[0_12px_24px_rgba(217,72,72,0.3)]',
-        'hover:-translate-y-0.5 hover:shadow-[0_16px_28px_rgba(217,72,72,0.4)]'
+        'bg-[color:var(--danger)] text-white',
+        'shadow-[0_1px_3px_rgba(220,38,38,0.20)]',
+        'hover:bg-red-700'
       ),
 
       // SUCCESS - Signal Green (#15803D / green-700)
       // Use for: Download, Confirm, Complete, Positive actions
       success: cn(
-        'bg-[color:var(--color-success)] text-white',
-        'shadow-[0_12px_24px_rgba(17,132,91,0.3)]',
-        'hover:-translate-y-0.5 hover:shadow-[0_16px_28px_rgba(17,132,91,0.4)]'
+        'bg-[color:var(--success)] text-white',
+        'shadow-[0_1px_3px_rgba(22,163,74,0.20)]',
+        'hover:bg-green-700'
       ),
 
       // WARNING - Alert Orange (#F97316 / orange-500)
       // Use for: Reset, Clear, Undo, Caution actions
       warning: cn(
-        'bg-[color:var(--color-warning)] text-white',
-        'shadow-[0_12px_24px_rgba(199,116,23,0.3)]',
-        'hover:-translate-y-0.5 hover:shadow-[0_16px_28px_rgba(199,116,23,0.4)]'
+        'bg-[color:var(--warning)] text-white',
+        'shadow-[0_1px_3px_rgba(217,119,6,0.20)]',
+        'hover:bg-amber-700'
       ),
 
       // OUTLINE - Canvas background with black border
       // Use for: Cancel, Back, Secondary actions, Navigation
       outline: cn(
         'bg-white text-[var(--foreground)]',
-        'border border-[color:var(--border)]',
-        'shadow-[0_10px_20px_rgba(15,27,45,0.08)]',
-        'hover:-translate-y-0.5 hover:shadow-[0_16px_28px_rgba(15,27,45,0.14)]'
+        'border-[1.5px] border-[color:var(--border)]',
+        'shadow-none',
+        'hover:border-slate-400 hover:bg-white'
       ),
 
       // SECONDARY - Panel Grey (#E5E5E0)
       // Use for: Less prominent actions, Toolbar buttons
       secondary: cn(
         'bg-[color:var(--secondary)] text-[var(--foreground)]',
-        'shadow-[0_10px_20px_rgba(15,27,45,0.12)]',
-        'hover:-translate-y-0.5 hover:shadow-[0_16px_28px_rgba(15,27,45,0.2)]'
+        'shadow-none',
+        'hover:bg-slate-200'
       ),
 
       // GHOST - No background, minimal styling
@@ -132,9 +133,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     // Size styles
     const sizes = {
       default: 'h-10 px-6',
-      sm: 'h-8 px-4 text-xs',
-      lg: 'h-12 px-8 text-base',
-      icon: 'h-10 w-10 p-0',
+      sm: 'h-8 px-3 text-[13px]',
+      lg: 'h-12 px-6 text-[15px]',
+      icon: 'h-9 w-9 p-0',
     };
 
     const variantClass = variants[variant];

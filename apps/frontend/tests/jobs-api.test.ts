@@ -37,7 +37,9 @@ describe('jobs API client', () => {
 
     await fetchJobs({ search: 'backend', status: 'active', page: 1, limit: 12 });
 
-    expect(mockedApiFetch).toHaveBeenCalledWith('/jobs?search=backend&status=active&page=1&limit=12');
+    expect(mockedApiFetch).toHaveBeenCalledWith(
+      '/jobs?search=backend&status=active&page=1&limit=12'
+    );
   });
 
   it('updateJob patches encoded endpoint and returns payload', async () => {
@@ -97,7 +99,10 @@ describe('jobs API client', () => {
 
   it('deleteJob preserves backend error_code for downstream handling', async () => {
     mockedApiDelete.mockResolvedValueOnce(
-      jsonResponse({ message: 'Job has active applications', error_code: 'job_has_active_applications' }, 409)
+      jsonResponse(
+        { message: 'Job has active applications', error_code: 'job_has_active_applications' },
+        409
+      )
     );
 
     await expect(deleteJob('job-1')).rejects.toMatchObject({

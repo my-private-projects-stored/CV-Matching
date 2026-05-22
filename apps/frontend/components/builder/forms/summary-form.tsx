@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
@@ -25,7 +25,7 @@ export const SummaryForm: React.FC<SummaryFormProps> = ({ value, onChange }) => 
       <div className="space-y-2">
         <Label
           htmlFor="summary"
-          className="font-mono text-xs uppercase tracking-wider text-gray-500"
+          className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]"
         >
           {t('resume.sections.summary')}
         </Label>
@@ -35,7 +35,7 @@ export const SummaryForm: React.FC<SummaryFormProps> = ({ value, onChange }) => 
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={t('builder.placeholders.summary')}
-          className="min-h-[150px] text-black rounded-none border-black focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-blue-700 bg-white"
+          className="min-h-[150px] text-[var(--foreground)] rounded-2xl border border-[color:var(--border)] focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[var(--primary)] bg-white"
         />
       </div>
     </div>

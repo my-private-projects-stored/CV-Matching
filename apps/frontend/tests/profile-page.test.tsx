@@ -228,6 +228,9 @@ describe('ProfilePage', () => {
     mockedFetchMyCandidateProfile.mockResolvedValue({
       data: {
         user_id: 'candidate-1',
+        email: 'candidate@example.com',
+        full_name: 'Candidate One',
+        role: 'candidate',
         profile: {
           headline: '',
           summary: '',
@@ -240,6 +243,7 @@ describe('ProfilePage', () => {
           education: [],
           portfolio: [],
         },
+        updated_at: '2026-03-23T00:00:00.000Z',
       },
     });
 

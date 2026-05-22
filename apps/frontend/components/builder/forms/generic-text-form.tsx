@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
@@ -37,7 +37,7 @@ export const GenericTextForm: React.FC<GenericTextFormProps> = ({
 
   return (
     <div className="space-y-2">
-      <Label className="font-mono text-xs uppercase tracking-wider text-gray-500">
+      <Label className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
         {finalLabel}
       </Label>
       <Textarea
@@ -45,7 +45,7 @@ export const GenericTextForm: React.FC<GenericTextFormProps> = ({
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={finalPlaceholder}
-        className="min-h-[150px] text-black rounded-none border-black focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-blue-700 bg-white"
+        className="min-h-[150px] text-[var(--foreground)] rounded-2xl border border-[color:var(--border)] focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[var(--primary)] bg-white"
       />
     </div>
   );

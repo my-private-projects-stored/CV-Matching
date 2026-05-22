@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/context/auth-context';
 
 const PUBLIC_PATHS = new Set(['/', '/login', '/signup', '/forgot-password', '/reset-password']);
+const DEMO_UI_MODE = true;
 
 function canAccessPath(pathname: string, role?: string): boolean {
   const normalizedRole = String(role || '').toLowerCase();
@@ -44,6 +45,10 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   const isPublicPath = PUBLIC_PATHS.has(pathname);
 
   useEffect(() => {
+    if (DEMO_UI_MODE) {
+      return;
+    }
+
     if (isLoading || isPublicPath || isAuthenticated) {
       return;
     }
@@ -53,6 +58,10 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   }, [isLoading, isPublicPath, isAuthenticated, pathname, router]);
 
   useEffect(() => {
+    if (DEMO_UI_MODE) {
+      return;
+    }
+
     if (isLoading || isPublicPath || !isAuthenticated) {
       return;
     }
@@ -63,6 +72,10 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
     router.replace('/dashboard');
   }, [isLoading, isPublicPath, isAuthenticated, pathname, user?.role, router]);
+
+  if (DEMO_UI_MODE) {
+    return <>{children}</>;
+  }
 
   if (isLoading && !isPublicPath) {
     return (

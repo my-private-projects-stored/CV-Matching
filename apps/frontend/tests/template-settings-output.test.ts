@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  DEFAULT_TEMPLATE_SETTINGS,
-  settingsToCssVars,
-} from '@/lib/types/template-settings';
+import { DEFAULT_TEMPLATE_SETTINGS, settingsToCssVars } from '@/lib/types/template-settings';
 
 describe('template settings output', () => {
   it('maps default settings to CSS variables', () => {

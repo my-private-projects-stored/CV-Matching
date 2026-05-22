@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
@@ -47,10 +47,10 @@ export const GenericListForm: React.FC<GenericListFormProps> = ({
 
   return (
     <div className="space-y-2">
-      <Label className="font-mono text-xs uppercase tracking-wider text-gray-500">
+      <Label className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
         {finalLabel}
       </Label>
-      <p className="font-mono text-xs text-blue-700 border-l-2 border-blue-700 pl-3 mb-2">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--primary)] border-l-2 border-[var(--primary)] pl-3 mb-2">
         {t('builder.additionalForm.instructions')}
       </p>
       <Textarea
@@ -58,7 +58,7 @@ export const GenericListForm: React.FC<GenericListFormProps> = ({
         onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={finalPlaceholder}
-        className="min-h-[150px] text-black rounded-none border-black bg-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-blue-700"
+        className="min-h-[150px] text-[var(--foreground)] rounded-2xl border border-[color:var(--border)] bg-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[var(--primary)]"
       />
     </div>
   );

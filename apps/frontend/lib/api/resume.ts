@@ -266,8 +266,14 @@ export async function setResumeAsMaster(resumeId: string): Promise<ResumeListIte
   return payload.data;
 }
 
-export async function restoreResumeVersion(resumeId: string, versionId: string): Promise<ResumeListItem> {
-  const res = await apiPut(`/resumes/${encodeURIComponent(resumeId)}/restore/${encodeURIComponent(versionId)}`, {});
+export async function restoreResumeVersion(
+  resumeId: string,
+  versionId: string
+): Promise<ResumeListItem> {
+  const res = await apiPut(
+    `/resumes/${encodeURIComponent(resumeId)}/restore/${encodeURIComponent(versionId)}`,
+    {}
+  );
   await assertOk(res, 'Failed to restore resume version');
 
   const payload = (await res.json()) as ResumeSummaryResponse;

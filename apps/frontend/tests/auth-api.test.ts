@@ -34,7 +34,13 @@ describe('auth API client', () => {
   it('signup posts payload and returns auth response', async () => {
     mockedApiPost.mockResolvedValueOnce(
       jsonResponse({
-        user: { id: 'u-1', email: 'candidate@example.com', role: 'candidate', full_name: 'Candidate', avatar: null },
+        user: {
+          id: 'u-1',
+          email: 'candidate@example.com',
+          role: 'candidate',
+          full_name: 'Candidate',
+          avatar: null,
+        },
         access_token: 'token-1',
         token_type: 'Bearer',
         expires_in: '7d',
@@ -56,7 +62,9 @@ describe('auth API client', () => {
   });
 
   it('login throws backend detail on failure', async () => {
-    mockedApiPost.mockResolvedValueOnce(jsonResponse({ message: 'Invalid email or password' }, 401));
+    mockedApiPost.mockResolvedValueOnce(
+      jsonResponse({ message: 'Invalid email or password' }, 401)
+    );
 
     await expect(login({ email: 'candidate@example.com', password: 'bad' })).rejects.toThrow(
       'Invalid email or password'
@@ -76,7 +84,15 @@ describe('auth API client', () => {
 
   it('fetchMe sends bearer token and returns user', async () => {
     mockedApiFetch.mockResolvedValueOnce(
-      jsonResponse({ user: { id: 'u-1', email: 'candidate@example.com', role: 'candidate', full_name: 'Candidate', avatar: null } })
+      jsonResponse({
+        user: {
+          id: 'u-1',
+          email: 'candidate@example.com',
+          role: 'candidate',
+          full_name: 'Candidate',
+          avatar: null,
+        },
+      })
     );
 
     const result = await fetchMe('token-abc');
@@ -97,8 +113,12 @@ describe('auth API client', () => {
         reset_token: 'reset-token-1',
       })
     );
-    mockedApiPost.mockResolvedValueOnce(jsonResponse({ message: 'Password has been reset successfully' }));
-    mockedApiFetch.mockResolvedValueOnce(jsonResponse({ message: 'Password updated successfully' }));
+    mockedApiPost.mockResolvedValueOnce(
+      jsonResponse({ message: 'Password has been reset successfully' })
+    );
+    mockedApiFetch.mockResolvedValueOnce(
+      jsonResponse({ message: 'Password updated successfully' })
+    );
 
     const forgot = await forgotPassword('candidate@example.com');
     const reset = await resetPassword({ token: 'reset-token-1', new_password: 'NewStrongPass123' });

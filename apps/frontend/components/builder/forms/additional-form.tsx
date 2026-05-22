@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
@@ -38,7 +38,7 @@ export const AdditionalForm: React.FC<AdditionalFormProps> = ({ data, onChange }
 
   return (
     <div className="space-y-6">
-      <p className="font-mono text-xs text-blue-700 border-l-2 border-blue-700 pl-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--primary)] border-l-2 border-[var(--primary)] pl-3">
         {t('builder.additionalForm.instructions')}
       </p>
 
@@ -46,7 +46,7 @@ export const AdditionalForm: React.FC<AdditionalFormProps> = ({ data, onChange }
         <div className="space-y-2">
           <Label
             htmlFor="technicalSkills"
-            className="font-mono text-xs uppercase tracking-wider text-gray-500"
+            className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]"
           >
             {t('resume.additional.technicalSkills')}
           </Label>
@@ -56,13 +56,13 @@ export const AdditionalForm: React.FC<AdditionalFormProps> = ({ data, onChange }
             onChange={(e) => handleArrayChange('technicalSkills', e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t('builder.additionalForm.placeholders.technicalSkills')}
-            className="min-h-[120px] text-black rounded-none border-black bg-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-blue-700"
+            className="min-h-[120px] text-[var(--foreground)] rounded-2xl border border-[color:var(--border)] bg-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[var(--primary)]"
           />
         </div>
         <div className="space-y-2">
           <Label
             htmlFor="languages"
-            className="font-mono text-xs uppercase tracking-wider text-gray-500"
+            className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]"
           >
             {t('resume.sections.languages')}
           </Label>
@@ -72,13 +72,13 @@ export const AdditionalForm: React.FC<AdditionalFormProps> = ({ data, onChange }
             onChange={(e) => handleArrayChange('languages', e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t('builder.additionalForm.placeholders.languages')}
-            className="min-h-[120px] text-black rounded-none border-black bg-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-blue-700"
+            className="min-h-[120px] text-[var(--foreground)] rounded-2xl border border-[color:var(--border)] bg-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[var(--primary)]"
           />
         </div>
         <div className="space-y-2">
           <Label
             htmlFor="certifications"
-            className="font-mono text-xs uppercase tracking-wider text-gray-500"
+            className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]"
           >
             {t('resume.sections.certifications')}
           </Label>
@@ -88,13 +88,13 @@ export const AdditionalForm: React.FC<AdditionalFormProps> = ({ data, onChange }
             onChange={(e) => handleArrayChange('certificationsTraining', e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t('builder.additionalForm.placeholders.certifications')}
-            className="min-h-[120px] text-black rounded-none border-black bg-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-blue-700"
+            className="min-h-[120px] text-[var(--foreground)] rounded-2xl border border-[color:var(--border)] bg-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[var(--primary)]"
           />
         </div>
         <div className="space-y-2">
           <Label
             htmlFor="awards"
-            className="font-mono text-xs uppercase tracking-wider text-gray-500"
+            className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]"
           >
             {t('resume.sections.awards')}
           </Label>
@@ -104,7 +104,7 @@ export const AdditionalForm: React.FC<AdditionalFormProps> = ({ data, onChange }
             onChange={(e) => handleArrayChange('awards', e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t('builder.additionalForm.placeholders.awards')}
-            className="min-h-[120px] text-black rounded-none border-black bg-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-blue-700"
+            className="min-h-[120px] text-[var(--foreground)] rounded-2xl border border-[color:var(--border)] bg-white focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[var(--primary)]"
           />
         </div>
       </div>

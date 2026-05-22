@@ -50,9 +50,7 @@ vi.mock('@/lib/context/status-cache', () => ({
 vi.mock('@/lib/api/config', () => ({
   fetchPromptConfig: vi.fn().mockResolvedValue({
     default_prompt_id: 'keywords',
-    prompt_options: [
-      { id: 'keywords', label: 'Keywords', description: 'Keywords mode' },
-    ],
+    prompt_options: [{ id: 'keywords', label: 'Keywords', description: 'Keywords mode' }],
   }),
 }));
 

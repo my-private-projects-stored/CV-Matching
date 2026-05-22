@@ -1,22 +1,22 @@
 .resume-body {
   /* Typography */
-  --resume-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --resume-font-mono: var(--font-mono);
 
   /* Text colors */
-  --resume-text-primary: #000000;
-  --resume-text-secondary: #374151; /* gray-700 */
-  --resume-text-tertiary: #4b5563; /* gray-600 */
-  --resume-text-body: #1f2937; /* gray-800 */
+  --resume-text-primary: var(--foreground);
+  --resume-text-secondary: var(--text-muted);
+  --resume-text-tertiary: var(--text-subtle);
+  --resume-text-body: var(--foreground);
 
   /* Border colors */
-  --resume-border-primary: #9ca3af; /* gray-400 */
-  --resume-border-secondary: #d1d5db; /* gray-300 */
-  --resume-border-tertiary: #e5e7eb; /* gray-200 */
+  --resume-border-primary: var(--border);
+  --resume-border-secondary: var(--border);
+  --resume-border-tertiary: var(--border);
 
   /* Accent */
-  --resume-accent-bg: #f3f4f6; /* gray-100 */
+  --resume-accent-bg: var(--surface-muted);
 
   /* Theme accent colors (defaults, overridden by JS) */
-  --resume-accent-primary: #1d4ed8; /* blue - default */
-  --resume-accent-light: #dbeafe; /* blue light - default */
+  --resume-accent-primary: var(--primary);
+  --resume-accent-light: var(--secondary);
 }

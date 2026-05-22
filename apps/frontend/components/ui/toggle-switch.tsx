@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
@@ -64,9 +64,9 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
         className={cn(
           'relative inline-flex h-6 w-12 shrink-0 cursor-pointer items-center rounded-full',
           'border border-[color:var(--border)] transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2',
           'disabled:cursor-not-allowed',
-          checked ? 'bg-blue-600' : 'bg-[var(--surface-muted)]'
+          checked ? 'bg-[var(--primary)]' : 'bg-[var(--surface-muted)]'
         )}
       >
         <span

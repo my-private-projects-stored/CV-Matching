@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Editor } from '@tiptap/react';
@@ -14,11 +14,6 @@ interface LinkDialogProps {
 
 /**
  * Link Dialog Component
- *
- * Swiss International Style modal for adding/editing links.
- * - Hard shadow (no blur)
- * - Square corners
- * - Monospace labels
  */
 export const LinkDialog: React.FC<LinkDialogProps> = ({ editor, onClose }) => {
   const [url, setUrl] = useState('');
@@ -117,26 +112,26 @@ export const LinkDialog: React.FC<LinkDialogProps> = ({ editor, onClose }) => {
       {/* Dialog */}
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <div
-          className="relative w-full max-w-md border-2 border-black bg-white shadow-[4px_4px_0px_0px_#000000] p-6"
+          className="relative w-full max-w-md rounded-2xl border border-[color:var(--border)] bg-white p-6 shadow-[0_24px_40px_rgba(15,27,45,0.18)]"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 opacity-70 transition-opacity hover:opacity-100"
+            className="absolute right-4 top-4 rounded-full p-1 opacity-70 transition-opacity hover:bg-black/5 hover:opacity-100"
           >
             <X className="h-5 w-5" />
           </button>
 
           {/* Title */}
-          <h3 className="font-mono text-xs uppercase tracking-wider mb-4 text-gray-600">
+          <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
             [ {hasExistingLink ? 'EDIT LINK' : 'ADD LINK'} ]
           </h3>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Display Text */}
             <div className="space-y-2">
-              <Label htmlFor="link-text" className="font-mono text-xs uppercase tracking-wider">
+              <Label htmlFor="link-text" className="text-xs uppercase tracking-[0.2em]">
                 Display Text
               </Label>
               <Input
@@ -144,14 +139,13 @@ export const LinkDialog: React.FC<LinkDialogProps> = ({ editor, onClose }) => {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Link text"
-                className="rounded-none border-black bg-white"
                 autoFocus
               />
             </div>
 
             {/* URL */}
             <div className="space-y-2">
-              <Label htmlFor="link-url" className="font-mono text-xs uppercase tracking-wider">
+              <Label htmlFor="link-url" className="text-xs uppercase tracking-[0.2em]">
                 URL
               </Label>
               <Input
@@ -159,7 +153,6 @@ export const LinkDialog: React.FC<LinkDialogProps> = ({ editor, onClose }) => {
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://example.com"
-                className="rounded-none border-black bg-white"
               />
             </div>
 

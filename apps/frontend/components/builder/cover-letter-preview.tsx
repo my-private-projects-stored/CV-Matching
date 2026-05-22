@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
@@ -45,8 +45,8 @@ export function CoverLetterPreview({
   return (
     <div
       className={cn(
-        'bg-white border-2 border-black',
-        'shadow-[4px_4px_0px_0px_#000000]',
+        'rounded-2xl border border-[color:var(--border)] bg-white',
+        'shadow-[0_18px_32px_rgba(15,27,45,0.14)]',
         'overflow-hidden',
         className
       )}
@@ -59,11 +59,11 @@ export function CoverLetterPreview({
         }}
       >
         {/* Header - Personal Info */}
-        <header className="mb-8 border-b-2 border-black pb-4">
+        <header className="mb-8 border-b border-[color:var(--border)] pb-4">
           <h1 className="font-serif text-2xl font-bold tracking-tight">
             {personalInfo.name || t('coverLetter.preview.defaultName')}
           </h1>
-          <div className="mt-2 font-mono text-xs text-gray-600 flex flex-wrap gap-x-4 gap-y-1">
+          <div className="mt-2 text-xs text-[color:var(--text-subtle)] flex flex-wrap gap-x-4 gap-y-1">
             {personalInfo.email && <span>{personalInfo.email}</span>}
             {personalInfo.phone && <span>{personalInfo.phone}</span>}
             {personalInfo.location && <span>{personalInfo.location}</span>}
@@ -73,7 +73,7 @@ export function CoverLetterPreview({
 
         {/* Date */}
         <div className="mb-8">
-          <p className="font-mono text-sm text-gray-600">{today}</p>
+          <p className="text-sm text-[color:var(--text-subtle)]">{today}</p>
         </div>
 
         {/* Body */}
@@ -86,8 +86,8 @@ export function CoverLetterPreview({
             ))
           ) : (
             <div className="text-center py-12 text-gray-400">
-              <p className="font-mono text-sm">{t('coverLetter.preview.emptyTitle')}</p>
-              <p className="font-mono text-xs mt-2">{t('coverLetter.preview.emptyDescription')}</p>
+              <p className="text-sm">{t('coverLetter.preview.emptyTitle')}</p>
+              <p className="text-xs mt-2">{t('coverLetter.preview.emptyDescription')}</p>
             </div>
           )}
         </div>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Button } from '@/components/ui/button';
 import { Check, X, Briefcase, FolderKanban } from 'lucide-react';
@@ -18,7 +18,9 @@ export function PreviewStep({ enhancements, onApply, onCancel }: PreviewStepProp
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold mb-2">{t('enrichment.preview.title')}</h2>
-        <p className="text-gray-600 font-mono text-sm">{t('enrichment.preview.description')}</p>
+        <p className="text-[color:var(--text-subtle)] text-sm">
+          {t('enrichment.preview.description')}
+        </p>
       </div>
 
       {/* Enhancements list */}
@@ -29,7 +31,7 @@ export function PreviewStep({ enhancements, onApply, onCancel }: PreviewStepProp
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-6 border-t border-gray-200 mt-6">
+      <div className="flex items-center justify-between pt-6 border-t border-[color:var(--border)] mt-6">
         <Button variant="outline" onClick={onCancel} className="gap-2">
           <X className="w-4 h-4" />
           {t('common.cancel')}
@@ -55,16 +57,16 @@ function EnhancementCard({ enhancement }: EnhancementCardProps) {
       : t('enrichment.itemType.project');
 
   return (
-    <div className="border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+    <div className="rounded-2xl border border-[color:var(--border)] bg-white shadow-[0_16px_28px_rgba(15,27,45,0.12)]">
       {/* Card header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-black bg-gray-50">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-[color:var(--border)] bg-[var(--surface-muted)]">
         {enhancement.item_type === 'experience' ? (
           <Briefcase className="w-4 h-4" />
         ) : (
           <FolderKanban className="w-4 h-4" />
         )}
-        <span className="font-mono text-sm font-bold uppercase">{itemTypeLabel}</span>
-        <span className="text-gray-600">|</span>
+        <span className="text-sm font-semibold uppercase tracking-[0.2em]">{itemTypeLabel}</span>
+        <span className="text-[color:var(--text-subtle)]">|</span>
         <span className="font-semibold">{enhancement.title}</span>
       </div>
 
@@ -74,10 +76,10 @@ function EnhancementCard({ enhancement }: EnhancementCardProps) {
           {/* Existing bullets - keeping */}
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-mono font-bold uppercase text-gray-600">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                 {t('enrichment.preview.keepingLabel')}
               </span>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-[color:var(--text-subtle)]">
                 {t('enrichment.preview.existingCount', {
                   count: enhancement.original_description.length,
                 })}
@@ -85,12 +87,15 @@ function EnhancementCard({ enhancement }: EnhancementCardProps) {
             </div>
             <ul className="space-y-2">
               {enhancement.original_description.map((bullet, i) => (
-                <li key={i} className="text-sm text-gray-700 pl-4 border-l-2 border-gray-300">
+                <li
+                  key={i}
+                  className="text-sm text-[var(--foreground)] pl-4 border-l-2 border-[color:var(--border)]"
+                >
                   {bullet}
                 </li>
               ))}
               {enhancement.original_description.length === 0 && (
-                <li className="text-sm text-gray-400 italic">
+                <li className="text-sm text-[color:var(--text-subtle)] italic">
                   {t('enrichment.preview.noExistingDescription')}
                 </li>
               )}
@@ -100,10 +105,10 @@ function EnhancementCard({ enhancement }: EnhancementCardProps) {
           {/* New bullets - adding */}
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-mono font-bold uppercase text-green-600">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
                 {t('enrichment.preview.addingLabel')}
               </span>
-              <span className="text-xs text-green-600">
+              <span className="text-xs text-emerald-700">
                 {t('enrichment.preview.newCount', {
                   count: enhancement.enhanced_description.length,
                 })}
@@ -113,7 +118,7 @@ function EnhancementCard({ enhancement }: EnhancementCardProps) {
               {enhancement.enhanced_description.map((bullet, i) => (
                 <li
                   key={i}
-                  className="text-sm text-gray-900 pl-4 border-l-2 border-green-500 bg-green-50 py-1 pr-2"
+                  className="text-sm text-[var(--foreground)] pl-4 border-l-2 border-emerald-500 bg-emerald-50 py-1 pr-2"
                 >
                   {bullet}
                 </li>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
@@ -80,24 +80,15 @@ export class ErrorBoundary extends Component<Props, State> {
 
             {process.env.NODE_ENV === 'development' && this.state.error && (
               <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3">
-                <p className="text-xs text-red-700 break-all">
-                  {this.state.error.message}
-                </p>
+                <p className="text-xs text-red-700 break-all">{this.state.error.message}</p>
               </div>
             )}
 
             <div className="flex gap-3">
-              <Button
-                onClick={this.handleReset}
-                variant="outline"
-                className="flex-1"
-              >
+              <Button onClick={this.handleReset} variant="outline" className="flex-1">
                 {strings.tryAgain}
               </Button>
-              <Button
-                onClick={this.handleReload}
-                className="flex-1"
-              >
+              <Button onClick={this.handleReload} className="flex-1">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 {strings.reloadPage}
               </Button>

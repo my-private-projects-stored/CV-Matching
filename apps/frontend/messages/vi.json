@@ -1019,6 +1019,7 @@
     },
     "errors": {
       "jobDescriptionTooShort": "Mô tả công việc quá ngắn. Vui lòng cung cấp thêm chi tiết.",
+      "privacyModeBlocked": "Chế độ riêng tư hiện tại đang chặn tác vụ AI này. Vui lòng đổi nhà cung cấp hoặc chế độ riêng tư trong Cài đặt.",
       "apiKeyError": "Lỗi khóa API. Vui lòng kiểm tra cấu hình LLM trong Cài đặt.",
       "rateLimit": "Đã đạt giới hạn tần suất. Vui lòng chờ một chút rồi thử lại.",
       "failedToGenerate": "Tạo CV thất bại. Vui lòng kiểm tra cài đặt và thử lại.",

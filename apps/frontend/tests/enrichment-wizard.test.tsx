@@ -11,7 +11,8 @@ vi.mock('@/lib/i18n', () => ({
 }));
 
 vi.mock('@/lib/api/enrichment', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/api/enrichment')>('@/lib/api/enrichment');
+  const actual =
+    await vi.importActual<typeof import('@/lib/api/enrichment')>('@/lib/api/enrichment');
   return {
     ...actual,
     analyzeResume: (...args: unknown[]) => mockedAnalyzeResume(...args),

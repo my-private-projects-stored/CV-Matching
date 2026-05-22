@@ -22,7 +22,9 @@ describe('applyMissingKeywordsToResumeData', () => {
       'Redis',
       'TypeScript',
     ]);
-    expect(result.resumeData.summary).toContain('Keywords aligned with this role: Redis, TypeScript.');
+    expect(result.resumeData.summary).toContain(
+      'Keywords aligned with this role: Redis, TypeScript.'
+    );
   });
 
   it('returns unchanged data when all keywords already exist', () => {

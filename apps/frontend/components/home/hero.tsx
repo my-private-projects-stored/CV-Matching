@@ -19,9 +19,9 @@ export default function Hero() {
               Xây dựng hệ sinh thái tuyển dụng kết nối ứng viên và doanh nghiệp
             </h1>
             <p className="max-w-xl text-base text-[color:var(--text-muted)] md:text-lg">
-              Trực quan hóa hành trình ứng tuyển, đo lường mức độ phù hợp bằng AI, và hỗ trợ
-              nhà tuyển dụng ra quyết định dựa trên dữ liệu. Phù hợp cho đề tài nghiên cứu và
-              triển khai thực tế.
+              Trực quan hóa hành trình ứng tuyển, đo lường mức độ phù hợp bằng AI, và hỗ trợ nhà
+              tuyển dụng ra quyết định dựa trên dữ liệu. Phù hợp cho đề tài nghiên cứu và triển khai
+              thực tế.
             </p>
 
             <div className="flex flex-wrap gap-4">
@@ -95,8 +95,8 @@ export default function Hero() {
                 Research Focus
               </p>
               <p className="mt-3 text-sm text-white/90">
-                Đề tài tập trung vào nền tảng công nghệ tuyển dụng tích hợp AI, tối ưu hóa việc
-                kết nối ứng viên và doanh nghiệp bằng thuật toán đánh giá CV.
+                Đề tài tập trung vào nền tảng công nghệ tuyển dụng tích hợp AI, tối ưu hóa việc kết
+                nối ứng viên và doanh nghiệp bằng thuật toán đánh giá CV.
               </p>
             </div>
           </div>

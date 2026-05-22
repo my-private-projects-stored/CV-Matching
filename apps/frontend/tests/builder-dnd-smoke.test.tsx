@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ResumeForm } from '@/components/builder/resume-form';
-import type { ResumeData, SectionMeta } from '@/components/dashboard/resume-component';
-import { DndContext, DragEndEvent } from '@dnd-kit/core';
+import type { ResumeData } from '@/components/dashboard/resume-component';
 
 vi.mock('@/lib/i18n', () => ({
   useTranslations: () => ({
@@ -16,17 +15,27 @@ vi.mock('@/lib/i18n', () => ({
 }));
 
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, variant: _v, size: _s, className: _c, ...props }: any) => (
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button {...props}>{children}</button>
   ),
 }));
 
 vi.mock('@/components/ui/input', () => ({
-  Input: ({ className: _c, ...props }: any) => <input {...props} />,
+  Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
 }));
 
 vi.mock('@/components/ui/confirm-dialog', () => ({
-  ConfirmDialog: ({ open, confirmLabel, onConfirm, onOpenChange }: any) =>
+  ConfirmDialog: ({
+    open,
+    confirmLabel,
+    onConfirm,
+    onOpenChange,
+  }: {
+    open: boolean;
+    confirmLabel?: string;
+    onConfirm: () => void;
+    onOpenChange: (open: boolean) => void;
+  }) =>
     open ? (
       <div role="dialog">
         <button onClick={onConfirm}>{confirmLabel}</button>
@@ -36,7 +45,7 @@ vi.mock('@/components/ui/confirm-dialog', () => ({
 }));
 
 vi.mock('@/components/builder/add-section-dialog', () => ({
-  AddSectionButton: ({ onAdd }: any) => (
+  AddSectionButton: ({ onAdd }: { onAdd: (displayName: string, sectionType: string) => void }) => (
     <button onClick={() => onAdd('Custom', 'text')}>Add Section</button>
   ),
 }));
@@ -78,7 +87,21 @@ vi.mock('@/components/builder/forms/generic-list-form', () => ({
 }));
 
 vi.mock('@/components/builder/section-header', () => ({
-  SectionHeader: ({ section, children, onMoveUp, onMoveDown, isFirst, isLast }: any) => (
+  SectionHeader: ({
+    section,
+    children,
+    onMoveUp,
+    onMoveDown,
+    isFirst,
+    isLast,
+  }: {
+    section: { displayName: string };
+    children?: React.ReactNode;
+    onMoveUp?: () => void;
+    onMoveDown?: () => void;
+    isFirst?: boolean;
+    isLast?: boolean;
+  }) => (
     <div>
       <h3>{section.displayName}</h3>
       <button onClick={onMoveUp} title="moveUp" disabled={isFirst}>
@@ -102,9 +125,7 @@ const renderResumeFormWithDnd = (initialData: ResumeData) => {
     return (
       <div>
         <div data-testid="section-order">
-          {resumeData.sectionMeta
-            ?.map((s) => `${s.id}:${s.order}`)
-            .join('|')}
+          {resumeData.sectionMeta?.map((s) => `${s.id}:${s.order}`).join('|')}
         </div>
         <ResumeForm resumeData={resumeData} onUpdate={setResumeData} />
       </div>
@@ -117,7 +138,7 @@ const renderResumeFormWithDnd = (initialData: ResumeData) => {
 const getSectionButtonByName = (sectionName: string, buttonTitle: 'moveUp' | 'moveDown') => {
   // Find all buttons with the target title
   const allButtons = screen.queryAllByTitle(buttonTitle);
-  
+
   if (allButtons.length === 0) {
     throw new Error(`Could not find any "${buttonTitle}" buttons`);
   }
@@ -351,7 +372,6 @@ describe('builder DnD smoke coverage', () => {
     });
 
     // Personal Info is first, move-up should be disabled
-    const personalInfoSection = screen.getByText('Personal Info').closest('div');
     // Personal Info doesn't have move buttons since it's rendered without SectionHeader
     // So let's verify it doesn't render move buttons
     const allMoveUpButtons = screen.queryAllByTitle('moveUp');

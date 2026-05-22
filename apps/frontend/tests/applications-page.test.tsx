@@ -40,10 +40,6 @@ function createDeferred<T>() {
   return { promise, resolve, reject };
 }
 
-function expectLatestReplaceHrefContains(parts: string[]) {
-  expectLatestHrefContains(mockedReplace, parts);
-}
-
 function loadRecruiterJob(jobId = 'job-1') {
   fillInputByPlaceholder('applicationsPage.recruiterView.jobIdPlaceholder', jobId);
   clickFirstButtonByName('applicationsPage.load');
@@ -307,10 +303,16 @@ describe('ApplicationsPage status changes filters', () => {
     loadRecruiterJob('job-1');
 
     await waitFor(() => {
-      expect(screen.getAllByText('applicationsPage.rankedCandidates.selectForBulk').length).toBeGreaterThan(1);
+      expect(
+        screen.getAllByText('applicationsPage.rankedCandidates.selectForBulk').length
+      ).toBeGreaterThan(1);
     });
 
-    fireEvent.click(screen.getByRole('checkbox', { name: 'applicationsPage.rankedCandidates.selectAllCurrentPage' }));
+    fireEvent.click(
+      screen.getByRole('checkbox', {
+        name: 'applicationsPage.rankedCandidates.selectAllCurrentPage',
+      })
+    );
     const bulkStatusSelect = screen
       .getByText('applicationsPage.rankedCandidates.bulkStatusPlaceholder')
       .closest('select');
@@ -319,17 +321,25 @@ describe('ApplicationsPage status changes filters', () => {
       target: { value: 'offer' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.applyBulkStatusButton' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'applicationsPage.rankedCandidates.applyBulkStatusButton',
+      })
+    );
 
     await waitFor(() => {
       expect(mockedBulkUpdateApplicationStatus).toHaveBeenCalledWith({
         applicationIds: ['app-1', 'app-2'],
         status: 'offer',
       });
-      expect(screen.getByText('applicationsPage.rankedCandidates.bulkResultLine')).toBeInTheDocument();
+      expect(
+        screen.getByText('applicationsPage.rankedCandidates.bulkResultLine')
+      ).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.undoBulkStatusButton' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.undoBulkStatusButton' })
+    );
 
     await waitFor(() => {
       expect(mockedBulkUpdateApplicationStatus).toHaveBeenCalledWith({
@@ -340,7 +350,9 @@ describe('ApplicationsPage status changes filters', () => {
         applicationIds: ['app-2'],
         status: 'interview',
       });
-      expect(screen.getByText('applicationsPage.rankedCandidates.bulkUndoResultLine')).toBeInTheDocument();
+      expect(
+        screen.getByText('applicationsPage.rankedCandidates.bulkUndoResultLine')
+      ).toBeInTheDocument();
     });
   });
 
@@ -400,10 +412,14 @@ describe('ApplicationsPage status changes filters', () => {
     render(<ApplicationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })
+      ).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })
+    );
 
     const href = getLatestMockCallArg<string>(mockedPush) || '';
     expect(href.startsWith('/jobs?')).toBe(true);
@@ -426,7 +442,10 @@ describe('ApplicationsPage status changes filters', () => {
     mockedAuthUser.id = 'candidate-1';
     mockedAuthUser.role = 'candidate';
     mockedSearchParams.set('candidate_id', 'candidate-1');
-    mockedSearchParams.set('jobs_return_query', 'search=Data+Engineer&status=active&page=3&location=Remote');
+    mockedSearchParams.set(
+      'jobs_return_query',
+      'search=Data+Engineer&status=active&page=3&location=Remote'
+    );
     mockedFetchCandidateApplicationHistory.mockResolvedValue({
       request_id: 'req-history-open-job-board-with-jobs-snapshot',
       data: {
@@ -461,14 +480,18 @@ describe('ApplicationsPage status changes filters', () => {
     render(<ApplicationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })
+      ).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })
+    );
 
     const href = getLatestMockCallArg<string>(mockedPush) || '';
     expect(href.startsWith('/jobs?')).toBe(true);
-    const params = new URLSearchParams((href.split('?')[1] || ''));
+    const params = new URLSearchParams(href.split('?')[1] || '');
 
     expect(params.get('focus_job_id')).toBe('job-2');
     expect(params.get('search')).toBe('Data Engineer');
@@ -483,7 +506,10 @@ describe('ApplicationsPage status changes filters', () => {
     mockedAuthUser.role = 'candidate';
     mockedSearchParams.set('candidate_id', 'candidate-1');
     mockedSearchParams.set('flow_ctx', '1');
-    mockedSearchParams.set('jobs_return_query', 'search=Data+Engineer&status=active&page=2&source=flow');
+    mockedSearchParams.set(
+      'jobs_return_query',
+      'search=Data+Engineer&status=active&page=2&source=flow'
+    );
     mockedFetchCandidateApplicationHistory.mockResolvedValue({
       request_id: 'req-history-open-job-board-precedence',
       data: {
@@ -518,10 +544,14 @@ describe('ApplicationsPage status changes filters', () => {
     render(<ApplicationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })
+      ).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })
+    );
 
     const href = getLatestMockCallArg<string>(mockedPush) || '';
     const params = new URLSearchParams(href.split('?')[1] || '');
@@ -579,10 +609,14 @@ describe('ApplicationsPage status changes filters', () => {
     render(<ApplicationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })
+      ).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })
+    );
 
     const href = getLatestMockCallArg<string>(mockedPush) || '';
     const params = new URLSearchParams(href.split('?')[1] || '');
@@ -634,10 +668,14 @@ describe('ApplicationsPage status changes filters', () => {
     render(<ApplicationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })
+      ).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openJobInBoard' })
+    );
 
     const href = getLatestMockCallArg<string>(mockedPush) || '';
     const params = new URLSearchParams(href.split('?')[1] || '');
@@ -712,7 +750,9 @@ describe('ApplicationsPage status changes filters', () => {
     render(<ApplicationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('applicationsPage.candidateHistory.focusedApplicationVisible')).toBeInTheDocument();
+      expect(
+        screen.getByText('applicationsPage.candidateHistory.focusedApplicationVisible')
+      ).toBeInTheDocument();
       expect(screen.getByText('applicationsPage.candidateHistory.focusBadge')).toBeInTheDocument();
       const focusedHistoryRow = document.querySelector('[data-candidate-history-focused="true"]');
       expect(focusedHistoryRow).toBeTruthy();
@@ -720,11 +760,15 @@ describe('ApplicationsPage status changes filters', () => {
     });
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'applicationsPage.candidateHistory.clearFocusedApplication' })
+      screen.getByRole('button', {
+        name: 'applicationsPage.candidateHistory.clearFocusedApplication',
+      })
     );
 
     await waitFor(() => {
-      expect(screen.queryByText('applicationsPage.candidateHistory.focusedApplicationVisible')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('applicationsPage.candidateHistory.focusedApplicationVisible')
+      ).not.toBeInTheDocument();
       const focusedHistoryRow = document.querySelector('[data-candidate-history-focused="true"]');
       expect(focusedHistoryRow).toBeNull();
       const latestHref = getLatestMockCallArg<string>(mockedReplace) || '';
@@ -816,7 +860,9 @@ describe('ApplicationsPage status changes filters', () => {
         (call) => call[0]?.page === 2
       );
       expect(pageTwoCall).toBeDefined();
-      expect(screen.getByText('applicationsPage.candidateHistory.focusedApplicationVisible')).toBeInTheDocument();
+      expect(
+        screen.getByText('applicationsPage.candidateHistory.focusedApplicationVisible')
+      ).toBeInTheDocument();
       expect(screen.getByText('applicationsPage.candidateHistory.focusBadge')).toBeInTheDocument();
       const focusedHistoryRow = document.querySelector('[data-candidate-history-focused="true"]');
       expect(focusedHistoryRow).toBeTruthy();
@@ -831,7 +877,8 @@ describe('ApplicationsPage status changes filters', () => {
     mockedSearchParams.set('application_id', 'app-target');
     mockedSearchParams.set('candidate_focus', '1');
 
-    const pageTwoDeferred = createDeferred<Awaited<ReturnType<typeof fetchCandidateApplicationHistory>>>();
+    const pageTwoDeferred =
+      createDeferred<Awaited<ReturnType<typeof fetchCandidateApplicationHistory>>>();
 
     mockedFetchCandidateApplicationHistory.mockImplementation(async (params) => {
       const page = params?.page || 1;
@@ -882,7 +929,9 @@ describe('ApplicationsPage status changes filters', () => {
     });
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'applicationsPage.candidateHistory.clearFocusedApplication' })
+      screen.getByRole('button', {
+        name: 'applicationsPage.candidateHistory.clearFocusedApplication',
+      })
     );
 
     await waitFor(() => {
@@ -934,12 +983,18 @@ describe('ApplicationsPage status changes filters', () => {
   it('filters ranked candidates by latest changed_by', async () => {
     render(<ApplicationsPage />);
 
-    fireEvent.change(screen.getByPlaceholderText('applicationsPage.recruiterView.jobIdPlaceholder'), {
-      target: { value: 'job-1' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('applicationsPage.recruiterView.changedByFilterPlaceholder'), {
-      target: { value: 'qa-reviewer' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('applicationsPage.recruiterView.jobIdPlaceholder'),
+      {
+        target: { value: 'job-1' },
+      }
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText('applicationsPage.recruiterView.changedByFilterPlaceholder'),
+      {
+        target: { value: 'qa-reviewer' },
+      }
+    );
     fireEvent.change(screen.getByLabelText('applicationsPage.recruiterView.changedAfterLabel'), {
       target: { value: '2026-03-10' },
     });
@@ -963,12 +1018,18 @@ describe('ApplicationsPage status changes filters', () => {
   it('syncs ranked changed_by and date filters to query string', async () => {
     render(<ApplicationsPage />);
 
-    fireEvent.change(screen.getByPlaceholderText('applicationsPage.recruiterView.jobIdPlaceholder'), {
-      target: { value: 'job-1' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('applicationsPage.recruiterView.changedByFilterPlaceholder'), {
-      target: { value: 'qa-reviewer' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('applicationsPage.recruiterView.jobIdPlaceholder'),
+      {
+        target: { value: 'job-1' },
+      }
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText('applicationsPage.recruiterView.changedByFilterPlaceholder'),
+      {
+        target: { value: 'qa-reviewer' },
+      }
+    );
     fireEvent.change(screen.getByLabelText('applicationsPage.recruiterView.changedAfterLabel'), {
       target: { value: '2026-03-10' },
     });
@@ -992,7 +1053,9 @@ describe('ApplicationsPage status changes filters', () => {
 
     await loadRecruiterAndWaitRanked('job-1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.recruiterView.preset.qtd' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.recruiterView.preset.qtd' })
+    );
 
     await waitFor(() => {
       const latest = getLatestRankedParams();
@@ -1007,7 +1070,9 @@ describe('ApplicationsPage status changes filters', () => {
 
     await loadRecruiterAndWaitRanked('job-1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.recruiterView.preset.7d' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.recruiterView.preset.7d' })
+    );
 
     await waitFor(() => {
       expectLatestHrefContains(mockedReplace, ['/applications?']);
@@ -1095,7 +1160,9 @@ describe('ApplicationsPage status changes filters', () => {
 
     await waitFor(() => {
       expect(mockedFetchRankedApplications).toHaveBeenCalled();
-      expect(screen.getByText('applicationsPage.rankedCandidates.focusedApplication')).toBeInTheDocument();
+      expect(
+        screen.getByText('applicationsPage.rankedCandidates.focusedApplication')
+      ).toBeInTheDocument();
     });
 
     const focusedCard = screen.getByText('Candidate Two').closest('[data-focused="true"]');
@@ -1110,16 +1177,22 @@ describe('ApplicationsPage status changes filters', () => {
     render(<ApplicationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('applicationsPage.rankedCandidates.focusedApplicationOnlyMode')).toBeInTheDocument();
+      expect(
+        screen.getByText('applicationsPage.rankedCandidates.focusedApplicationOnlyMode')
+      ).toBeInTheDocument();
       expect(screen.getByText('Candidate Two')).toBeInTheDocument();
       expect(screen.queryByText('Candidate One')).not.toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.focusOnlyDisable' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.focusOnlyDisable' })
+    );
 
     await waitFor(() => {
       expect(screen.getByText('Candidate One')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.focusOnlyEnable' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.focusOnlyEnable' })
+      ).toBeInTheDocument();
     });
   });
 
@@ -1133,8 +1206,12 @@ describe('ApplicationsPage status changes filters', () => {
     await waitFor(() => {
       expect(screen.getByText('Candidate One')).toBeInTheDocument();
       expect(screen.getByText('Candidate Two')).toBeInTheDocument();
-      expect(screen.queryByText('applicationsPage.rankedCandidates.focusedApplicationOnlyMode')).not.toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.focusOnlyEnable' })).toBeInTheDocument();
+      expect(
+        screen.queryByText('applicationsPage.rankedCandidates.focusedApplicationOnlyMode')
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.focusOnlyEnable' })
+      ).toBeInTheDocument();
     });
   });
 
@@ -1145,10 +1222,14 @@ describe('ApplicationsPage status changes filters', () => {
     render(<ApplicationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('applicationsPage.rankedCandidates.focusedApplicationOnlyMode')).toBeInTheDocument();
+      expect(
+        screen.getByText('applicationsPage.rankedCandidates.focusedApplicationOnlyMode')
+      ).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.focusOnlyDisable' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.focusOnlyDisable' })
+    );
 
     await waitFor(() => {
       expectLatestHrefContains(mockedReplace, ['/applications?']);
@@ -1159,7 +1240,9 @@ describe('ApplicationsPage status changes filters', () => {
       });
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.focusOnlyEnable' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.focusOnlyEnable' })
+    );
 
     await waitFor(() => {
       expectLatestHrefQueryValues(mockedReplace, {
@@ -1177,7 +1260,9 @@ describe('ApplicationsPage status changes filters', () => {
     render(<ApplicationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('applicationsPage.recruiterView.summaryFocusedApplication')).toBeInTheDocument();
+      expect(
+        screen.getByText('applicationsPage.recruiterView.summaryFocusedApplication')
+      ).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByText('applicationsPage.recruiterView.summaryFocusedApplication'));
@@ -1196,10 +1281,18 @@ describe('ApplicationsPage status changes filters', () => {
     render(<ApplicationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.clearFocusedApplication' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', {
+          name: 'applicationsPage.rankedCandidates.clearFocusedApplication',
+        })
+      ).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.clearFocusedApplication' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'applicationsPage.rankedCandidates.clearFocusedApplication',
+      })
+    );
 
     await waitFor(() => {
       const latestHref = getLatestMockCallArg<string>(mockedReplace) || '';
@@ -1225,7 +1318,11 @@ describe('ApplicationsPage status changes filters', () => {
                 application_id: 'app-target',
                 status: 'interview',
                 ai_status: 'completed',
-                candidate: { id: 'c-target', full_name: 'Candidate Target', email: 'target@example.com' },
+                candidate: {
+                  id: 'c-target',
+                  full_name: 'Candidate Target',
+                  email: 'target@example.com',
+                },
                 resume: { id: 'r-target', title: 'Resume Target', processing_status: 'ready' },
                 scores: { semantic_score: 0.93, keyword_score: 0.88, hybrid_score: 0.9 },
                 explainability: { matched_keywords: ['node'], missing_keywords: ['redis'] },
@@ -1267,7 +1364,9 @@ describe('ApplicationsPage status changes filters', () => {
         (call) => call[0]?.page === 2
       );
       expect(pageTwoCall).toBeDefined();
-      expect(screen.getByText('applicationsPage.rankedCandidates.focusedApplication')).toBeInTheDocument();
+      expect(
+        screen.getByText('applicationsPage.rankedCandidates.focusedApplication')
+      ).toBeInTheDocument();
       expect(screen.getByText('Candidate Target')).toBeInTheDocument();
       expect(screen.getByText('applicationsPage.rankedCandidates.focusBadge')).toBeInTheDocument();
     });
@@ -1311,11 +1410,17 @@ describe('ApplicationsPage status changes filters', () => {
     render(<ApplicationsPage />);
 
     await waitFor(() => {
-      const pageTwoCalls = mockedFetchRankedApplications.mock.calls.filter((call) => call[0]?.page === 2);
+      const pageTwoCalls = mockedFetchRankedApplications.mock.calls.filter(
+        (call) => call[0]?.page === 2
+      );
       expect(pageTwoCalls).toHaveLength(1);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.rankedCandidates.clearFocusedApplication' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'applicationsPage.rankedCandidates.clearFocusedApplication',
+      })
+    );
 
     await waitFor(() => {
       const latestHref = getLatestMockCallArg<string>(mockedReplace) || '';
@@ -1332,7 +1437,11 @@ describe('ApplicationsPage status changes filters', () => {
             application_id: 'app-target',
             status: 'interview',
             ai_status: 'completed',
-            candidate: { id: 'c-target', full_name: 'Candidate Target', email: 'target@example.com' },
+            candidate: {
+              id: 'c-target',
+              full_name: 'Candidate Target',
+              email: 'target@example.com',
+            },
             resume: { id: 'r-target', title: 'Resume Target', processing_status: 'ready' },
             scores: { semantic_score: 0.93, keyword_score: 0.88, hybrid_score: 0.9 },
             explainability: { matched_keywords: ['node'], missing_keywords: ['redis'] },
@@ -1371,7 +1480,9 @@ describe('ApplicationsPage status changes filters', () => {
     await loadRecruiterAndWaitRanked('job-1');
 
     fireEvent.click(
-      screen.getAllByRole('button', { name: 'applicationsPage.rankedCandidates.statusHistoryButton' })[0]
+      screen.getAllByRole('button', {
+        name: 'applicationsPage.rankedCandidates.statusHistoryButton',
+      })[0]
     );
 
     await waitFor(() => {
@@ -1585,7 +1696,9 @@ describe('ApplicationsPage status changes filters', () => {
       expect(mockedFetchCandidateApplicationHistory).toHaveBeenCalled();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openProfile' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.candidateHistory.openProfile' })
+    );
 
     await waitFor(() => {
       expect(mockedFetchCandidateProfileById).toHaveBeenCalledWith('c-hist-1');
@@ -1610,6 +1723,7 @@ describe('ApplicationsPage status changes filters', () => {
         changes: [
           {
             application_id: 'app-sc-1',
+            job: { id: 'job-1', title: 'Backend Engineer' },
             candidate: {
               id: 'c-status-1',
               full_name: 'Status Candidate',
@@ -1652,7 +1766,9 @@ describe('ApplicationsPage status changes filters', () => {
 
     await loadRecruiterAndWaitStatusChanges('job-1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.statusChanges.profileButton' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.statusChanges.profileButton' })
+    );
 
     await waitFor(() => {
       expect(mockedFetchCandidateProfileById).toHaveBeenCalledWith('c-status-1');
@@ -1739,7 +1855,9 @@ describe('ApplicationsPage status changes filters', () => {
     await loadRecruiterAndWaitRanked('job-1');
 
     fireEvent.click(
-      screen.getAllByRole('button', { name: 'applicationsPage.rankedCandidates.statusChangesButton' })[0]
+      screen.getAllByRole('button', {
+        name: 'applicationsPage.rankedCandidates.statusChangesButton',
+      })[0]
     );
 
     await waitFor(() => {
@@ -1895,7 +2013,9 @@ describe('ApplicationsPage status changes filters', () => {
     render(<ApplicationsPage />);
 
     await waitFor(() => {
-      const pageTwoCall = mockedFetchRecentStatusChanges.mock.calls.find((call) => call[0]?.page === 2);
+      const pageTwoCall = mockedFetchRecentStatusChanges.mock.calls.find(
+        (call) => call[0]?.page === 2
+      );
       expect(pageTwoCall).toBeDefined();
       expect(
         screen.getByText('applicationsPage.statusChanges.focusedApplicationVisible')
@@ -1977,12 +2097,18 @@ describe('ApplicationsPage status changes filters', () => {
       render(<ApplicationsPage />);
       await vi.advanceTimersByTimeAsync(0);
 
-      fireEvent.change(screen.getByPlaceholderText('applicationsPage.statusChanges.changedByPlaceholder'), {
-        target: { value: 'ops-team-a' },
-      });
-      fireEvent.change(screen.getByPlaceholderText('applicationsPage.statusChanges.changedByPlaceholder'), {
-        target: { value: 'ops-team-final' },
-      });
+      fireEvent.change(
+        screen.getByPlaceholderText('applicationsPage.statusChanges.changedByPlaceholder'),
+        {
+          target: { value: 'ops-team-a' },
+        }
+      );
+      fireEvent.change(
+        screen.getByPlaceholderText('applicationsPage.statusChanges.changedByPlaceholder'),
+        {
+          target: { value: 'ops-team-final' },
+        }
+      );
 
       await vi.advanceTimersByTimeAsync(120);
       const earlyPageTwoCalls = mockedFetchRecentStatusChanges.mock.calls.filter(
@@ -1991,7 +2117,9 @@ describe('ApplicationsPage status changes filters', () => {
       expect(earlyPageTwoCalls).toHaveLength(0);
 
       await vi.advanceTimersByTimeAsync(220);
-      const pageTwoCalls = mockedFetchRecentStatusChanges.mock.calls.filter((call) => call[0]?.page === 2);
+      const pageTwoCalls = mockedFetchRecentStatusChanges.mock.calls.filter(
+        (call) => call[0]?.page === 2
+      );
       expect(pageTwoCalls).toHaveLength(1);
       expect(pageTwoCalls[0]?.[0]?.changedBy).toBe('ops-team-final');
     } finally {
@@ -2048,7 +2176,10 @@ describe('ApplicationsPage status changes filters', () => {
     mockedSearchParams.set('flow_ctx', '1');
     mockedSearchParams.set('job_id', 'job-1');
     mockedSearchParams.set('application_id', 'app-2');
-    mockedSearchParams.set('jobs_return_query', 'search=Platform+Engineer&status=all&page=2&source=flow');
+    mockedSearchParams.set(
+      'jobs_return_query',
+      'search=Platform+Engineer&status=all&page=2&source=flow'
+    );
 
     render(<ApplicationsPage />);
 
@@ -2143,7 +2274,9 @@ describe('ApplicationsPage status changes filters', () => {
     });
 
     fireEvent.click(
-      screen.getAllByRole('button', { name: 'applicationsPage.rankedCandidates.statusChangesButton' })[0]
+      screen.getAllByRole('button', {
+        name: 'applicationsPage.rankedCandidates.statusChangesButton',
+      })[0]
     );
 
     await waitFor(() => {
@@ -2222,7 +2355,9 @@ describe('ApplicationsPage status changes filters', () => {
 
     await loadRecruiterAndWaitRanked('job-1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.recruiterView.preset.7d' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.recruiterView.preset.7d' })
+    );
 
     await waitFor(() => {
       const latest = getLatestRankedParams();
@@ -2230,7 +2365,9 @@ describe('ApplicationsPage status changes filters', () => {
       expect(latest?.changedBefore).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.recruiterView.preset.all-time' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.recruiterView.preset.all-time' })
+    );
 
     await waitFor(() => {
       const latest = getLatestRankedParams();
@@ -2242,21 +2379,37 @@ describe('ApplicationsPage status changes filters', () => {
   it('shows and clears ranked active filter chips', async () => {
     render(<ApplicationsPage />);
 
-    fireEvent.change(screen.getByPlaceholderText('applicationsPage.recruiterView.jobIdPlaceholder'), {
-      target: { value: 'job-1' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('applicationsPage.recruiterView.changedByFilterPlaceholder'), {
-      target: { value: 'qa-reviewer' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.recruiterView.preset.7d' }));
+    fireEvent.change(
+      screen.getByPlaceholderText('applicationsPage.recruiterView.jobIdPlaceholder'),
+      {
+        target: { value: 'job-1' },
+      }
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText('applicationsPage.recruiterView.changedByFilterPlaceholder'),
+      {
+        target: { value: 'qa-reviewer' },
+      }
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.recruiterView.preset.7d' })
+    );
 
     await waitFor(() => {
-      expect(screen.getByText('applicationsPage.recruiterView.activeFiltersLabel')).toBeInTheDocument();
-      expect(screen.getByText('applicationsPage.recruiterView.summaryChangedBy')).toBeInTheDocument();
-      expect(screen.getAllByText('applicationsPage.recruiterView.preset.7d').length).toBeGreaterThan(0);
+      expect(
+        screen.getByText('applicationsPage.recruiterView.activeFiltersLabel')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('applicationsPage.recruiterView.summaryChangedBy')
+      ).toBeInTheDocument();
+      expect(
+        screen.getAllByText('applicationsPage.recruiterView.preset.7d').length
+      ).toBeGreaterThan(0);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.recruiterView.clearSummaryButton' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.recruiterView.clearSummaryButton' })
+    );
 
     await waitFor(() => {
       const calls = mockedFetchRankedApplications.mock.calls;
@@ -2295,9 +2448,12 @@ describe('ApplicationsPage status changes filters', () => {
 
     await loadRecruiterAndWaitStatusChanges('job-1');
 
-    fireEvent.change(screen.getByPlaceholderText('applicationsPage.statusChanges.changedByPlaceholder'), {
-      target: { value: 'recruiter-ui' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('applicationsPage.statusChanges.changedByPlaceholder'),
+      {
+        target: { value: 'recruiter-ui' },
+      }
+    );
 
     await waitFor(() => {
       const presetButton = screen.getByRole('button', {
@@ -2306,7 +2462,9 @@ describe('ApplicationsPage status changes filters', () => {
       expect(presetButton).not.toBeDisabled();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.statusChanges.preset.7d' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.statusChanges.preset.7d' })
+    );
 
     await waitFor(() => {
       expectLatestHrefContains(mockedReplace, ['/applications?']);
@@ -2324,9 +2482,12 @@ describe('ApplicationsPage status changes filters', () => {
 
     await loadRecruiterAndWaitStatusChanges('job-1');
 
-    fireEvent.change(screen.getByPlaceholderText('applicationsPage.statusChanges.changedByPlaceholder'), {
-      target: { value: 'recruiter-ui' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('applicationsPage.statusChanges.changedByPlaceholder'),
+      {
+        target: { value: 'recruiter-ui' },
+      }
+    );
     fireEvent.change(screen.getAllByRole('combobox')[1], {
       target: { value: 'screening' },
     });
@@ -2338,7 +2499,9 @@ describe('ApplicationsPage status changes filters', () => {
       expect(exportButton).not.toBeDisabled();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.statusChanges.exportButton' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.statusChanges.exportButton' })
+    );
 
     await waitFor(() => {
       expect(mockedExportRecentStatusChangesCsv).toHaveBeenCalledWith(
@@ -2383,7 +2546,9 @@ describe('ApplicationsPage status changes filters', () => {
 
       await loadRecruiterAndWaitStatusChanges('job-1');
 
-      fireEvent.click(screen.getByRole('button', { name: `applicationsPage.statusChanges.preset.${preset}` }));
+      fireEvent.click(
+        screen.getByRole('button', { name: `applicationsPage.statusChanges.preset.${preset}` })
+      );
 
       await waitFor(() => {
         const latest = getLatestStatusChangesParams();
@@ -2409,18 +2574,22 @@ describe('ApplicationsPage status changes filters', () => {
 
     await loadRecruiterAndWaitStatusChanges('job-1');
 
-    const preset7d = screen.getByRole('button', { name: 'applicationsPage.statusChanges.preset.7d' });
-    const presetQtd = screen.getByRole('button', { name: 'applicationsPage.statusChanges.preset.qtd' });
+    const preset7d = screen.getByRole('button', {
+      name: 'applicationsPage.statusChanges.preset.7d',
+    });
+    const presetQtd = screen.getByRole('button', {
+      name: 'applicationsPage.statusChanges.preset.qtd',
+    });
 
     fireEvent.click(preset7d);
     await waitFor(() => {
-      expect(preset7d.className).toContain('bg-blue-50');
+      expect(preset7d.className).toContain('bg-[var(--surface-muted)]');
     });
 
     fireEvent.click(presetQtd);
     await waitFor(() => {
-      expect(presetQtd.className).toContain('bg-blue-50');
-      expect(preset7d.className).not.toContain('bg-blue-50');
+      expect(presetQtd.className).toContain('bg-[var(--surface-muted)]');
+      expect(preset7d.className).not.toContain('bg-[var(--surface-muted)]');
     });
 
     await waitFor(() => {
@@ -2431,30 +2600,39 @@ describe('ApplicationsPage status changes filters', () => {
     });
   });
 
-
   it('shows active filter summary chips for status and changedBy filters', async () => {
     render(<ApplicationsPage />);
 
-    fireEvent.change(screen.getByPlaceholderText('applicationsPage.recruiterView.jobIdPlaceholder'), {
-      target: { value: 'job-1' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('applicationsPage.recruiterView.jobIdPlaceholder'),
+      {
+        target: { value: 'job-1' },
+      }
+    );
     fireEvent.click(screen.getAllByRole('button', { name: 'applicationsPage.load' })[0]);
 
     await waitFor(() => {
       expect(mockedFetchRecentStatusChanges).toHaveBeenCalled();
     });
 
-    fireEvent.change(screen.getByPlaceholderText('applicationsPage.statusChanges.changedByPlaceholder'), {
-      target: { value: 'recruiter-ui' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('applicationsPage.statusChanges.changedByPlaceholder'),
+      {
+        target: { value: 'recruiter-ui' },
+      }
+    );
 
     fireEvent.change(screen.getAllByRole('combobox')[1], {
       target: { value: 'screening' },
     });
 
     await waitFor(() => {
-      expect(screen.getByText('applicationsPage.statusChanges.activeFiltersLabel')).toBeInTheDocument();
-      expect(screen.getByText('applicationsPage.statusChanges.summaryChangedBy')).toBeInTheDocument();
+      expect(
+        screen.getByText('applicationsPage.statusChanges.activeFiltersLabel')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('applicationsPage.statusChanges.summaryChangedBy')
+      ).toBeInTheDocument();
       expect(screen.getByText('applicationsPage.statusChanges.summaryStatus')).toBeInTheDocument();
     });
   });
@@ -2462,9 +2640,12 @@ describe('ApplicationsPage status changes filters', () => {
   it('removes status filter when clicking its summary chip', async () => {
     render(<ApplicationsPage />);
 
-    fireEvent.change(screen.getByPlaceholderText('applicationsPage.recruiterView.jobIdPlaceholder'), {
-      target: { value: 'job-1' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('applicationsPage.recruiterView.jobIdPlaceholder'),
+      {
+        target: { value: 'job-1' },
+      }
+    );
     fireEvent.click(screen.getAllByRole('button', { name: 'applicationsPage.load' })[0]);
 
     await waitFor(() => {
@@ -2491,26 +2672,38 @@ describe('ApplicationsPage status changes filters', () => {
   it('clears all active summary chips via clear chips action', async () => {
     render(<ApplicationsPage />);
 
-    fireEvent.change(screen.getByPlaceholderText('applicationsPage.recruiterView.jobIdPlaceholder'), {
-      target: { value: 'job-1' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('applicationsPage.recruiterView.jobIdPlaceholder'),
+      {
+        target: { value: 'job-1' },
+      }
+    );
     fireEvent.click(screen.getAllByRole('button', { name: 'applicationsPage.load' })[0]);
 
     await waitFor(() => {
       expect(mockedFetchRecentStatusChanges).toHaveBeenCalled();
     });
 
-    fireEvent.change(screen.getByPlaceholderText('applicationsPage.statusChanges.changedByPlaceholder'), {
-      target: { value: 'recruiter-ui' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.statusChanges.preset.7d' }));
+    fireEvent.change(
+      screen.getByPlaceholderText('applicationsPage.statusChanges.changedByPlaceholder'),
+      {
+        target: { value: 'recruiter-ui' },
+      }
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.statusChanges.preset.7d' })
+    );
 
     await waitFor(() => {
-      expect(screen.getByText('applicationsPage.statusChanges.summaryChangedBy')).toBeInTheDocument();
+      expect(
+        screen.getByText('applicationsPage.statusChanges.summaryChangedBy')
+      ).toBeInTheDocument();
       expect(screen.getByText('applicationsPage.statusChanges.preset.7d')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.statusChanges.clearSummaryButton' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.statusChanges.clearSummaryButton' })
+    );
 
     await waitFor(() => {
       const calls = mockedFetchRecentStatusChanges.mock.calls;
@@ -2528,9 +2721,12 @@ describe('ApplicationsPage status changes filters', () => {
 
     await loadRecruiterAndWaitStatusChanges('job-1');
 
-    fireEvent.change(screen.getByPlaceholderText('applicationsPage.statusChanges.changedByPlaceholder'), {
-      target: { value: 'recruiter' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('applicationsPage.statusChanges.changedByPlaceholder'),
+      {
+        target: { value: 'recruiter' },
+      }
+    );
     fireEvent.change(screen.getByLabelText('applicationsPage.statusChanges.changedAfterLabel'), {
       target: { value: '2026-03-01' },
     });
@@ -2549,7 +2745,9 @@ describe('ApplicationsPage status changes filters', () => {
       expect(presetCall).toBeDefined();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.statusChanges.clearFiltersButton' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'applicationsPage.statusChanges.clearFiltersButton' })
+    );
 
     await waitFor(() => {
       const latest = getLatestStatusChangesParams();

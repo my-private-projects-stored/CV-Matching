@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import { createPortal } from 'react-dom';
@@ -7,12 +7,9 @@ import { cn } from '@/lib/utils';
 import { useTranslations } from '@/lib/i18n';
 
 /**
- * Swiss International Style Dialog Component
+ * Enterprise Dialog Component
  *
  * Native implementation without external dependencies.
- * - Square corners (rounded-none) - Brutalist aesthetic
- * - Black borders and hard shadows
- * - Canvas background (#F0F0E8)
  */
 
 interface DialogContextValue {
@@ -136,8 +133,7 @@ const DialogContent: React.FC<DialogContentProps> = ({ children, className }) =>
         <div
           className={cn(
             'relative w-full max-w-lg',
-            'border border-black bg-[#F0F0E8] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)]',
-            'rounded-none',
+            'rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] shadow-[0_24px_40px_rgba(15,27,45,0.18)]',
             'animate-in fade-in-0 zoom-in-95 duration-200',
             className
           )}
@@ -146,7 +142,7 @@ const DialogContent: React.FC<DialogContentProps> = ({ children, className }) =>
           {children}
           <button
             onClick={() => onOpenChange(false)}
-            className="absolute right-4 top-4 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-blue-700 focus:ring-offset-2"
+            className="absolute right-4 top-4 rounded-full p-1 opacity-70 transition-opacity hover:bg-black/5 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2"
           >
             <X className="h-5 w-5" />
             <span className="sr-only">{t('common.close')}</span>
@@ -190,7 +186,10 @@ interface DialogTitleProps {
 
 const DialogTitle: React.FC<DialogTitleProps> = ({ className, children, ...props }) => (
   <h2
-    className={cn('font-serif text-lg font-bold leading-none tracking-tight', className)}
+    className={cn(
+      'text-lg font-semibold leading-none tracking-tight text-[var(--foreground)]',
+      className
+    )}
     {...props}
   >
     {children}
@@ -203,7 +202,7 @@ interface DialogDescriptionProps {
 }
 
 const DialogDescription: React.FC<DialogDescriptionProps> = ({ className, children, ...props }) => (
-  <p className={cn('text-sm text-gray-600', className)} {...props}>
+  <p className={cn('text-sm text-[color:var(--text-subtle)]', className)} {...props}>
     {children}
   </p>
 );

@@ -147,7 +147,7 @@
 
 /* Link pill - styled clickable link with icon support */
 .resume-link-pill {
-  font-family: var(--resume-font-mono);
+  font-family: var(--body-font);
   font-size: calc(var(--font-size-base) * 0.7);
   padding: 0.125rem 0.375rem;
   color: var(--resume-text-primary);

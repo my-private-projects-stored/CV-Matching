@@ -110,7 +110,10 @@ async function fetchResumeData(id: string): Promise<ResumeData> {
 /**
  * Parse spacing level from string, clamped to valid range 1-5
  */
-export function parseSpacingLevel(value: string | undefined, defaultValue: SpacingLevel): SpacingLevel {
+export function parseSpacingLevel(
+  value: string | undefined,
+  defaultValue: SpacingLevel
+): SpacingLevel {
   if (!value) return defaultValue;
   const num = parseInt(value, 10);
   if (isNaN(num) || num < 1 || num > 5) return defaultValue;

@@ -107,23 +107,23 @@ export function JDComparisonView({
   return (
     <div className="h-full flex flex-col">
       {/* Stats Bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-[color:var(--border)]">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <Target className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-mono">
+            <Target className="w-4 h-4 text-[var(--primary)]" />
+            <span className="text-sm text-[var(--foreground)]">
               {t('builder.jdMatch.stats.keywordsExtracted', { count: keywords.size })}
             </span>
           </div>
           <div className="flex items-center gap-2">
             <CheckCircle className="w-4 h-4 text-green-600" />
-            <span className="text-sm font-mono">
+            <span className="text-sm text-[var(--foreground)]">
               {t('builder.jdMatch.stats.matchesFound', { count: stats.matchCount })}
             </span>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-mono text-gray-600">
+          <span className="text-sm text-[color:var(--text-subtle)]">
             {t('builder.jdMatch.stats.matchRateLabel')}
           </span>
           <span
@@ -140,9 +140,9 @@ export function JDComparisonView({
         </div>
       </div>
 
-      <div className="px-4 py-3 bg-[#F8F8F5] border-b border-gray-200 space-y-2">
+      <div className="px-4 py-3 bg-[var(--surface-muted)] border-b border-[color:var(--border)] space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="font-mono text-xs uppercase text-gray-700">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
             {t('builder.jdMatch.missingKeywordsTitle', { count: missingKeywords.length })}
           </p>
           <div className="flex items-center gap-2">
@@ -177,22 +177,22 @@ export function JDComparisonView({
               <button
                 key={keyword}
                 type="button"
-                className="inline-flex items-center gap-1 border border-black bg-white px-2 py-1 text-[11px] font-mono uppercase"
+                className="inline-flex items-center gap-1 rounded-full border border-[color:var(--border)] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em]"
                 onClick={() => copyText(keyword)}
               >
                 <span>{keyword}</span>
-                <span className="text-blue-700">{t('builder.jdMatch.copyKeyword')}</span>
+                <span className="text-[var(--primary)]">{t('builder.jdMatch.copyKeyword')}</span>
               </button>
             ))}
           </div>
         ) : (
-          <p className="font-mono text-xs uppercase text-green-700">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
             {t('builder.jdMatch.missingKeywordsEmpty')}
           </p>
         )}
 
         {copiedKeyword ? (
-          <p className="font-mono text-[11px] uppercase text-blue-700">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--primary)]">
             {t('builder.jdMatch.copiedKeywordMessage', { keyword: copiedKeyword })}
           </p>
         ) : null}
@@ -201,7 +201,7 @@ export function JDComparisonView({
       {/* Split View */}
       <div className="flex-1 grid grid-cols-2 min-h-0">
         {/* Left: JD */}
-        <div className="border-r border-gray-200 overflow-hidden">
+        <div className="border-r border-[color:var(--border)] overflow-hidden">
           <JDDisplay content={jobDescription} />
         </div>
 

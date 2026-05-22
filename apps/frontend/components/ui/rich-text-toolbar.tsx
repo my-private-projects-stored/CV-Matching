@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Editor } from '@tiptap/react';
@@ -50,7 +50,7 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({ editor, onLink
   ];
 
   return (
-    <div className="flex items-center gap-1 p-1 border border-black bg-[#E5E5E0]">
+    <div className="flex items-center gap-1 rounded-xl border border-[color:var(--border)] bg-[var(--surface-muted)] p-1">
       {tools.map((tool) => (
         <Button
           key={tool.label}
@@ -63,8 +63,8 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({ editor, onLink
           }}
           title={`${tool.label} (${tool.shortcut})`}
           className={cn(
-            'h-7 w-7 rounded-none',
-            tool.isActive && 'bg-blue-700 text-white hover:bg-blue-800 hover:text-white'
+            'h-7 w-7 rounded-lg',
+            tool.isActive && 'bg-[var(--primary)] text-white hover:bg-[var(--primary-strong)]'
           )}
         >
           <tool.icon className="w-4 h-4" />

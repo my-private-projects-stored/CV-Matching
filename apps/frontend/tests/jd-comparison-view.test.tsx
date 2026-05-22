@@ -19,10 +19,7 @@ describe('JDComparisonView', () => {
     };
 
     render(
-      <JDComparisonView
-        jobDescription="React Node TypeScript Redis"
-        resumeData={resumeData}
-      />
+      <JDComparisonView jobDescription="React Node TypeScript Redis" resumeData={resumeData} />
     );
 
     expect(screen.getByText('builder.jdMatch.missingKeywordsTitle')).toBeInTheDocument();

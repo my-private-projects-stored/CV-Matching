@@ -22,13 +22,13 @@ vi.mock('@/lib/i18n', () => ({
 }));
 
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, variant: _variant, size: _size, className: _className, ...props }: any) => (
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button {...props}>{children}</button>
   ),
 }));
 
 vi.mock('@/components/ui/input', () => ({
-  Input: ({ className: _className, ...props }: any) => <input {...props} />,
+  Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
 }));
 
 vi.mock('@/components/ui/confirm-dialog', () => ({
@@ -40,7 +40,15 @@ vi.mock('@/components/ui/confirm-dialog', () => ({
     cancelLabel,
     onOpenChange,
     onConfirm,
-  }: any) =>
+  }: {
+    open: boolean;
+    title?: string;
+    description?: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void;
+  }) =>
     open ? (
       <div role="dialog" aria-label={title}>
         <p>{title}</p>
@@ -56,11 +64,11 @@ vi.mock('@/components/ui/confirm-dialog', () => ({
 }));
 
 vi.mock('@/components/builder/draggable-section-wrapper', () => ({
-  DraggableSectionWrapper: ({ children }: any) => <div>{children}</div>,
+  DraggableSectionWrapper: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('@/components/builder/add-section-dialog', () => ({
-  AddSectionButton: ({ onAdd }: any) => (
+  AddSectionButton: ({ onAdd }: { onAdd: (displayName: string, sectionType: string) => void }) => (
     <button type="button" onClick={() => onAdd('Testimonials', 'text')}>
       Add custom section
     </button>
@@ -68,7 +76,13 @@ vi.mock('@/components/builder/add-section-dialog', () => ({
 }));
 
 vi.mock('@/components/builder/forms/personal-info-form', () => ({
-  PersonalInfoForm: ({ data, onChange }: any) => (
+  PersonalInfoForm: ({
+    data,
+    onChange,
+  }: {
+    data: { name?: string };
+    onChange: (value: { name?: string }) => void;
+  }) => (
     <button
       type="button"
       onClick={() => onChange({ ...data, name: `${data.name ?? 'Name'} Updated` })}
@@ -79,7 +93,7 @@ vi.mock('@/components/builder/forms/personal-info-form', () => ({
 }));
 
 vi.mock('@/components/builder/forms/summary-form', () => ({
-  SummaryForm: ({ value, onChange }: any) => (
+  SummaryForm: ({ value, onChange }: { value: string; onChange: (value: string) => void }) => (
     <button type="button" onClick={() => onChange(`${value} updated`)}>
       Update summary
     </button>
@@ -103,7 +117,7 @@ vi.mock('@/components/builder/forms/additional-form', () => ({
 }));
 
 vi.mock('@/components/builder/forms/generic-text-form', () => ({
-  GenericTextForm: ({ value, onChange }: any) => (
+  GenericTextForm: ({ value, onChange }: { value: string; onChange: (value: string) => void }) => (
     <button type="button" onClick={() => onChange(`${value} edited`)}>
       Update custom text
     </button>
@@ -129,8 +143,9 @@ const renderResumeHarness = (initialData: ResumeData) => {
         <div data-testid="summary-preview">{resumeData.summary ?? ''}</div>
         <div data-testid="section-preview">
           {resumeData.sectionMeta
-            ?.map((section) =>
-              `${section.id}:${section.displayName}:${section.order}:${section.isVisible ? 'visible' : 'hidden'}`
+            ?.map(
+              (section) =>
+                `${section.id}:${section.displayName}:${section.order}:${section.isVisible ? 'visible' : 'hidden'}`
             )
             .join('|')}
         </div>
@@ -147,7 +162,8 @@ const renderResumeHarness = (initialData: ResumeData) => {
 
 const getSectionContainer = (sectionName: string) => {
   const heading = screen.getByRole('heading', { level: 3, name: sectionName });
-  return (heading.closest('div.space-y-0') ?? heading.parentElement?.parentElement?.parentElement) as HTMLElement;
+  return (heading.closest('div.space-y-0') ??
+    heading.parentElement?.parentElement?.parentElement) as HTMLElement;
 };
 
 describe('builder regression coverage', () => {
@@ -241,26 +257,33 @@ describe('builder regression coverage', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Portfolio' })).toBeInTheDocument();
     expect(screen.getByTestId('section-preview')).toHaveTextContent('custom_1:Portfolio:2:visible');
 
-    fireEvent.click(within(getSectionContainer('Portfolio')).getByTitle('builder.sectionHeader.moveUp'));
+    fireEvent.click(
+      within(getSectionContainer('Portfolio')).getByTitle('builder.sectionHeader.moveUp')
+    );
 
-    expect(screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)).toEqual([
-      'Portfolio',
-      'Summary',
-    ]);
+    expect(
+      screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)
+    ).toEqual(['Portfolio', 'Summary']);
     expect(screen.getByTestId('section-preview')).toHaveTextContent('custom_1:Portfolio:1:visible');
 
-    fireEvent.click(within(getSectionContainer('Portfolio')).getByTitle('builder.sectionHeader.hideSection'));
+    fireEvent.click(
+      within(getSectionContainer('Portfolio')).getByTitle('builder.sectionHeader.hideSection')
+    );
 
     expect(screen.getByTestId('section-preview')).toHaveTextContent('custom_1:Portfolio:1:hidden');
     expect(
       within(getSectionContainer('Portfolio')).getByText('builder.sectionHeader.hiddenFromPdfTag')
     ).toBeInTheDocument();
 
-    fireEvent.click(within(getSectionContainer('Portfolio')).getByTitle('builder.sectionHeader.showSection'));
+    fireEvent.click(
+      within(getSectionContainer('Portfolio')).getByTitle('builder.sectionHeader.showSection')
+    );
 
     expect(screen.getByTestId('section-preview')).toHaveTextContent('custom_1:Portfolio:1:visible');
 
-    fireEvent.click(within(getSectionContainer('Portfolio')).getByTitle('builder.sectionHeader.deleteSection'));
+    fireEvent.click(
+      within(getSectionContainer('Portfolio')).getByTitle('builder.sectionHeader.deleteSection')
+    );
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'common.delete' }));

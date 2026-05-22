@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import {
@@ -208,7 +208,7 @@ export function ResumeUploadDialog({
           <div
             className={`
               relative rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-200
-              ${isDragging ? 'border-blue-600 bg-blue-50' : 'border-[color:var(--border)] hover:border-blue-400 hover:bg-white'}
+              ${isDragging ? 'border-[var(--primary)] bg-[var(--surface-muted)]' : 'border-[color:var(--border)] hover:border-[var(--primary)] hover:bg-white'}
               ${currentFile ? 'bg-white border-solid border-[color:var(--border)]' : ''}
               ${!currentFile && !isRetryingProcessing ? 'cursor-pointer' : 'cursor-default'}
               ${isRetryingProcessing ? 'opacity-70' : ''}
@@ -223,8 +223,8 @@ export function ResumeUploadDialog({
 
             {isUploadingGlobal ? (
               <div className="flex flex-col items-center py-4">
-                <Loader2Icon className="mb-4 h-10 w-10 animate-spin text-blue-600" />
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">
+                <Loader2Icon className="mb-4 h-10 w-10 animate-spin text-[var(--primary)]" />
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--primary)]">
                   {t('common.uploading')}
                 </p>
               </div>

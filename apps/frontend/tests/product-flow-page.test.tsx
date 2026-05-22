@@ -176,7 +176,9 @@ describe('ProductFlowPage', () => {
     render(<ProductFlowPage />);
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue(/Platform reliability role owning backend APIs/)).toBeInTheDocument();
+      expect(
+        screen.getByDisplayValue(/Platform reliability role owning backend APIs/)
+      ).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'flow.actions.generatePreview' }));
@@ -188,13 +190,18 @@ describe('ProductFlowPage', () => {
   });
 
   it('returns to job board with preserved jobs query context', () => {
-    mockedSearchParams.set('jobs_return_query', 'search=Platform+Engineer&status=all&source=applications');
+    mockedSearchParams.set(
+      'jobs_return_query',
+      'search=Platform+Engineer&status=all&source=applications'
+    );
 
     render(<ProductFlowPage />);
 
     fireEvent.click(screen.getByRole('button', { name: 'flow.actions.backToJobsContext' }));
 
-    expect(mockedPush).toHaveBeenCalledWith('/jobs?search=Platform+Engineer&status=all&source=applications');
+    expect(mockedPush).toHaveBeenCalledWith(
+      '/jobs?search=Platform+Engineer&status=all&source=applications'
+    );
   });
 
   it('normalizes missing jobs snapshot source to flow when returning to job board', () => {
@@ -240,12 +247,17 @@ describe('ProductFlowPage', () => {
       })
     );
     mockedSearchParams.set('prefill_job', '1');
-    mockedSearchParams.set('jobs_return_query', 'search=Platform+Engineer&status=all&source=applications');
+    mockedSearchParams.set(
+      'jobs_return_query',
+      'search=Platform+Engineer&status=all&source=applications'
+    );
 
     render(<ProductFlowPage />);
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue(/Platform reliability role owning backend APIs/)).toBeInTheDocument();
+      expect(
+        screen.getByDisplayValue(/Platform reliability role owning backend APIs/)
+      ).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'flow.actions.backToJobsContext' }));
@@ -275,7 +287,9 @@ describe('ProductFlowPage', () => {
     render(<ProductFlowPage />);
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue(/Platform reliability role owning backend APIs/)).toBeInTheDocument();
+      expect(
+        screen.getByDisplayValue(/Platform reliability role owning backend APIs/)
+      ).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'flow.actions.backToJobsContext' }));
@@ -479,19 +493,23 @@ describe('ProductFlowPage', () => {
     expect(params.get('job_id')).toBe('job-1');
     expect(params.get('application_id')).toBe('app-1');
     expect(params.get('flow_ctx')).toBe('1');
-    let jobsReturn = new URLSearchParams(params.get('jobs_return_query') || '');
+    const jobsReturn = new URLSearchParams(params.get('jobs_return_query') || '');
     expect(jobsReturn.get('focus_job_id')).toBe('job-1');
     expect(jobsReturn.get('status')).toBe('all');
     expect(jobsReturn.get('source')).toBe('flow');
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' })
+    );
     href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     params = new URLSearchParams(href.replace('/applications?', ''));
     expect(params.get('job_id')).toBe('job-1');
     expect(params.get('application_id')).toBe('app-1');
     expect(params.get('flow_ctx')).toBe('1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openStatusHistoryForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openStatusHistoryForItem' })
+    );
     href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     params = new URLSearchParams(href.replace('/applications?', ''));
     expect(params.get('job_id')).toBe('job-1');
@@ -499,7 +517,9 @@ describe('ProductFlowPage', () => {
     expect(params.get('sh_open')).toBe('1');
     expect(params.get('flow_ctx')).toBe('1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openStatusChangesForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openStatusChangesForItem' })
+    );
     href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     params = new URLSearchParams(href.replace('/applications?', ''));
     expect(params.get('job_id')).toBe('job-1');
@@ -507,7 +527,9 @@ describe('ProductFlowPage', () => {
     expect(params.get('sc_open')).toBe('1');
     expect(params.get('flow_ctx')).toBe('1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openFeedbackForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openFeedbackForItem' })
+    );
     href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     params = new URLSearchParams(href.replace('/applications?', ''));
     expect(params.get('job_id')).toBe('job-1');
@@ -537,7 +559,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' })
+    );
 
     expect(mockedPush).toHaveBeenCalledWith(
       '/applications?candidate_id=candidate-42&application_id=app-777&candidate_focus=1&flow_ctx=1'
@@ -567,7 +591,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' })
+    );
 
     const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     expect(href.startsWith('/applications?')).toBe(true);
@@ -650,7 +676,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' })
+    );
 
     const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     expect(href.startsWith('/applications?')).toBe(true);
@@ -688,7 +716,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' })
+    );
 
     const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     const params = new URLSearchParams(href.replace('/applications?', ''));
@@ -719,7 +749,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' })
+    );
 
     const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     const params = new URLSearchParams(href.replace('/applications?', ''));
@@ -745,7 +777,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openJobBoardForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openJobBoardForItem' })
+    );
 
     expect(mockedPush).toHaveBeenCalledWith('/jobs?focus_job_id=job-777&status=all&source=flow');
   });
@@ -768,7 +802,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openJobBoardForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openJobBoardForItem' })
+    );
 
     const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     const params = new URLSearchParams(href.replace('/jobs?', ''));
@@ -798,7 +834,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openJobBoardForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openJobBoardForItem' })
+    );
 
     const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     expect(href.startsWith('/jobs?')).toBe(true);
@@ -836,7 +874,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openJobBoardForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openJobBoardForItem' })
+    );
 
     const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     expect(href.startsWith('/jobs?')).toBe(true);
@@ -874,7 +914,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openJobBoardForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openJobBoardForItem' })
+    );
 
     const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     const params = new URLSearchParams(href.replace('/jobs?', ''));
@@ -906,7 +948,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openJobBoardForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openJobBoardForItem' })
+    );
 
     const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     const params = new URLSearchParams(href.replace('/jobs?', ''));
@@ -1004,7 +1048,9 @@ describe('ProductFlowPage', () => {
     expect(screen.getByRole('button', { name: 'flow.actions.confirmAndCreate' })).toBeDisabled();
     expect(screen.getByText('flow.sections.jobIdLabelPending')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('flow.sections.jobDescriptionPlaceholder')).toHaveValue('');
-    expect(screen.getByText('flow.sections.currentMasterResume:resume-master-1')).toBeInTheDocument();
+    expect(
+      screen.getByText('flow.sections.currentMasterResume:resume-master-1')
+    ).toBeInTheDocument();
     expect(screen.getByText('flow.sessionHistory.count:1')).toBeInTheDocument();
     expect(screen.getByText('flow.sessionHistory.statusCreated')).toBeInTheDocument();
   });
@@ -1096,11 +1142,16 @@ describe('ProductFlowPage', () => {
         },
       ])
     );
-    mockedSearchParams.set('flow_return_query', 'rc_focus=focus&rc_changed_by=qa-reviewer&sc_preset=7d');
+    mockedSearchParams.set(
+      'flow_return_query',
+      'rc_focus=focus&rc_changed_by=qa-reviewer&sc_preset=7d'
+    );
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' })
+    );
 
     const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     expect(href.startsWith('/applications?')).toBe(true);
@@ -1134,7 +1185,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' })
+    );
 
     const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     expect(href.startsWith('/applications?')).toBe(true);
@@ -1165,7 +1218,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openStatusHistoryForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openStatusHistoryForItem' })
+    );
 
     const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     expect(href.startsWith('/applications?')).toBe(true);
@@ -1197,7 +1252,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' })
+    );
 
     const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     expect(href.startsWith('/applications?')).toBe(true);
@@ -1230,7 +1287,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openApplicationsForItem' })
+    );
 
     const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     expect(href.startsWith('/applications?')).toBe(true);
@@ -1263,7 +1322,9 @@ describe('ProductFlowPage', () => {
 
     render(<ProductFlowPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'flow.sessionHistory.openFeedbackForItem' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'flow.sessionHistory.openFeedbackForItem' })
+    );
 
     const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
     expect(href.startsWith('/applications?')).toBe(true);

@@ -57,12 +57,14 @@ describe('resume API client', () => {
   it('improveResume throws with backend status and body when request fails', async () => {
     mockedApiPost.mockResolvedValueOnce(new Response('bad request', { status: 400 }));
 
-    const error = await improveResume('resume-1', 'job-1').catch((err: unknown) => err as Error & {
-      statusCode?: number;
-    });
-
-    expect(error.message).toBe('Improve failed (status 400).');
-    expect(error.statusCode).toBe(400);
+    try {
+      await improveResume('resume-1', 'job-1');
+      throw new Error('Expected improveResume to throw');
+    } catch (err: unknown) {
+      const error = err as Error & { statusCode?: number };
+      expect(error.message).toBe('Improve failed (status 400).');
+      expect(error.statusCode).toBe(400);
+    }
   });
 
   it('fetchResume calls encoded endpoint and returns data payload', async () => {
@@ -221,13 +223,15 @@ describe('resume API client', () => {
       )
     );
 
-    const error = await setResumeAsMaster('resume-2').catch(
-      (err: unknown) => err as Error & { errorCode?: string; statusCode?: number }
-    );
-
-    expect(error.message).toBe('Master resume already selected');
-    expect(error.errorCode).toBe('resume_already_master');
-    expect(error.statusCode).toBe(409);
+    try {
+      await setResumeAsMaster('resume-2');
+      throw new Error('Expected setResumeAsMaster to throw');
+    } catch (err: unknown) {
+      const error = err as Error & { errorCode?: string; statusCode?: number };
+      expect(error.message).toBe('Master resume already selected');
+      expect(error.errorCode).toBe('resume_already_master');
+      expect(error.statusCode).toBe(409);
+    }
   });
 
   it('generateCoverLetter posts output language when provided', async () => {

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { fetchLlmApiKey, updateLlmApiKey } from '@/lib/api/config';
@@ -86,10 +86,10 @@ export default function ApiKeyMenu(): React.ReactElement {
       <button
         type="button"
         onClick={handleToggle}
-        className="inline-flex items-center gap-2 rounded-none border-2 border-black bg-white px-3 py-2 text-black shadow-[2px_2px_0px_0px_#000000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none"
+        className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--border)] bg-white px-3 py-2 text-[var(--foreground)] shadow-[0_10px_20px_rgba(15,27,45,0.12)] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_24px_rgba(15,27,45,0.18)]"
       >
         <span className="font-semibold">{t('settings.apiKeyMenu.buttonLabel')}</span>
-        <span className="font-mono text-xs text-gray-600">{maskedKey}</span>
+        <span className="text-xs text-[color:var(--text-subtle)]">{maskedKey}</span>
         <ChevronDown className="h-4 w-4" />
       </button>
       {isOpen ? (
@@ -99,14 +99,16 @@ export default function ApiKeyMenu(): React.ReactElement {
             onClick={handleClose}
             aria-hidden="true"
           />
-          <div className="absolute right-0 z-50 mt-2 w-80 rounded-none border-2 border-black bg-white p-4 shadow-[4px_4px_0px_0px_#000000]">
+          <div className="absolute right-0 z-50 mt-2 w-80 rounded-2xl border border-[color:var(--border)] bg-white p-4 shadow-[0_18px_32px_rgba(15,27,45,0.2)]">
             <h3 className="font-serif text-base font-semibold text-black mb-2">
               {t('settings.apiKeyMenu.title')}
             </h3>
-            <p className="text-xs text-gray-600 mb-3">{t('settings.apiKeyMenu.description')}</p>
+            <p className="text-xs text-[color:var(--text-subtle)] mb-3">
+              {t('settings.apiKeyMenu.description')}
+            </p>
             <label
               htmlFor="llmKey"
-              className="font-mono text-xs font-medium uppercase tracking-wider text-gray-600"
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]"
             >
               {t('settings.apiKey')}
             </label>
@@ -116,14 +118,14 @@ export default function ApiKeyMenu(): React.ReactElement {
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               placeholder={t('settings.llmConfiguration.apiKeyPlaceholder')}
-              className="mt-1 w-full rounded-none border-2 border-black bg-[#F0F0E8] px-3 py-2 text-sm text-black focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700"
+              className="mt-1 w-full rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
             />
             {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
             <div className="mt-4 flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={handleClose}
-                className="rounded-none border-2 border-black px-3 py-2 text-xs font-semibold text-black hover:bg-[#F0F0E8]"
+                className="rounded-lg border border-[color:var(--border)] px-3 py-2 text-xs font-semibold text-[var(--foreground)] hover:bg-[var(--surface-muted)]"
               >
                 {t('common.cancel')}
               </button>
@@ -131,10 +133,10 @@ export default function ApiKeyMenu(): React.ReactElement {
                 type="button"
                 onClick={handleSave}
                 disabled={status === 'saving'}
-                className={`rounded-none border-2 border-black px-4 py-2 text-xs font-semibold transition-all ${
+                className={`rounded-lg border border-[color:var(--border)] px-4 py-2 text-xs font-semibold transition-all ${
                   status === 'saving'
-                    ? 'bg-gray-300 text-gray-600 cursor-wait'
-                    : 'bg-blue-700 text-white shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none'
+                    ? 'bg-[var(--surface-muted)] text-[color:var(--text-subtle)] cursor-wait'
+                    : 'bg-[var(--primary)] text-white shadow-[0_10px_20px_rgba(15,27,45,0.18)] hover:-translate-y-0.5 hover:shadow-[0_14px_24px_rgba(15,27,45,0.22)]'
                 }`}
               >
                 {status === 'saving' ? t('common.saving') : t('common.save')}

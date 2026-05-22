@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -25,9 +25,7 @@ interface RichTextEditorProps {
 /**
  * Rich Text Editor Component
  *
- * Swiss International Style WYSIWYG editor with formatting toolbar.
  * Supports bold, italic, underline, and links.
- *
  * Uses Tiptap (ProseMirror) under the hood for reliable editing.
  */
 export const RichTextEditor: React.FC<RichTextEditorProps> = ({
@@ -80,7 +78,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       attributes: {
         class: cn(
           'outline-none prose prose-sm max-w-none',
-          'prose-strong:font-bold prose-em:italic prose-a:text-blue-700 prose-a:underline'
+          'prose-strong:font-bold prose-em:italic prose-a:text-[var(--primary)] prose-a:underline'
         ),
         style: `min-height: calc(${minHeight} - 24px)`,
       },
@@ -137,11 +135,11 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   if (!isMounted) {
     return (
       <div className={cn('space-y-1', className)}>
-        <div className="flex items-center gap-1 p-1 border border-black bg-[#E5E5E0] h-9" />
+        <div className="h-9 rounded-xl border border-[color:var(--border)] bg-[var(--surface-muted)] p-1" />
         <div
           className={cn(
-            'w-full border border-black bg-white',
-            'px-3 py-2 text-sm text-gray-400 rounded-none'
+            'w-full rounded-xl border border-[color:var(--border)] bg-white',
+            'px-3 py-2 text-sm text-[color:var(--text-subtle)]'
           )}
           style={{ minHeight }}
         >
@@ -160,12 +158,12 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       <RichTextToolbar editor={editor} onLinkClick={handleLinkClick} />
       <div
         className={cn(
-          'w-full border border-black bg-white',
-          'px-3 py-2 text-sm text-black rounded-none',
-          'focus-within:ring-1 focus-within:ring-blue-700',
+          'w-full rounded-xl border border-[color:var(--border)] bg-white',
+          'px-3 py-2 text-sm text-[var(--foreground)]',
+          'focus-within:ring-2 focus-within:ring-[var(--primary)] focus-within:ring-offset-1',
           '[&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[36px]',
           '[&_.ProseMirror_p]:m-0',
-          '[&_.ProseMirror_a]:text-blue-700 [&_.ProseMirror_a]:underline'
+          '[&_.ProseMirror_a]:text-[var(--primary)] [&_.ProseMirror_a]:underline'
         )}
         style={{ minHeight }}
       >

@@ -11,7 +11,7 @@ vi.mock('next/link', () => ({
 }));
 
 vi.mock('next/image', () => ({
-  default: (props: ImgHTMLAttributes<HTMLImageElement>) => <img {...props} alt={props.alt || ''} />,
+  default: (props: ImgHTMLAttributes<HTMLImageElement>) => <span data-alt={props.alt || ''} />,
 }));
 
 vi.mock('@/lib/context/auth-context', () => ({
@@ -79,7 +79,9 @@ vi.mock('@/lib/api/config', () => ({
   }),
   updateCompanyProfileConfig: vi.fn(),
   updateFeatureConfig: vi.fn(),
-  fetchPromptConfig: vi.fn().mockResolvedValue({ default_prompt_id: 'keywords', prompt_options: [] }),
+  fetchPromptConfig: vi
+    .fn()
+    .mockResolvedValue({ default_prompt_id: 'keywords', prompt_options: [] }),
   updatePromptConfig: vi.fn(),
   clearAllApiKeys: vi.fn(),
   resetDatabase: vi.fn(),

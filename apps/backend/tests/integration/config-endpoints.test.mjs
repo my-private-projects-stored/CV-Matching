@@ -75,6 +75,26 @@ test(
       const recruiterToken = recruiterSignup.json?.access_token;
       assert.ok(recruiterToken);
 
+      const adminSignup = await requestJson(baseUrl, "POST", "/auth/signup", {
+        email: "admin.config@example.com",
+        password: "StrongPass123",
+        full_name: "Admin Config",
+        role: "admin",
+      });
+      assert.equal(adminSignup.status, 201);
+      const adminToken = adminSignup.json?.access_token;
+      assert.ok(adminToken);
+
+      const candidateSignup = await requestJson(baseUrl, "POST", "/auth/signup", {
+        email: "candidate.config@example.com",
+        password: "StrongPass123",
+        full_name: "Candidate Config",
+        role: "candidate",
+      });
+      assert.equal(candidateSignup.status, 201);
+      const candidateToken = candidateSignup.json?.access_token;
+      assert.ok(candidateToken);
+
       const statusBefore = await requestJson(baseUrl, "GET", "/status");
       assert.equal(statusBefore.status, 200);
       assert.equal(statusBefore.json?.database_stats?.total_jobs, 0);
@@ -83,14 +103,40 @@ test(
       assert.equal(languageGetPublic.status, 200);
       assert.equal(languageGetPublic.json?.ui_language, "en");
 
-      const featureGet = await requestJson(baseUrl, "GET", "/config/features", undefined, recruiterToken);
+      const recruiterLlmForbidden = await requestJson(
+        baseUrl,
+        "PUT",
+        "/config/llm-api-key",
+        {
+          provider: "openai",
+          model: "gpt-5-nano-2025-08-07",
+          api_key: "sk-recruiter-should-not-write",
+        },
+        recruiterToken
+      );
+      assert.equal(recruiterLlmForbidden.status, 403);
+
+      const candidateLlmForbidden = await requestJson(
+        baseUrl,
+        "PUT",
+        "/config/llm-api-key",
+        {
+          provider: "openai",
+          model: "gpt-5-nano-2025-08-07",
+          api_key: "sk-candidate-should-not-write",
+        },
+        candidateToken
+      );
+      assert.equal(candidateLlmForbidden.status, 403);
+
+      const featureGet = await requestJson(baseUrl, "GET", "/config/features", undefined, adminToken);
       assert.equal(featureGet.status, 200);
       assert.equal(featureGet.json?.enable_cover_letter, false);
 
       const featurePut = await requestJson(baseUrl, "PUT", "/config/features", {
         enable_cover_letter: true,
         enable_outreach_message: true,
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(featurePut.status, 200);
       assert.equal(featurePut.json?.enable_cover_letter, true);
 
@@ -116,13 +162,13 @@ test(
       const languagePut = await requestJson(baseUrl, "PUT", "/config/language", {
         ui_language: "vi",
         content_language: "en",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(languagePut.status, 200);
       assert.equal(languagePut.json?.ui_language, "vi");
 
       const promptsPut = await requestJson(baseUrl, "PUT", "/config/prompts", {
         default_prompt_id: "full",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(promptsPut.status, 200);
       assert.equal(promptsPut.json?.default_prompt_id, "full");
 
@@ -130,31 +176,31 @@ test(
         provider: "openai",
         model: "gpt-5-nano-2025-08-07",
         api_key: "sk-test-1234567890",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(llmPut.status, 200);
       assert.match(llmPut.json?.api_key || "", /\*\*\*\*/);
 
-      const privacyGet = await requestJson(baseUrl, "GET", "/config/privacy", undefined, recruiterToken);
+      const privacyGet = await requestJson(baseUrl, "GET", "/config/privacy", undefined, adminToken);
       assert.equal(privacyGet.status, 200);
       assert.equal(privacyGet.json?.privacy_mode, "hybrid");
 
       const privacyPut = await requestJson(baseUrl, "PUT", "/config/privacy", {
         privacy_mode: "local_only",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(privacyPut.status, 200);
       assert.equal(privacyPut.json?.privacy_mode, "local_only");
 
       const llmPutBlockedByPrivacy = await requestJson(baseUrl, "PUT", "/config/llm-api-key", {
         provider: "openai",
         model: "gpt-5-nano-2025-08-07",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(llmPutBlockedByPrivacy.status, 400);
       assert.equal(llmPutBlockedByPrivacy.json?.error_code, "provider_blocked_by_privacy_mode");
 
       const llmTestBlockedByPrivacy = await requestJson(baseUrl, "POST", "/config/llm-test", {
         provider: "openai",
         model: "gpt-5-nano-2025-08-07",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(llmTestBlockedByPrivacy.status, 200);
       assert.equal(llmTestBlockedByPrivacy.json?.healthy, false);
       assert.equal(llmTestBlockedByPrivacy.json?.error_code, "provider_blocked_by_privacy_mode");
@@ -163,42 +209,42 @@ test(
         provider: "ollama",
         model: "gemma3:4b",
         api_base: "http://localhost:11434",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(llmPutOllama.status, 200);
       assert.equal(llmPutOllama.json?.provider, "ollama");
 
       const llmTest = await requestJson(baseUrl, "POST", "/config/llm-test", {
         provider: "ollama",
         model: "gemma3:4b",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(llmTest.status, 200);
       assert.equal(llmTest.json?.healthy, true);
 
       const apiKeysPost = await requestJson(baseUrl, "POST", "/config/api-keys", {
         openai: "sk-openai-123456",
         google: "gk-google-123456",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(apiKeysPost.status, 200);
       assert.deepEqual(apiKeysPost.json?.updated_providers?.sort(), ["google", "openai"]);
 
       const apiKeysBadProvider = await requestJson(baseUrl, "POST", "/config/api-keys", {
         not_a_provider: "abc-123",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(apiKeysBadProvider.status, 400);
 
       const apiKeysBlankValue = await requestJson(baseUrl, "POST", "/config/api-keys", {
         openai: "   ",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(apiKeysBlankValue.status, 200);
 
-      const apiKeysAfterBlank = await requestJson(baseUrl, "GET", "/config/api-keys", undefined, recruiterToken);
+      const apiKeysAfterBlank = await requestJson(baseUrl, "GET", "/config/api-keys", undefined, adminToken);
       assert.equal(apiKeysAfterBlank.status, 200);
       const openaiAfterBlank = apiKeysAfterBlank.json?.providers?.find(
         (p) => p.provider === "openai"
       );
       assert.equal(openaiAfterBlank?.configured, false);
 
-      const apiKeysGet = await requestJson(baseUrl, "GET", "/config/api-keys", undefined, recruiterToken);
+      const apiKeysGet = await requestJson(baseUrl, "GET", "/config/api-keys", undefined, adminToken);
       assert.equal(apiKeysGet.status, 200);
       const openaiStatus = apiKeysGet.json?.providers?.find((p) => p.provider === "openai");
       assert.equal(openaiStatus?.configured, false);
@@ -208,7 +254,7 @@ test(
         "DELETE",
         "/config/api-keys/not-a-provider",
         undefined,
-        recruiterToken
+        adminToken
       );
       assert.equal(deleteUnsupportedProvider.status, 400);
 
@@ -217,14 +263,14 @@ test(
         "DELETE",
         "/config/api-keys/deepseek",
         undefined,
-        recruiterToken
+        adminToken
       );
       assert.equal(deleteNonexistentButValidProvider.status, 204);
 
-      const deleteProvider = await requestJson(baseUrl, "DELETE", "/config/api-keys/google", undefined, recruiterToken);
+      const deleteProvider = await requestJson(baseUrl, "DELETE", "/config/api-keys/google", undefined, adminToken);
       assert.equal(deleteProvider.status, 204);
 
-      const clearAllMissingConfirm = await requestJson(baseUrl, "DELETE", "/config/api-keys", undefined, recruiterToken);
+      const clearAllMissingConfirm = await requestJson(baseUrl, "DELETE", "/config/api-keys", undefined, adminToken);
       assert.equal(clearAllMissingConfirm.status, 400);
 
       const clearAll = await requestJson(
@@ -232,7 +278,7 @@ test(
         "DELETE",
         "/config/api-keys?confirm=CLEAR_ALL_KEYS",
         undefined,
-        recruiterToken
+        adminToken
       );
       assert.equal(clearAll.status, 204);
 
@@ -259,12 +305,12 @@ test(
 
       const resetBad = await requestJson(baseUrl, "POST", "/config/reset", {
         confirm: "INVALID",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(resetBad.status, 400);
 
       const resetOk = await requestJson(baseUrl, "POST", "/config/reset", {
         confirm: "RESET_ALL_DATA",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(resetOk.status, 200);
       assert.equal(resetOk.json?.message, "Database reset completed");
 

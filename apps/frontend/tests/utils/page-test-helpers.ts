@@ -24,10 +24,7 @@ export function expectLatestHrefContains(mockFn: MockLike, parts: string[]) {
   }
 }
 
-export function expectLatestHrefQueryValues(
-  mockFn: MockLike,
-  expected: Record<string, string>
-) {
+export function expectLatestHrefQueryValues(mockFn: MockLike, expected: Record<string, string>) {
   expect(mockFn.mock.calls.length).toBeGreaterThan(0);
   const latestHref = getLatestHref(mockFn);
   const queryPart = latestHref.split('?')[1] || '';

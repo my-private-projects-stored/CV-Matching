@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -153,7 +153,7 @@ export const FormattingControls: React.FC<FormattingControlsProps> = ({ settings
         className="flex w-full items-center justify-between p-3 transition-colors hover:bg-[var(--surface-muted)]"
       >
         <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-blue-600"></div>
+          <div className="h-2 w-2 rounded-full bg-[var(--primary)]"></div>
           <span className="text-xs font-semibold uppercase tracking-[0.2em]">
             {t('builder.formatting.panelTitle')}
           </span>
@@ -180,7 +180,7 @@ export const FormattingControls: React.FC<FormattingControlsProps> = ({ settings
                   onClick={() => handleTemplateChange(template.id)}
                   className={`group flex flex-col items-center rounded-xl border p-2 transition-all ${
                     settings.template === template.id
-                      ? 'border-blue-500 bg-white shadow-[0_8px_16px_rgba(37,99,235,0.18)]'
+                      ? 'border-[color:var(--primary)] bg-white shadow-[0_8px_16px_rgba(15,27,45,0.16)]'
                       : 'border-[color:var(--border)] bg-white hover:bg-[var(--surface-muted)]'
                   }`}
                   title={templateLabels[template.id].description}
@@ -194,7 +194,7 @@ export const FormattingControls: React.FC<FormattingControlsProps> = ({ settings
                   <span
                     className={`text-[9px] font-semibold uppercase tracking-[0.2em] ${
                       settings.template === template.id
-                        ? 'text-blue-700'
+                        ? 'text-[var(--primary)]'
                         : 'text-[color:var(--text-subtle)]'
                     }`}
                   >
@@ -218,7 +218,7 @@ export const FormattingControls: React.FC<FormattingControlsProps> = ({ settings
                     onClick={() => handleAccentColorChange(color)}
                     className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs transition-all ${
                       settings.accentColor === color
-                        ? 'border-blue-500 bg-white shadow-[0_8px_16px_rgba(37,99,235,0.18)]'
+                        ? 'border-[color:var(--primary)] bg-white shadow-[0_8px_16px_rgba(15,27,45,0.16)]'
                         : 'border-[color:var(--border)] bg-white hover:bg-[var(--surface-muted)]'
                     }`}
                     title={t(`builder.formatting.accentColors.${color}`)}
@@ -246,7 +246,7 @@ export const FormattingControls: React.FC<FormattingControlsProps> = ({ settings
                   onClick={() => handlePageSizeChange(size)}
                   className={`flex-1 rounded-xl border px-3 py-2 text-xs transition-all ${
                     settings.pageSize === size
-                      ? 'border-blue-500 bg-white text-blue-700 shadow-[0_8px_16px_rgba(37,99,235,0.18)]'
+                      ? 'border-[color:var(--primary)] bg-white text-[var(--primary)] shadow-[0_8px_16px_rgba(15,27,45,0.16)]'
                       : 'border-[color:var(--border)] bg-white text-[color:var(--text-subtle)] hover:bg-[var(--surface-muted)]'
                   }`}
                   title={PAGE_SIZE_INFO[size].dimensions}
@@ -341,7 +341,7 @@ export const FormattingControls: React.FC<FormattingControlsProps> = ({ settings
                       onClick={() => handleHeaderFontChange(font)}
                       className={`rounded-lg border px-2 py-1 text-xs transition-all ${
                         settings.fontSize.headerFont === font
-                          ? 'border-blue-500 bg-blue-600 text-white'
+                          ? 'border-[color:var(--primary)] bg-[var(--primary)] text-white'
                           : 'border-[color:var(--border)] bg-white text-[color:var(--text-subtle)] hover:bg-[var(--surface-muted)]'
                       }`}
                       style={{
@@ -370,7 +370,7 @@ export const FormattingControls: React.FC<FormattingControlsProps> = ({ settings
                       onClick={() => handleBodyFontChange(font)}
                       className={`rounded-lg border px-2 py-1 text-xs transition-all ${
                         settings.fontSize.bodyFont === font
-                          ? 'border-blue-500 bg-blue-600 text-white'
+                          ? 'border-[color:var(--primary)] bg-[var(--primary)] text-white'
                           : 'border-[color:var(--border)] bg-white text-[color:var(--text-subtle)] hover:bg-[var(--surface-muted)]'
                       }`}
                       style={{
@@ -402,14 +402,14 @@ export const FormattingControls: React.FC<FormattingControlsProps> = ({ settings
                   onClick={handleCompactModeToggle}
                   className={`relative h-5 w-10 rounded-full border transition-all ${
                     settings.compactMode
-                      ? 'bg-blue-600 border-blue-600'
+                      ? 'bg-[var(--primary)] border-[var(--primary)]'
                       : 'bg-white border-[color:var(--border)]'
                   }`}
                 >
                   <span
                     className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white border transition-all ${
                       settings.compactMode
-                        ? 'left-5 border-blue-600'
+                        ? 'left-5 border-[var(--primary)]'
                         : 'left-0.5 border-[color:var(--border)]'
                     }`}
                   />
@@ -425,14 +425,14 @@ export const FormattingControls: React.FC<FormattingControlsProps> = ({ settings
                   onClick={handleShowContactIconsToggle}
                   className={`relative h-5 w-10 rounded-full border transition-all ${
                     settings.showContactIcons
-                      ? 'bg-blue-600 border-blue-600'
+                      ? 'bg-[var(--primary)] border-[var(--primary)]'
                       : 'bg-white border-[color:var(--border)]'
                   }`}
                 >
                   <span
                     className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white border transition-all ${
                       settings.showContactIcons
-                        ? 'left-5 border-blue-600'
+                        ? 'left-5 border-[var(--primary)]'
                         : 'left-0.5 border-[color:var(--border)]'
                     }`}
                   />
@@ -530,16 +530,16 @@ const MarginSlider: React.FC<MarginSliderProps> = ({ label, value, onChange }) =
                    [&::-webkit-slider-thumb]:w-3
                    [&::-webkit-slider-thumb]:h-3
                    [&::-webkit-slider-thumb]:rounded-full
-                   [&::-webkit-slider-thumb]:bg-blue-600
+                   [&::-webkit-slider-thumb]:bg-[var(--primary)]
                    [&::-webkit-slider-thumb]:border
-                   [&::-webkit-slider-thumb]:border-blue-400
+                   [&::-webkit-slider-thumb]:border-[var(--primary)]
                    [&::-webkit-slider-thumb]:cursor-pointer
                    [&::-moz-range-thumb]:w-3
                    [&::-moz-range-thumb]:h-3
                    [&::-moz-range-thumb]:rounded-full
-                   [&::-moz-range-thumb]:bg-blue-600
+                   [&::-moz-range-thumb]:bg-[var(--primary)]
                    [&::-moz-range-thumb]:border
-                   [&::-moz-range-thumb]:border-blue-400
+                   [&::-moz-range-thumb]:border-[var(--primary)]
                    [&::-moz-range-thumb]:cursor-pointer"
       />
       <span className="w-6 text-right text-xs font-semibold text-[color:var(--foreground)]">
@@ -575,7 +575,7 @@ const SpacingSelector: React.FC<SpacingSelectorProps> = ({ label, value, onChang
             onClick={() => onChange(level)}
             className={`h-6 w-6 rounded-lg border text-xs transition-all ${
               value === level
-                ? 'border-blue-500 bg-blue-600 text-white'
+                ? 'border-[color:var(--primary)] bg-[var(--primary)] text-white'
                 : 'border-[color:var(--border)] bg-white text-[color:var(--text-subtle)] hover:bg-[var(--surface-muted)]'
             }`}
           >

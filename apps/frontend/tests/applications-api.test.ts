@@ -39,7 +39,9 @@ describe('applications API client', () => {
   });
 
   it('creates application with expected payload', async () => {
-    mockedApiPost.mockResolvedValueOnce(jsonResponse({ request_id: 'req-1', data: { application_id: 'a-1' } }, 201));
+    mockedApiPost.mockResolvedValueOnce(
+      jsonResponse({ request_id: 'req-1', data: { application_id: 'a-1' } }, 201)
+    );
 
     const result = await createApplication({ job_id: 'job-1', resume_id: 'resume-1' });
 
@@ -52,10 +54,15 @@ describe('applications API client', () => {
 
   it('createApplication preserves backend error_code on failure', async () => {
     mockedApiPost.mockResolvedValueOnce(
-      jsonResponse({ message: 'Duplicate application', error_code: 'application_already_exists' }, 409)
+      jsonResponse(
+        { message: 'Duplicate application', error_code: 'application_already_exists' },
+        409
+      )
     );
 
-    await expect(createApplication({ job_id: 'job-1', resume_id: 'resume-1' })).rejects.toMatchObject({
+    await expect(
+      createApplication({ job_id: 'job-1', resume_id: 'resume-1' })
+    ).rejects.toMatchObject({
       errorCode: 'application_already_exists',
       statusCode: 409,
     });
@@ -107,15 +114,28 @@ describe('applications API client', () => {
   });
 
   it('fetches candidate history with query string', async () => {
-    mockedApiFetch.mockResolvedValueOnce(jsonResponse({ request_id: 'req-1', data: { candidate_id: 'c-1', applications: [], pagination: { page: 1, limit: 20, total: 0, total_pages: 1 } } }));
+    mockedApiFetch.mockResolvedValueOnce(
+      jsonResponse({
+        request_id: 'req-1',
+        data: {
+          candidate_id: 'c-1',
+          applications: [],
+          pagination: { page: 1, limit: 20, total: 0, total_pages: 1 },
+        },
+      })
+    );
 
     await fetchCandidateApplicationHistory({ candidateId: 'candidate-1', page: 1, limit: 5 });
 
-    expect(mockedApiFetch).toHaveBeenCalledWith('/applications/history?candidate_id=candidate-1&page=1&limit=5');
+    expect(mockedApiFetch).toHaveBeenCalledWith(
+      '/applications/history?candidate_id=candidate-1&page=1&limit=5'
+    );
   });
 
   it('updates application status', async () => {
-    mockedApiPatch.mockResolvedValueOnce(jsonResponse({ request_id: 'req-1', data: { status: 'interview' } }));
+    mockedApiPatch.mockResolvedValueOnce(
+      jsonResponse({ request_id: 'req-1', data: { status: 'interview' } })
+    );
 
     const result = await updateApplicationStatus('app-1', 'interview', 'recruiter-ui');
 
@@ -156,7 +176,21 @@ describe('applications API client', () => {
   });
 
   it('loads application feedback', async () => {
-    mockedApiFetch.mockResolvedValueOnce(jsonResponse({ request_id: 'req-1', data: { application_id: 'a-1', job_id: 'j-1', resume_id: 'r-1', scores: { semantic_score: 0.7, keyword_score: 0.6, hybrid_score: 0.66 }, explainability: { matched_keywords: ['node.js'], missing_keywords: ['redis'] }, recommendations: ['Add redis project bullet'], status: 'screening', ai_status: 'completed' } }));
+    mockedApiFetch.mockResolvedValueOnce(
+      jsonResponse({
+        request_id: 'req-1',
+        data: {
+          application_id: 'a-1',
+          job_id: 'j-1',
+          resume_id: 'r-1',
+          scores: { semantic_score: 0.7, keyword_score: 0.6, hybrid_score: 0.66 },
+          explainability: { matched_keywords: ['node.js'], missing_keywords: ['redis'] },
+          recommendations: ['Add redis project bullet'],
+          status: 'screening',
+          ai_status: 'completed',
+        },
+      })
+    );
 
     const result = await fetchApplicationFeedback('app-1');
 

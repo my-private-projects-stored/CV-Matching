@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import {
@@ -13,7 +13,7 @@ import { Button } from './button';
 import { useTranslations } from '@/lib/i18n';
 
 /**
- * Swiss International Style Confirm Dialog Component
+ * Confirm Dialog Component
  *
  * A modal dialog for confirming user actions with semantic variants:
  * - danger: Destructive actions (delete, remove)
@@ -73,7 +73,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const variantStyles = {
     danger: {
       icon: (
-        <div className="w-12 h-12 border-2 border-red-600 bg-red-50 flex items-center justify-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-red-200 bg-red-50">
           <span className="text-red-600 text-2xl font-bold">!</span>
         </div>
       ),
@@ -81,7 +81,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     },
     warning: {
       icon: (
-        <div className="w-12 h-12 border-2 border-orange-500 bg-orange-50 flex items-center justify-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-200 bg-orange-50">
           <span className="text-orange-500 text-2xl font-bold">!</span>
         </div>
       ),
@@ -89,7 +89,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     },
     success: {
       icon: (
-        <div className="w-12 h-12 border-2 border-green-700 bg-green-50 flex items-center justify-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-green-200 bg-green-50">
           <span className="text-green-700 text-2xl font-bold">&#10003;</span>
         </div>
       ),
@@ -97,8 +97,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     },
     default: {
       icon: (
-        <div className="w-12 h-12 border-2 border-blue-700 bg-blue-50 flex items-center justify-center">
-          <span className="text-blue-700 text-2xl font-bold">?</span>
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)]">
+          <span className="text-[var(--primary)] text-2xl font-bold">?</span>
         </div>
       ),
       buttonVariant: 'default' as const,
@@ -114,34 +114,25 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <div className="flex items-start gap-4">
             {icon}
             <div className="flex-1">
-              <DialogTitle className="font-serif text-xl font-bold uppercase tracking-tight">
-                {title}
-              </DialogTitle>
-              <DialogDescription className="font-mono text-xs text-gray-600 mt-2">
-                {description}
-              </DialogDescription>
+              <DialogTitle className="text-xl font-semibold tracking-tight">{title}</DialogTitle>
+              <DialogDescription className="mt-2 text-xs">{description}</DialogDescription>
             </div>
           </div>
         </DialogHeader>
         {errorMessage && (
           <div className="px-6 pb-4">
-            <div className="border-2 border-red-600 bg-red-50 p-3 font-mono text-xs text-red-700">
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
               {errorMessage}
             </div>
           </div>
         )}
-        <DialogFooter className="p-4 bg-[#E5E5E0] border-t border-black flex-row justify-end gap-3">
+        <DialogFooter className="flex-row justify-end gap-3 border-t border-[color:var(--border)] bg-[var(--surface-muted)] p-4">
           {showCancelButton && (
-            <Button variant="outline" onClick={handleCancel} className="rounded-none border-black">
+            <Button variant="outline" onClick={handleCancel}>
               {finalCancelLabel}
             </Button>
           )}
-          <Button
-            variant={buttonVariant}
-            onClick={handleConfirm}
-            className="rounded-none"
-            disabled={confirmDisabled}
-          >
+          <Button variant={buttonVariant} onClick={handleConfirm} disabled={confirmDisabled}>
             {finalConfirmLabel}
           </Button>
         </DialogFooter>

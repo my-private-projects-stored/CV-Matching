@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Plus } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n';

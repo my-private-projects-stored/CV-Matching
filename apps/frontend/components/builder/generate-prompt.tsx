@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
@@ -43,16 +43,16 @@ export function GeneratePrompt({
           className
         )}
       >
-        <div className="w-16 h-16 border-2 border-gray-300 bg-gray-100 flex items-center justify-center mb-6">
-          <Icon className="w-8 h-8 text-gray-400" />
+        <div className="w-16 h-16 rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] flex items-center justify-center mb-6">
+          <Icon className="w-8 h-8 text-[color:var(--text-subtle)]" />
         </div>
-        <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 mb-3">
+        <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)] mb-3">
           {t('builder.generatePrompt.notAvailableTitle', { title })}
         </h3>
-        <p className="font-mono text-xs text-gray-500 max-w-md mb-6 leading-relaxed">
+        <p className="text-xs text-[color:var(--text-subtle)] max-w-md mb-6 leading-relaxed">
           {t('builder.generatePrompt.notAvailableDescription', { title })}
         </p>
-        <div className="flex items-center gap-2 text-blue-700 font-mono text-xs">
+        <div className="flex items-center gap-2 text-[var(--primary)] text-xs font-semibold uppercase tracking-[0.2em]">
           <span>{t('builder.generatePrompt.goToDashboard')}</span>
           <ArrowRight className="w-4 h-4" />
         </div>
@@ -67,13 +67,13 @@ export function GeneratePrompt({
         className
       )}
     >
-      <div className="w-16 h-16 border-2 border-blue-700 bg-blue-50 flex items-center justify-center mb-6">
-        <Icon className="w-8 h-8 text-blue-700" />
+      <div className="w-16 h-16 rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] flex items-center justify-center mb-6">
+        <Icon className="w-8 h-8 text-[var(--primary)]" />
       </div>
-      <h3 className="font-mono text-sm font-bold uppercase tracking-wider mb-3">
+      <h3 className="text-sm font-semibold uppercase tracking-[0.2em] mb-3">
         {t('builder.generatePrompt.generateTitle', { title })}
       </h3>
-      <p className="font-mono text-xs text-gray-600 max-w-md mb-6 leading-relaxed">
+      <p className="text-xs text-[color:var(--text-subtle)] max-w-md mb-6 leading-relaxed">
         {isOutreach
           ? t('builder.generatePrompt.outreachDescription')
           : t('builder.generatePrompt.coverLetterDescription')}
@@ -91,13 +91,13 @@ export function GeneratePrompt({
           </>
         )}
       </Button>
-      <p className="font-mono text-xs text-gray-400 mt-4">
+      <p className="text-xs text-[color:var(--text-subtle)] mt-4">
         {isOutreach
           ? t('builder.generatePrompt.outreachFooter')
           : t('builder.generatePrompt.coverLetterFooter')}
       </p>
       {outputLanguageLabel ? (
-        <p className="font-mono text-[11px] text-gray-600 mt-3 px-2 py-1 border border-gray-300 bg-gray-50">
+        <p className="text-[11px] text-[color:var(--text-subtle)] mt-3 px-2 py-1 rounded-full border border-[color:var(--border)] bg-[var(--surface-muted)]">
           {t('builder.generatePrompt.aiLanguageLabel')}: {outputLanguageLabel}
         </p>
       ) : null}

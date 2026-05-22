@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { type PageSize, type MarginSettings } from '@/lib/types/template-settings';
@@ -55,7 +55,7 @@ export function PageContainer({
     <div className="relative flex flex-col items-center">
       {/* Page wrapper with scale transform */}
       <div
-        className="relative bg-white border-2 border-black shadow-[6px_6px_0px_0px_#000000] origin-top"
+        className="relative rounded-2xl border border-[color:var(--border)] bg-white shadow-[0_18px_32px_rgba(15,27,45,0.16)] origin-top"
         style={{
           width: pageWidthPx,
           height: pageHeightPx,
@@ -72,14 +72,14 @@ export function PageContainer({
               left: marginLeftPx,
               width: contentWidth,
               height: maxContentHeight,
-              border: '1px dashed rgba(29, 78, 216, 0.5)',
+              border: '1px dashed rgba(15, 27, 45, 0.4)',
             }}
           >
             {/* Corner markers */}
-            <div className="absolute -top-1 -left-1 w-2 h-2 border-t border-l border-blue-500" />
-            <div className="absolute -top-1 -right-1 w-2 h-2 border-t border-r border-blue-500" />
-            <div className="absolute -bottom-1 -left-1 w-2 h-2 border-b border-l border-blue-500" />
-            <div className="absolute -bottom-1 -right-1 w-2 h-2 border-b border-r border-blue-500" />
+            <div className="absolute -top-1 -left-1 w-2 h-2 border-t border-l border-[color:var(--primary)]" />
+            <div className="absolute -top-1 -right-1 w-2 h-2 border-t border-r border-[color:var(--primary)]" />
+            <div className="absolute -bottom-1 -left-1 w-2 h-2 border-b border-l border-[color:var(--primary)]" />
+            <div className="absolute -bottom-1 -right-1 w-2 h-2 border-b border-r border-[color:var(--primary)]" />
           </div>
         )}
 
@@ -107,7 +107,7 @@ export function PageContainer({
 
         {/* Page number indicator */}
         <div
-          className="absolute bottom-2 right-3 font-mono text-[10px] text-gray-400 uppercase tracking-wider"
+          className="absolute bottom-2 right-3 text-[10px] text-[color:var(--text-subtle)] uppercase tracking-[0.2em]"
           style={{ transform: `scale(${1 / scale})`, transformOrigin: 'bottom right' }}
         >
           Page {pageNumber} of {totalPages}

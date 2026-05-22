@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -87,12 +87,14 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
 
   return (
     <div
-      className={`space-y-0 border p-6 bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] ${
-        isHidden ? 'border-dashed border-gray-400 opacity-60' : 'border-black'
+      className={`space-y-0 rounded-2xl border p-6 bg-white shadow-[0_16px_28px_rgba(15,27,45,0.12)] ${
+        isHidden
+          ? 'border-dashed border-[color:var(--border)] opacity-60'
+          : 'border-[color:var(--border)]'
       }`}
     >
       {/* Section Header */}
-      <div className="flex justify-between items-center border-b border-black pb-2 mb-4">
+      <div className="flex justify-between items-center border-b border-[color:var(--border)] pb-2 mb-4">
         {/* Section Name (editable) */}
         <div className="flex items-center gap-2">
           {isEditing ? (
@@ -101,13 +103,13 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
                 value={editedName}
                 onChange={(e) => setEditedName(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="h-8 w-48 rounded-none border-black font-serif text-lg font-bold"
+                className="h-8 w-48 rounded-xl border-[color:var(--border)] font-serif text-lg font-bold"
                 autoFocus
               />
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-green-700 hover:text-green-800 hover:bg-green-50"
+                className="h-8 w-8 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
                 onClick={handleSaveEdit}
               >
                 <Check className="w-4 h-4" />
@@ -115,7 +117,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                className="h-8 w-8 text-[color:var(--text-subtle)] hover:text-[var(--foreground)] hover:bg-[var(--surface-muted)]"
                 onClick={handleCancelEdit}
               >
                 <X className="w-4 h-4" />
@@ -128,7 +130,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 text-gray-400 hover:text-gray-600"
+                  className="h-6 w-6 text-[color:var(--text-subtle)] hover:text-[var(--foreground)]"
                   onClick={handleStartEdit}
                   title={t('builder.sectionHeader.renameSection')}
                 >
@@ -136,12 +138,12 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
                 </Button>
               )}
               {!section.isDefault && (
-                <span className="font-mono text-[10px] uppercase tracking-wider text-gray-400 bg-gray-100 px-1.5 py-0.5 border border-gray-200">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--text-subtle)] bg-[var(--surface-muted)] px-1.5 py-0.5 border border-[color:var(--border)] rounded-full">
                   {t('builder.sectionHeader.customTag')}
                 </span>
               )}
               {isHidden && (
-                <span className="font-mono text-[10px] uppercase tracking-wider text-orange-600 bg-white px-1.5 py-0.5 border border-orange-500">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-amber-700 bg-amber-50 px-1.5 py-0.5 border border-amber-200 rounded-full">
                   {t('builder.sectionHeader.hiddenFromPdfTag')}
                 </span>
               )}
@@ -156,7 +158,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
             <Button
               variant="ghost"
               size="icon"
-              className={`h-8 w-8 ${section.isVisible ? 'text-gray-500' : 'text-gray-300'}`}
+              className={`h-8 w-8 ${section.isVisible ? 'text-[color:var(--text-subtle)]' : 'text-[color:var(--border)]'}`}
               onClick={onToggleVisibility}
               title={
                 section.isVisible
@@ -173,7 +175,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-gray-500 hover:text-gray-700 disabled:opacity-30"
+              className="h-8 w-8 text-[color:var(--text-subtle)] hover:text-[var(--foreground)] disabled:opacity-30"
               onClick={onMoveUp}
               disabled={isFirst}
               title={t('builder.sectionHeader.moveUp')}
@@ -187,7 +189,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-gray-500 hover:text-gray-700 disabled:opacity-30"
+              className="h-8 w-8 text-[color:var(--text-subtle)] hover:text-[var(--foreground)] disabled:opacity-30"
               onClick={onMoveDown}
               disabled={isLast}
               title={t('builder.sectionHeader.moveDown')}

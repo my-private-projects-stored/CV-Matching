@@ -24,33 +24,32 @@ import { requireAuth, requireRoles } from "../middleware/auth.middleware.js";
 
 const router = Router();
 const requireRecruiterRole = [requireAuth, requireRoles("recruiter", "admin")];
+const requireAdminRole = [requireAuth, requireRoles("admin")];
 
 router.get("/language", getLanguageConfigHandler);
 router.get("/company-profile", requireAuth, getCompanyProfileConfigHandler);
 
-router.use(...requireRecruiterRole);
+router.get("/llm-api-key", ...requireAdminRole, getLlmConfigHandler);
+router.put("/llm-api-key", ...requireAdminRole, updateLlmConfigHandler);
+router.post("/llm-test", ...requireAdminRole, testLlmConfigHandler);
 
-router.get("/llm-api-key", getLlmConfigHandler);
-router.put("/llm-api-key", updateLlmConfigHandler);
-router.post("/llm-test", testLlmConfigHandler);
+router.get("/privacy", ...requireAdminRole, getPrivacyConfigHandler);
+router.put("/privacy", ...requireAdminRole, updatePrivacyConfigHandler);
 
-router.get("/privacy", getPrivacyConfigHandler);
-router.put("/privacy", updatePrivacyConfigHandler);
+router.get("/features", ...requireAdminRole, getFeatureConfigHandler);
+router.put("/features", ...requireAdminRole, updateFeatureConfigHandler);
 
-router.get("/features", getFeatureConfigHandler);
-router.put("/features", updateFeatureConfigHandler);
+router.put("/company-profile", ...requireRecruiterRole, updateCompanyProfileConfigHandler);
+router.put("/language", ...requireAdminRole, updateLanguageConfigHandler);
 
-router.put("/company-profile", updateCompanyProfileConfigHandler);
-router.put("/language", updateLanguageConfigHandler);
+router.get("/prompts", ...requireAdminRole, getPromptConfigHandler);
+router.put("/prompts", ...requireAdminRole, updatePromptConfigHandler);
 
-router.get("/prompts", getPromptConfigHandler);
-router.put("/prompts", updatePromptConfigHandler);
+router.get("/api-keys", ...requireAdminRole, getApiKeyStatusHandler);
+router.post("/api-keys", ...requireAdminRole, updateApiKeysHandler);
+router.delete("/api-keys/:provider", ...requireAdminRole, deleteApiKeyHandler);
+router.delete("/api-keys", ...requireAdminRole, clearAllApiKeysHandler);
 
-router.get("/api-keys", getApiKeyStatusHandler);
-router.post("/api-keys", updateApiKeysHandler);
-router.delete("/api-keys/:provider", deleteApiKeyHandler);
-router.delete("/api-keys", clearAllApiKeysHandler);
-
-router.post("/reset", resetDatabaseHandler);
+router.post("/reset", ...requireAdminRole, resetDatabaseHandler);
 
 export default router;

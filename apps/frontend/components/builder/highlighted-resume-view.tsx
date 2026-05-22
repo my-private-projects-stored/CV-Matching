@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useMemo } from 'react';
 import { type ResumeData } from '@/components/dashboard/resume-component';
@@ -21,12 +21,12 @@ export function HighlightedResumeView({ resumeData, keywords }: HighlightedResum
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-2 p-4 border-b border-gray-200 bg-gray-50">
-        <FileUser className="w-4 h-4 text-gray-600" />
-        <h3 className="font-mono text-sm font-bold uppercase text-gray-700">
+      <div className="flex items-center gap-2 p-4 border-b border-[color:var(--border)] bg-[var(--surface-muted)]">
+        <FileUser className="w-4 h-4 text-[color:var(--text-subtle)]" />
+        <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--foreground)]">
           {t('builder.jdMatch.yourResume')}
         </h3>
-        <span className="text-xs text-gray-500 ml-2">
+        <span className="text-xs text-[color:var(--text-subtle)] ml-2">
           {t('builder.jdMatch.matchingKeywordsHighlighted')}
         </span>
       </div>
@@ -130,7 +130,7 @@ export function HighlightedResumeView({ resumeData, keywords }: HighlightedResum
             {resumeData.additional.technicalSkills &&
               resumeData.additional.technicalSkills.length > 0 && (
                 <div className="mb-3">
-                  <div className="text-xs font-mono uppercase text-gray-500 mb-1">
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)] mb-1">
                     {t('resume.additional.technicalSkills')}
                   </div>
                   <div className="flex flex-wrap gap-1">
@@ -143,7 +143,7 @@ export function HighlightedResumeView({ resumeData, keywords }: HighlightedResum
 
             {resumeData.additional.languages && resumeData.additional.languages.length > 0 && (
               <div className="mb-3">
-                <div className="text-xs font-mono uppercase text-gray-500 mb-1">
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)] mb-1">
                   {t('resume.sections.languages')}
                 </div>
                 <div className="flex flex-wrap gap-1">
@@ -157,7 +157,7 @@ export function HighlightedResumeView({ resumeData, keywords }: HighlightedResum
             {resumeData.additional.certificationsTraining &&
               resumeData.additional.certificationsTraining.length > 0 && (
                 <div className="mb-3">
-                  <div className="text-xs font-mono uppercase text-gray-500 mb-1">
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)] mb-1">
                     {t('resume.sections.certifications')}
                   </div>
                   <ul className="list-disc list-inside space-y-1 text-sm">
@@ -189,10 +189,12 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-gray-200 bg-white rounded-none">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50">
+    <div className="rounded-2xl border border-[color:var(--border)] bg-white">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-[color:var(--border)] bg-[var(--surface-muted)]">
         {icon}
-        <span className="font-mono text-xs font-bold uppercase text-gray-600">{title}</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+          {title}
+        </span>
       </div>
       <div className="p-3">{children}</div>
     </div>
@@ -209,7 +211,7 @@ function HighlightedText({ text, keywords }: { text: string; keywords: Set<strin
     <span>
       {segments.map((segment, i) =>
         segment.isMatch ? (
-          <mark key={i} className="bg-yellow-200 text-black px-0.5">
+          <mark key={i} className="bg-amber-200 text-black px-0.5 rounded-sm">
             {segment.text}
           </mark>
         ) : (
@@ -229,7 +231,9 @@ function SkillTag({ text, keywords }: { text: string; keywords: Set<string> }) {
   return (
     <span
       className={`inline-block px-2 py-0.5 text-xs ${
-        isMatch ? 'bg-yellow-200 text-black font-medium' : 'bg-[#F0F0E8] text-gray-600'
+        isMatch
+          ? 'bg-amber-200 text-black font-medium'
+          : 'bg-[var(--surface-muted)] text-[color:var(--text-subtle)]'
       }`}
     >
       {text}

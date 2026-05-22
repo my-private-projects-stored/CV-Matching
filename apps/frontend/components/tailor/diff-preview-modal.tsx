@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { AlertTriangle, CheckCircle, X, ChevronDown, ChevronRight } from 'lucide-react';
@@ -44,22 +44,22 @@ export function DiffPreviewModal({
           }
         }}
       >
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-6 bg-[#F0F0E8] border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]">
-          <DialogHeader className="border-b-2 border-black pb-4 bg-white -mx-6 -mt-6 px-6 pt-6">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] p-6 shadow-[0_24px_40px_rgba(15,27,45,0.18)]">
+          <DialogHeader className="border-b border-[color:var(--border)] pb-4 bg-white -mx-6 -mt-6 px-6 pt-6">
             <DialogTitle className="font-serif text-2xl font-bold uppercase tracking-tight">
               {t('tailor.missingDiffDialog.title')}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="mt-6 border-2 border-black bg-white p-4 font-mono text-xs text-gray-700">
+          <div className="mt-6 rounded-xl border border-[color:var(--border)] bg-white p-4 text-xs text-[color:var(--text-subtle)]">
             {t('tailor.missingDiffDialog.description')}
           </div>
-          <div className="mt-3 flex items-center gap-2 font-mono text-xs text-amber-700">
+          <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-amber-700">
             <AlertTriangle className="w-4 h-4" />
             <span>{t('tailor.missingDiffDialog.confirmLabel')}</span>
           </div>
 
-          <div className="flex justify-end items-center gap-3 pt-4 border-t-2 border-black bg-white -mx-6 -mb-6 px-6 py-4">
+          <div className="flex justify-end items-center gap-3 pt-4 border-t border-[color:var(--border)] bg-white -mx-6 -mb-6 px-6 py-4">
             <Button variant="outline" onClick={onClose} className="gap-2">
               {t('common.cancel')}
             </Button>
@@ -100,22 +100,22 @@ export function DiffPreviewModal({
         }
       }}
     >
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-6 bg-[#F0F0E8] border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]">
-        <DialogHeader className="border-b-2 border-black pb-4 bg-white -mx-6 -mt-6 px-6 pt-6">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] p-6 shadow-[0_24px_40px_rgba(15,27,45,0.18)]">
+        <DialogHeader className="border-b border-[color:var(--border)] pb-4 bg-white -mx-6 -mt-6 px-6 pt-6">
           <DialogTitle className="font-serif text-2xl font-bold uppercase tracking-tight">
             {t('tailor.diffModal.title')}
           </DialogTitle>
-          <p className="font-mono text-xs text-gray-600 mt-2">
+          <p className="text-xs text-[color:var(--text-subtle)] mt-2">
             {'// '}
             {t('tailor.diffModal.subtitle')}
           </p>
         </DialogHeader>
 
         {/* Summary cards */}
-        <div className="border-2 border-black bg-white p-4 mt-4">
+        <div className="rounded-2xl border border-[color:var(--border)] bg-white p-4 mt-4">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-3 h-3 bg-[#1D4ED8]"></div>
-            <h3 className="font-mono text-sm font-bold uppercase tracking-wider">
+            <div className="w-3 h-3 rounded-sm bg-[var(--primary)]"></div>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em]">
               {t('tailor.diffModal.summary')}
             </h3>
           </div>
@@ -149,18 +149,18 @@ export function DiffPreviewModal({
           </div>
 
           {diffSummary.high_risk_changes > 0 && (
-            <div className="mt-4 border-2 border-[#F97316] bg-[#FFF7ED] p-3 flex items-start gap-3">
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 flex items-start gap-3">
               <AlertTriangle
                 data-testid="high-risk-warning-banner-icon"
-                className="w-5 h-5 text-[#F97316] shrink-0 mt-0.5"
+                className="w-5 h-5 text-amber-500 shrink-0 mt-0.5"
               />
               <div>
-                <p className="font-mono text-xs font-bold uppercase text-[#C2410C]">
+                <p className="text-xs font-semibold uppercase text-amber-800">
                   {t('tailor.diffModal.warningTitle', {
                     count: diffSummary.high_risk_changes,
                   })}
                 </p>
-                <p className="font-mono text-xs text-[#C2410C] mt-1">
+                <p className="text-xs text-amber-800 mt-1">
                   {t('tailor.diffModal.warningMessage')}
                 </p>
               </div>
@@ -169,7 +169,7 @@ export function DiffPreviewModal({
         </div>
 
         {errorMessage && (
-          <div className="mt-4 border-2 border-red-600 bg-red-50 p-3 font-mono text-xs text-red-700">
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
             {errorMessage}
           </div>
         )}
@@ -276,12 +276,12 @@ export function DiffPreviewModal({
         </div>
 
         {/* Action buttons */}
-        <div className="flex justify-between items-center pt-4 border-t-2 border-black bg-white -mx-6 -mb-6 px-6 py-4">
+        <div className="flex justify-between items-center pt-4 border-t border-[color:var(--border)] bg-white -mx-6 -mb-6 px-6 py-4">
           <Button variant="outline" onClick={onReject} className="gap-2">
             <X className="w-4 h-4" />
             {t('tailor.diffModal.rejectButton')}
           </Button>
-          <Button onClick={onConfirm} className="gap-2 bg-[#15803D] hover:bg-[#166534]">
+          <Button onClick={onConfirm} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
             <CheckCircle className="w-4 h-4" />
             {t('tailor.diffModal.confirmButton')}
           </Button>
@@ -300,16 +300,16 @@ interface StatCardProps {
 
 function StatCard({ label, value, variant }: StatCardProps) {
   const colors = {
-    success: 'border-[#15803D] bg-[#F0FDF4] text-[#15803D]',
-    warning: 'border-[#F97316] bg-[#FFF7ED] text-[#F97316]',
-    danger: 'border-[#DC2626] bg-[#FEF2F2] text-[#DC2626]',
-    info: 'border-[#1D4ED8] bg-[#EFF6FF] text-[#1D4ED8]',
+    success: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    warning: 'border-amber-200 bg-amber-50 text-amber-700',
+    danger: 'border-red-200 bg-red-50 text-red-700',
+    info: 'border-[color:var(--border)] bg-[var(--surface-muted)] text-[var(--primary)]',
   };
 
   return (
-    <div className={`border-2 p-3 ${colors[variant]}`}>
-      <div className="font-mono text-2xl font-bold">{value}</div>
-      <div className="font-mono text-xs uppercase tracking-wider mt-1">{label}</div>
+    <div className={`rounded-xl border p-3 ${colors[variant]}`}>
+      <div className="text-2xl font-semibold">{value}</div>
+      <div className="text-xs font-semibold uppercase tracking-[0.2em] mt-1">{label}</div>
     </div>
   );
 }
@@ -325,20 +325,22 @@ interface ChangeSectionProps {
 
 function ChangeSection({ title, count, isExpanded, onToggle, children }: ChangeSectionProps) {
   return (
-    <div className="border-2 border-black bg-white">
+    <div className="rounded-2xl border border-[color:var(--border)] bg-white">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-3 hover:bg-gray-50"
+        className="w-full flex items-center justify-between p-3 hover:bg-[var(--surface-muted)]"
       >
         <div className="flex items-center gap-2">
           {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          <span className="font-mono text-sm font-bold uppercase tracking-wider">
+          <span className="text-sm font-semibold uppercase tracking-[0.2em]">
             {title} ({count})
           </span>
         </div>
       </button>
 
-      {isExpanded && <div className="border-t-2 border-black p-4 space-y-3">{children}</div>}
+      {isExpanded && (
+        <div className="border-t border-[color:var(--border)] p-4 space-y-3">{children}</div>
+      )}
     </div>
   );
 }
@@ -350,9 +352,9 @@ interface ChangeItemProps {
 
 function ChangeItem({ change }: ChangeItemProps) {
   const typeColors = {
-    added: 'border-l-4 border-[#15803D] bg-[#F0FDF4]',
-    removed: 'border-l-4 border-[#DC2626] bg-[#FEF2F2]',
-    modified: 'border-l-4 border-[#1D4ED8] bg-[#EFF6FF]',
+    added: 'border-l-4 border-emerald-500 bg-emerald-50',
+    removed: 'border-l-4 border-red-500 bg-red-50',
+    modified: 'border-l-4 border-[color:var(--primary)] bg-[var(--surface-muted)]',
   };
 
   const typeLabels = {
@@ -364,23 +366,21 @@ function ChangeItem({ change }: ChangeItemProps) {
   return (
     <div className={`p-3 ${typeColors[change.change_type]}`}>
       <div className="flex items-start gap-2">
-        <span className="font-mono text-xs font-bold uppercase tracking-wider text-gray-500">
+        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
           {typeLabels[change.change_type]}
         </span>
         <div className="flex-1">
           {change.original_value && (
-            <div className="line-through text-[#DC2626] font-mono text-sm mb-1">
-              {change.original_value}
-            </div>
+            <div className="line-through text-red-600 text-sm mb-1">{change.original_value}</div>
           )}
           {change.new_value && (
-            <div className="text-gray-900 font-mono text-sm">{change.new_value}</div>
+            <div className="text-[var(--foreground)] text-sm">{change.new_value}</div>
           )}
         </div>
         {change.change_type === 'added' && change.confidence === 'high' && (
           <AlertTriangle
             data-testid="high-risk-change-icon"
-            className="w-4 h-4 text-[#F97316] shrink-0"
+            className="w-4 h-4 text-amber-500 shrink-0"
           />
         )}
       </div>

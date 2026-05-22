@@ -117,12 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signUp = useCallback(
-    async (payload: {
-      email: string;
-      password: string;
-      full_name: string;
-      role?: UserRole;
-    }) => {
+    async (payload: { email: string; password: string; full_name: string; role?: UserRole }) => {
       const result = await signup(payload);
       applySession({ accessToken: result.access_token, user: result.user });
       return result.user;

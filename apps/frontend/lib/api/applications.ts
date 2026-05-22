@@ -62,6 +62,7 @@ export interface RankedApplicationsResponse {
 
 export interface CandidateHistoryItem {
   application_id: string;
+  candidate_id?: string | null;
   status: ApplicationStatus;
   ai_status: ApplicationAiStatus;
   job: {
@@ -287,7 +288,9 @@ export async function fetchApplicationFeedback(
   return res.json();
 }
 
-export async function fetchApplicationStatusSummary(jobId: string): Promise<ApplicationSummaryResponse> {
+export async function fetchApplicationStatusSummary(
+  jobId: string
+): Promise<ApplicationSummaryResponse> {
   const query = new URLSearchParams({ job_id: jobId.trim() });
   const res = await apiFetch(`/applications/summary?${query.toString()}`);
   await assertOk(res, 'Failed to load application summary');

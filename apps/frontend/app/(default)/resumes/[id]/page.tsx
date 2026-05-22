@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -24,7 +24,7 @@ import { useTranslations } from '@/lib/i18n';
 import { withLocalizedDefaultSections } from '@/lib/utils/section-helpers';
 import { useLanguage } from '@/lib/context/language-context';
 import { downloadBlobAsFile, openUrlInNewTab, sanitizeFilename } from '@/lib/utils/download';
-import { logError } from '@/lib/utils/logger';
+import { logError, logWarn } from '@/lib/utils/logger';
 import ResumeVersionHistory from '@/components/builder/resume-version-history';
 
 type ProcessingStatus = 'pending' | 'processing' | 'ready' | 'failed';
@@ -51,15 +51,25 @@ type ResumeComparison = {
   skillChanges: { added: string[]; removed: string[] };
 };
 
+const getErrorStatusCode = (err: unknown): number | null => {
+  if (!err || typeof err !== 'object') return null;
+  const statusCode = (err as { statusCode?: number }).statusCode;
+  return typeof statusCode === 'number' ? statusCode : null;
+};
+
+const isAccessDeniedStatus = (statusCode: number | null): boolean =>
+  statusCode === 401 || statusCode === 403;
+
 function normalizeStringList(values: unknown): string[] {
   if (!Array.isArray(values)) return [];
 
-  return values
-    .map((value) => String(value || '').trim())
-    .filter(Boolean);
+  return values.map((value) => String(value || '').trim()).filter(Boolean);
 }
 
-function toSnapshotFromProcessed(processed: ResumeData | null, title: string | null): ResumeSnapshot {
+function toSnapshotFromProcessed(
+  processed: ResumeData | null,
+  title: string | null
+): ResumeSnapshot {
   const additional = processed?.additional || {};
   const personalInfo = processed?.personalInfo || {};
 
@@ -74,7 +84,9 @@ function toSnapshotFromProcessed(processed: ResumeData | null, title: string | n
     awards: normalizeStringList(additional.awards),
     experienceCount: Array.isArray(processed?.workExperience) ? processed.workExperience.length : 0,
     educationCount: Array.isArray(processed?.education) ? processed.education.length : 0,
-    projectCount: Array.isArray(processed?.personalProjects) ? processed.personalProjects.length : 0,
+    projectCount: Array.isArray(processed?.personalProjects)
+      ? processed.personalProjects.length
+      : 0,
   };
 }
 
@@ -100,12 +112,36 @@ function buildComparison(current: ResumeSnapshot, selected: ResumeSnapshot): Res
     { label: 'Name', current: current.name || '-', selected: selected.name || '-' },
     { label: 'Role', current: current.role || '-', selected: selected.role || '-' },
     { label: 'Summary', current: current.summary || '-', selected: selected.summary || '-' },
-    { label: 'Experience sections', current: String(current.experienceCount), selected: String(selected.experienceCount) },
-    { label: 'Education sections', current: String(current.educationCount), selected: String(selected.educationCount) },
-    { label: 'Projects', current: String(current.projectCount), selected: String(selected.projectCount) },
-    { label: 'Languages', current: current.languages.join(', ') || '-', selected: selected.languages.join(', ') || '-' },
-    { label: 'Certifications', current: current.certifications.join(', ') || '-', selected: selected.certifications.join(', ') || '-' },
-    { label: 'Awards', current: current.awards.join(', ') || '-', selected: selected.awards.join(', ') || '-' },
+    {
+      label: 'Experience sections',
+      current: String(current.experienceCount),
+      selected: String(selected.experienceCount),
+    },
+    {
+      label: 'Education sections',
+      current: String(current.educationCount),
+      selected: String(selected.educationCount),
+    },
+    {
+      label: 'Projects',
+      current: String(current.projectCount),
+      selected: String(selected.projectCount),
+    },
+    {
+      label: 'Languages',
+      current: current.languages.join(', ') || '-',
+      selected: selected.languages.join(', ') || '-',
+    },
+    {
+      label: 'Certifications',
+      current: current.certifications.join(', ') || '-',
+      selected: selected.certifications.join(', ') || '-',
+    },
+    {
+      label: 'Awards',
+      current: current.awards.join(', ') || '-',
+      selected: selected.awards.join(', ') || '-',
+    },
   ];
 
   const currentSkills = new Set(current.skills.map((skill) => skill.toLowerCase()));
@@ -143,7 +179,9 @@ export default function ResumeViewerPage() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editingTitleValue, setEditingTitleValue] = useState('');
   const [isSettingMaster, setIsSettingMaster] = useState(false);
-  const [resumeHistory, setResumeHistory] = useState<Awaited<ReturnType<typeof fetchResumeHistory>> | null>(null);
+  const [resumeHistory, setResumeHistory] = useState<Awaited<
+    ReturnType<typeof fetchResumeHistory>
+  > | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [comparison, setComparison] = useState<ResumeComparison | null>(null);
@@ -152,6 +190,14 @@ export default function ResumeViewerPage() {
   const [comparisonTitle, setComparisonTitle] = useState<string | null>(null);
 
   const resumeId = params?.id as string;
+
+  const clearMasterResumeIfNeeded = useCallback(() => {
+    if (localStorage.getItem('master_resume_id') === resumeId) {
+      localStorage.removeItem('master_resume_id');
+      setHasMasterResume(false);
+      setIsMasterResume(false);
+    }
+  }, [resumeId, setHasMasterResume]);
 
   const localizedResumeData = useMemo(() => {
     if (!resumeData) return null;
@@ -194,6 +240,13 @@ export default function ResumeViewerPage() {
           setError(t('resumeViewer.errors.noDataAvailable'));
         }
       } catch (err) {
+        const statusCode = getErrorStatusCode(err);
+        if (isAccessDeniedStatus(statusCode)) {
+          logWarn('resume-viewer-page', 'Access denied while loading resume', { statusCode });
+          clearMasterResumeIfNeeded();
+          setError(t('errors.unauthorized'));
+          return;
+        }
         logError('resume-viewer-page', 'Failed to load resume', err);
         setError(t('resumeViewer.errors.failedToLoad'));
       } finally {
@@ -203,7 +256,7 @@ export default function ResumeViewerPage() {
 
     loadResume();
     setIsMasterResume(localStorage.getItem('master_resume_id') === resumeId);
-  }, [resumeId, t]);
+  }, [resumeId, t, clearMasterResumeIfNeeded]);
 
   useEffect(() => {
     if (!resumeId) return;
@@ -219,6 +272,16 @@ export default function ResumeViewerPage() {
           setResumeHistory(history);
         }
       } catch (err) {
+        const statusCode = getErrorStatusCode(err);
+        if (isAccessDeniedStatus(statusCode)) {
+          logWarn('resume-viewer-page', 'Access denied while loading resume history', {
+            statusCode,
+          });
+          if (active) {
+            setHistoryError(t('errors.unauthorized'));
+          }
+          return;
+        }
         logError('resume-viewer-page', 'Failed to load resume history', err);
         if (active) {
           setHistoryError(t('resumeViewer.versionHistoryFailed'));
@@ -249,6 +312,13 @@ export default function ResumeViewerPage() {
         setError(t('resumeViewer.errors.processingFailed'));
       }
     } catch (err) {
+      const statusCode = getErrorStatusCode(err);
+      if (isAccessDeniedStatus(statusCode)) {
+        logWarn('resume-viewer-page', 'Access denied while retrying processing', { statusCode });
+        clearMasterResumeIfNeeded();
+        setError(t('errors.unauthorized'));
+        return;
+      }
       logError('resume-viewer-page', 'Retry processing failed', err);
       setError(t('resumeViewer.errors.processingFailed'));
     } finally {
@@ -323,11 +393,7 @@ export default function ResumeViewerPage() {
   const handleDownloadOriginal = async () => {
     try {
       const blob = await downloadOriginalResumeFile(resumeId);
-      const filename = sanitizeFilename(
-        resumeTitle,
-        resumeId,
-        'resume'
-      );
+      const filename = sanitizeFilename(resumeTitle, resumeId, 'resume');
       downloadBlobAsFile(blob, filename);
       setShowDownloadSuccessDialog(true);
     } catch (err) {
@@ -348,6 +414,14 @@ export default function ResumeViewerPage() {
       setShowDeleteDialog(false);
       setShowDeleteSuccessDialog(true);
     } catch (err) {
+      const statusCode = getErrorStatusCode(err);
+      if (isAccessDeniedStatus(statusCode)) {
+        logWarn('resume-viewer-page', 'Access denied while deleting resume', { statusCode });
+        clearMasterResumeIfNeeded();
+        setDeleteError(t('errors.unauthorized'));
+        setShowDeleteDialog(false);
+        return;
+      }
       logError('resume-viewer-page', 'Failed to delete resume', err);
       setDeleteError(t('resumeViewer.errors.failedToDelete'));
       setShowDeleteDialog(false);
@@ -364,6 +438,15 @@ export default function ResumeViewerPage() {
       setIsMasterResume(true);
       setHasMasterResume(true);
     } catch (err) {
+      const statusCode = getErrorStatusCode(err);
+      if (isAccessDeniedStatus(statusCode)) {
+        logWarn('resume-viewer-page', 'Access denied while setting master resume', {
+          statusCode,
+        });
+        clearMasterResumeIfNeeded();
+        setError(t('errors.unauthorized'));
+        return;
+      }
       logError('resume-viewer-page', 'Failed to set master resume', err);
       setError(t('resumeViewer.errors.failedToSetMaster'));
     } finally {
@@ -417,7 +500,7 @@ export default function ResumeViewerPage() {
         version.title ?? null
       );
 
-      setComparisonTitle(version.title || version.filename || version.resume_id);
+      setComparisonTitle(version.title || version.resume_id);
       setComparison(buildComparison(currentSnapshot, versionSnapshot));
     } catch (err) {
       logError('resume-viewer-page', 'Failed to compare resume version', err);
@@ -429,9 +512,9 @@ export default function ResumeViewerPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F0F0E8]">
-        <Loader2 className="w-10 h-10 animate-spin text-blue-700 mb-4" />
-        <p className="font-mono text-sm font-bold uppercase text-blue-700">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--canvas)]">
+        <Loader2 className="w-10 h-10 animate-spin text-[var(--primary)] mb-4" />
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--primary)]">
           {t('resumeViewer.loading')}
         </p>
       </div>
@@ -443,11 +526,11 @@ export default function ResumeViewerPage() {
     const isFailed = processingStatus === 'failed';
 
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F0F0E8] p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--canvas)] p-4">
         <div
-          className={`border p-6 text-center max-w-md shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] ${
+          className={`rounded-2xl border p-6 text-center max-w-md shadow-[0_16px_28px_rgba(15,27,45,0.12)] ${
             isProcessing
-              ? 'bg-blue-50 border-blue-200'
+              ? 'bg-[var(--surface-muted)] border-[color:var(--primary)]'
               : isFailed
                 ? 'bg-orange-50 border-orange-200'
                 : 'bg-red-50 border-red-200'
@@ -455,7 +538,7 @@ export default function ResumeViewerPage() {
         >
           <div className="flex justify-center mb-4">
             {isProcessing ? (
-              <Loader2 className="w-8 h-8 animate-spin text-blue-700" />
+              <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
             ) : isFailed ? (
               <AlertCircle className="w-8 h-8 text-orange-600" />
             ) : (
@@ -463,8 +546,8 @@ export default function ResumeViewerPage() {
             )}
           </div>
           <p
-            className={`font-bold mb-4 ${
-              isProcessing ? 'text-blue-700' : isFailed ? 'text-orange-700' : 'text-red-700'
+            className={`font-semibold mb-4 ${
+              isProcessing ? 'text-[var(--primary)]' : isFailed ? 'text-orange-700' : 'text-red-700'
             }`}
           >
             {error || t('resumeViewer.resumeNotFound')}
@@ -497,7 +580,7 @@ export default function ResumeViewerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F0F0E8] py-12 px-4 md:px-8 overflow-y-auto">
+    <div className="min-h-screen bg-[var(--canvas)] py-12 px-4 md:px-8 overflow-y-auto">
       <div className="max-w-7xl mx-auto">
         {/* Header Actions */}
         <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 no-print">
@@ -514,7 +597,11 @@ export default function ResumeViewerPage() {
               </Button>
             )}
             {!isMasterResume && (
-              <Button variant="outline" onClick={handleSetAsMasterResume} disabled={isSettingMaster}>
+              <Button
+                variant="outline"
+                onClick={handleSetAsMasterResume}
+                disabled={isSettingMaster}
+              >
                 {isSettingMaster ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -553,7 +640,7 @@ export default function ResumeViewerPage() {
                 autoFocus
                 maxLength={80}
                 placeholder={t('resumeViewer.titlePlaceholder')}
-                className="font-serif text-2xl font-bold border-b-2 border-black bg-transparent outline-none w-full max-w-xl px-0 py-1"
+                className="font-serif text-2xl font-bold border-b border-[color:var(--border)] bg-transparent outline-none w-full max-w-xl px-0 py-1"
               />
             ) : (
               <button
@@ -564,7 +651,7 @@ export default function ResumeViewerPage() {
                 className="group flex items-center gap-2 cursor-pointer bg-transparent border-none p-0"
               >
                 <h2
-                  className={`font-serif text-2xl font-bold border-b-2 border-transparent group-hover:border-black transition-colors ${!resumeTitle ? 'text-gray-400' : ''}`}
+                  className={`font-serif text-2xl font-bold border-b border-transparent group-hover:border-[color:var(--border)] transition-colors ${!resumeTitle ? 'text-[color:var(--text-subtle)]' : ''}`}
                 >
                   {resumeTitle || t('resumeViewer.titlePlaceholder')}
                 </h2>
@@ -578,7 +665,7 @@ export default function ResumeViewerPage() {
 
         {/* Resume Viewer */}
         <div className="flex justify-center pb-4">
-          <div className="resume-print w-full max-w-[250mm] shadow-[8px_8px_0px_0px_#000000] border-2 border-black bg-white">
+          <div className="resume-print w-full max-w-[250mm] rounded-2xl shadow-[0_24px_40px_rgba(15,27,45,0.16)] border border-[color:var(--border)] bg-white">
             <Resume
               resumeData={localizedResumeData || resumeData}
               additionalSectionLabels={{
@@ -680,11 +767,11 @@ export default function ResumeViewerPage() {
 
       {comparisonTitle ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 no-print">
-          <div className="w-full max-w-5xl border border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)]">
-            <div className="border-b border-black px-5 py-4 flex items-start justify-between gap-4">
+          <div className="w-full max-w-5xl rounded-2xl border border-[color:var(--border)] bg-white shadow-[0_24px_40px_rgba(15,27,45,0.2)]">
+            <div className="border-b border-[color:var(--border)] px-5 py-4 flex items-start justify-between gap-4">
               <div>
                 <h3 className="font-serif text-xl font-bold">Compare versions</h3>
-                <p className="font-mono text-[10px] uppercase tracking-wider text-gray-600">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   Current version vs {comparisonTitle}
                 </p>
               </div>
@@ -703,67 +790,85 @@ export default function ResumeViewerPage() {
 
             <div className="p-5 space-y-4 max-h-[75vh] overflow-auto">
               {comparisonLoading ? (
-                <p className="font-mono text-xs uppercase text-gray-500">Loading comparison...</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                  Loading comparison...
+                </p>
               ) : comparisonError ? (
-                <p className="font-mono text-xs uppercase text-red-700">{comparisonError}</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-red-700">{comparisonError}</p>
               ) : comparison ? (
                 <>
                   <div className="grid gap-3 md:grid-cols-2">
-                    <div className="border border-black/20 bg-[#F8F8F4] p-4">
-                      <p className="font-mono text-[10px] uppercase tracking-wider text-gray-600">Current</p>
-                      <h4 className="mt-1 font-serif text-lg font-bold">{comparison.current.title}</h4>
-                      <dl className="mt-3 space-y-2 font-mono text-xs">
+                    <div className="rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] p-4">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                        Current
+                      </p>
+                      <h4 className="mt-1 font-serif text-lg font-bold">
+                        {comparison.current.title}
+                      </h4>
+                      <dl className="mt-3 space-y-2 text-xs">
                         <div>
-                          <dt className="text-gray-500">Role</dt>
+                          <dt className="text-[color:var(--text-subtle)]">Role</dt>
                           <dd>{comparison.current.role || '-'}</dd>
                         </div>
                         <div>
-                          <dt className="text-gray-500">Summary</dt>
-                          <dd className="whitespace-pre-wrap">{comparison.current.summary || '-'}</dd>
+                          <dt className="text-[color:var(--text-subtle)]">Summary</dt>
+                          <dd className="whitespace-pre-wrap">
+                            {comparison.current.summary || '-'}
+                          </dd>
                         </div>
                         <div>
-                          <dt className="text-gray-500">Skills</dt>
+                          <dt className="text-[color:var(--text-subtle)]">Skills</dt>
                           <dd>{comparison.current.skills.join(', ') || '-'}</dd>
                         </div>
                       </dl>
                     </div>
-                    <div className="border border-black/20 bg-[#F8F8F4] p-4">
-                      <p className="font-mono text-[10px] uppercase tracking-wider text-gray-600">Selected version</p>
-                      <h4 className="mt-1 font-serif text-lg font-bold">{comparison.selected.title}</h4>
-                      <dl className="mt-3 space-y-2 font-mono text-xs">
+                    <div className="rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] p-4">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+                        Selected version
+                      </p>
+                      <h4 className="mt-1 font-serif text-lg font-bold">
+                        {comparison.selected.title}
+                      </h4>
+                      <dl className="mt-3 space-y-2 text-xs">
                         <div>
-                          <dt className="text-gray-500">Role</dt>
+                          <dt className="text-[color:var(--text-subtle)]">Role</dt>
                           <dd>{comparison.selected.role || '-'}</dd>
                         </div>
                         <div>
-                          <dt className="text-gray-500">Summary</dt>
-                          <dd className="whitespace-pre-wrap">{comparison.selected.summary || '-'}</dd>
+                          <dt className="text-[color:var(--text-subtle)]">Summary</dt>
+                          <dd className="whitespace-pre-wrap">
+                            {comparison.selected.summary || '-'}
+                          </dd>
                         </div>
                         <div>
-                          <dt className="text-gray-500">Skills</dt>
+                          <dt className="text-[color:var(--text-subtle)]">Skills</dt>
                           <dd>{comparison.selected.skills.join(', ') || '-'}</dd>
                         </div>
                       </dl>
                     </div>
                   </div>
 
-                  <div className="border border-black/20 bg-white p-4">
+                  <div className="rounded-2xl border border-[color:var(--border)] bg-white p-4">
                     <h4 className="font-serif text-lg font-bold">What changed</h4>
                     <div className="mt-3 space-y-3">
                       {comparison.rows.map((row) => (
                         <div
                           key={row.label}
-                          className="grid gap-2 md:grid-cols-[180px_1fr_1fr] md:items-start border-b border-black/10 pb-2 last:border-b-0 last:pb-0"
+                          className="grid gap-2 md:grid-cols-[180px_1fr_1fr] md:items-start border-b border-[color:var(--border)] pb-2 last:border-b-0 last:pb-0"
                         >
-                          <div className="font-mono text-[10px] uppercase tracking-wider text-gray-500">
+                          <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                             {row.label}
                           </div>
-                          <div className="font-mono text-xs">
-                            <span className="text-gray-500 md:hidden">Current: </span>
+                          <div className="text-xs">
+                            <span className="text-[color:var(--text-subtle)] md:hidden">
+                              Current:{' '}
+                            </span>
                             {row.current}
                           </div>
-                          <div className="font-mono text-xs">
-                            <span className="text-gray-500 md:hidden">Selected: </span>
+                          <div className="text-xs">
+                            <span className="text-[color:var(--text-subtle)] md:hidden">
+                              Selected:{' '}
+                            </span>
                             {row.selected}
                           </div>
                         </div>
@@ -772,17 +877,21 @@ export default function ResumeViewerPage() {
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
-                    <div className="border border-green-700 bg-green-50 p-4">
-                      <h4 className="font-serif text-base font-bold text-green-800">Added skills</h4>
-                      <p className="mt-2 font-mono text-xs uppercase text-green-800">
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                      <h4 className="font-serif text-base font-bold text-green-800">
+                        Added skills
+                      </h4>
+                      <p className="mt-2 text-xs uppercase tracking-[0.2em] text-emerald-800">
                         {comparison.skillChanges.added.length
                           ? comparison.skillChanges.added.join(', ')
                           : 'No skill additions'}
                       </p>
                     </div>
-                    <div className="border border-red-700 bg-red-50 p-4">
-                      <h4 className="font-serif text-base font-bold text-red-800">Removed skills</h4>
-                      <p className="mt-2 font-mono text-xs uppercase text-red-800">
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+                      <h4 className="font-serif text-base font-bold text-red-800">
+                        Removed skills
+                      </h4>
+                      <p className="mt-2 text-xs uppercase tracking-[0.2em] text-red-800">
                         {comparison.skillChanges.removed.length
                           ? comparison.skillChanges.removed.join(', ')
                           : 'No skill removals'}

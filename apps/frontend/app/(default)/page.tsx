@@ -1,5 +1,5 @@
-import Hero from '@/components/home/hero';
+import { DemoAuthPage } from '@/components/demo/demo-ui';
 
 export default function Home() {
-  return <Hero />;
+  return <DemoAuthPage mode="signup" />;
 }

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -55,7 +55,10 @@ export function ResumeVersionHistory({
 
   const versionLabelById = useMemo(() => {
     return new Map(
-      versions.map((version) => [version.resume_id, version.title || version.filename || version.resume_id])
+      versions.map((version) => [
+        version.resume_id,
+        version.title || version.filename || version.resume_id,
+      ])
     );
   }, [versions]);
 
@@ -90,19 +93,21 @@ export function ResumeVersionHistory({
 
   return (
     <>
-      <section className="mt-8 border border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
-        <div className="border-b border-black px-4 py-3">
+      <section className="mt-8 rounded-2xl border border-[color:var(--border)] bg-white shadow-[0_16px_28px_rgba(15,27,45,0.12)]">
+        <div className="border-b border-[color:var(--border)] px-4 py-3">
           <h3 className="font-serif text-lg font-bold">{t('resumeViewer.versionHistoryTitle')}</h3>
-          <p className="font-mono text-[10px] uppercase tracking-wider text-gray-500">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
             {t('resumeViewer.versionHistoryDescription')}
           </p>
         </div>
 
         <div className="p-4">
           {isLoading ? (
-            <p className="font-mono text-xs uppercase text-gray-500">{t('common.loading')}</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
+              {t('common.loading')}
+            </p>
           ) : error ? (
-            <p className="font-mono text-xs uppercase text-red-700">{error}</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-red-700">{error}</p>
           ) : versions.length ? (
             <>
               <ol className="space-y-3">
@@ -110,44 +115,49 @@ export function ResumeVersionHistory({
                   const isCurrent = version.resume_id === currentResumeId;
                   const label = version.title || version.filename || version.resume_id;
                   const restoredFromLabel = version.restored_from_version_id
-                    ? versionLabelById.get(version.restored_from_version_id) || version.restored_from_version_id
+                    ? versionLabelById.get(version.restored_from_version_id) ||
+                      version.restored_from_version_id
                     : null;
 
                   return (
                     <li
                       key={version.resume_id}
-                      className={`border p-3 ${isCurrent ? 'border-blue-700 bg-blue-50' : 'border-black/20 bg-white'}`}
+                      className={`rounded-xl border p-3 ${
+                        isCurrent
+                          ? 'border-[color:var(--primary)] bg-[var(--surface-muted)]'
+                          : 'border-[color:var(--border)] bg-white'
+                      }`}
                     >
                       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
                             <h4 className="font-serif text-base font-bold">{label}</h4>
                             {isCurrent ? (
-                              <span className="font-mono text-[10px] uppercase tracking-wider text-blue-700 border border-blue-700 px-2 py-0.5">
+                              <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--primary)] border border-[color:var(--primary)] px-2 py-0.5 rounded-full">
                                 {t('resumeViewer.versionHistoryCurrent')}
                               </span>
                             ) : null}
                             {version.is_master ? (
-                              <span className="font-mono text-[10px] uppercase tracking-wider text-green-700 border border-green-700 px-2 py-0.5">
+                              <span className="text-[10px] uppercase tracking-[0.2em] text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
                                 {t('resumeViewer.versionHistoryMaster')}
                               </span>
                             ) : null}
                             {version.parent_id ? (
-                              <span className="font-mono text-[10px] uppercase tracking-wider text-gray-600 border border-gray-300 px-2 py-0.5">
+                              <span className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--text-subtle)] border border-[color:var(--border)] px-2 py-0.5 rounded-full">
                                 {t('resumeViewer.versionHistoryTailored')}
                               </span>
                             ) : null}
                             {version.restored_from_version_id ? (
-                              <span className="font-mono text-[10px] uppercase tracking-wider text-amber-700 border border-amber-700 px-2 py-0.5">
+                              <span className="text-[10px] uppercase tracking-[0.2em] text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
                                 restored snapshot
                               </span>
                             ) : null}
                           </div>
-                          <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-gray-500">
+                          <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                             {formatDate(version.created_at)}
                           </p>
                           {version.restored_from_version_id ? (
-                            <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-amber-700">
+                            <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-amber-700">
                               restored from {restoredFromLabel}
                               {version.restored_at ? ` on ${formatDate(version.restored_at)}` : ''}
                             </p>
@@ -195,7 +205,7 @@ export function ResumeVersionHistory({
               </ol>
 
               {totalPages > 1 ? (
-                <div className="mt-4 flex items-center justify-between border-t border-black/10 pt-3 font-mono text-[10px] uppercase tracking-wider text-gray-600">
+                <div className="mt-4 flex items-center justify-between border-t border-[color:var(--border)] pt-3 text-[10px] uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   <Button
                     variant="outline"
                     size="sm"
@@ -219,7 +229,7 @@ export function ResumeVersionHistory({
               ) : null}
             </>
           ) : (
-            <p className="font-mono text-xs uppercase text-gray-500">
+            <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
               {t('resumeViewer.versionHistoryEmpty')}
             </p>
           )}

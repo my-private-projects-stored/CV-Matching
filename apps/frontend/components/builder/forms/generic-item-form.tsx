@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Input } from '@/components/ui/input';
@@ -129,19 +129,17 @@ export const GenericItemForm: React.FC<GenericItemFormProps> = ({
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleAdd}
-          className="rounded-none border-black hover:bg-black hover:text-white transition-colors"
-        >
+        <Button variant="outline" size="sm" onClick={handleAdd} className="rounded-xl">
           <Plus className="w-4 h-4 mr-2" /> {finalAddLabel}
         </Button>
       </div>
 
       <div className="space-y-8">
         {items.map((item) => (
-          <div key={item.id} className="p-6 border border-black bg-gray-50 relative group">
+          <div
+            key={item.id}
+            className="p-6 rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] relative group"
+          >
             <Button
               variant="ghost"
               size="icon"
@@ -153,52 +151,52 @@ export const GenericItemForm: React.FC<GenericItemFormProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pr-8">
               <div className="space-y-2">
-                <Label className="font-mono text-xs uppercase tracking-wider text-gray-500">
+                <Label className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   {t('builder.genericItemForm.fields.title')}
                 </Label>
                 <Input
                   value={item.title || ''}
                   onChange={(e) => handleChange(item.id, 'title', e.target.value)}
                   placeholder={finalTitlePlaceholder}
-                  className="rounded-none border-black bg-white"
+                  className="rounded-xl border-[color:var(--border)] bg-white"
                 />
               </div>
               {showSubtitle && (
                 <div className="space-y-2">
-                  <Label className="font-mono text-xs uppercase tracking-wider text-gray-500">
+                  <Label className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                     {t('builder.genericItemForm.fields.organization')}
                   </Label>
                   <Input
                     value={item.subtitle || ''}
                     onChange={(e) => handleChange(item.id, 'subtitle', e.target.value)}
                     placeholder={finalSubtitlePlaceholder}
-                    className="rounded-none border-black bg-white"
+                    className="rounded-xl border-[color:var(--border)] bg-white"
                   />
                 </div>
               )}
               {showLocation && (
                 <div className="space-y-2">
-                  <Label className="font-mono text-xs uppercase tracking-wider text-gray-500">
+                  <Label className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                     {t('builder.genericItemForm.fields.location')}
                   </Label>
                   <Input
                     value={item.location || ''}
                     onChange={(e) => handleChange(item.id, 'location', e.target.value)}
                     placeholder={finalLocationPlaceholder}
-                    className="rounded-none border-black bg-white"
+                    className="rounded-xl border-[color:var(--border)] bg-white"
                   />
                 </div>
               )}
               {showYears && (
                 <div className="space-y-2">
-                  <Label className="font-mono text-xs uppercase tracking-wider text-gray-500">
+                  <Label className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                     {t('builder.genericItemForm.fields.years')}
                   </Label>
                   <Input
                     value={item.years || ''}
                     onChange={(e) => handleChange(item.id, 'years', e.target.value)}
                     placeholder={finalYearsPlaceholder}
-                    className="rounded-none border-black bg-white"
+                    className="rounded-xl border-[color:var(--border)] bg-white"
                   />
                 </div>
               )}
@@ -206,14 +204,14 @@ export const GenericItemForm: React.FC<GenericItemFormProps> = ({
 
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <Label className="font-mono text-xs uppercase tracking-wider text-gray-500">
+                <Label className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                   {t('builder.genericItemForm.fields.descriptionPoints')}
                 </Label>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleAddDescription(item.id)}
-                  className="h-6 text-xs text-blue-700 hover:text-blue-800 hover:bg-blue-50"
+                  className="h-6 text-xs text-[var(--primary)] hover:text-[var(--primary-strong)] hover:bg-[var(--surface-muted)]"
                 >
                   <Plus className="w-3 h-3 mr-1" /> {t('builder.genericItemForm.actions.addPoint')}
                 </Button>
@@ -243,16 +241,11 @@ export const GenericItemForm: React.FC<GenericItemFormProps> = ({
         ))}
 
         {items.length === 0 && (
-          <div className="text-center py-12 bg-gray-50 border border-dashed border-black">
-            <p className="font-mono text-sm text-gray-500 mb-4">
+          <div className="text-center py-12 bg-[var(--surface-muted)] border border-dashed border-[color:var(--border)] rounded-2xl">
+            <p className="text-sm text-[color:var(--text-subtle)] mb-4">
               {t('builder.genericItemForm.noEntries', { label: finalItemLabel })}
             </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAdd}
-              className="rounded-none border-black"
-            >
+            <Button variant="outline" size="sm" onClick={handleAdd} className="rounded-xl">
               <Plus className="w-4 h-4 mr-2" />{' '}
               {t('builder.genericItemForm.addFirstItem', { label: finalItemLabel })}
             </Button>

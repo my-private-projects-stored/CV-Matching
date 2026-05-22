@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
@@ -58,12 +58,12 @@ export function Dropdown({
   return (
     <div className={`space-y-1 ${className}`} ref={containerRef}>
       {label && (
-        <label className="font-mono text-xs font-bold uppercase tracking-wider text-gray-700 block">
+        <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
           {label}
         </label>
       )}
 
-      {description && <p className="text-sm text-gray-600">{description}</p>}
+      {description && <p className="text-sm text-[color:var(--text-subtle)]">{description}</p>}
 
       <div className="relative">
         {/* Trigger Button */}
@@ -72,20 +72,22 @@ export function Dropdown({
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           disabled={disabled}
-          className="w-full flex items-center justify-between border border-black bg-white px-4 py-3 font-mono text-sm transition-all duration-150 ease-out shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-none hover:translate-y-[2px] hover:translate-x-[2px] disabled:opacity-50 disabled:cursor-not-allowed rounded-none"
+          className="flex w-full items-center justify-between rounded-xl border border-[color:var(--border)] bg-white px-4 py-3 text-sm transition-all duration-150 ease-out shadow-[0_10px_20px_rgba(15,27,45,0.08)] hover:-translate-y-0.5 hover:shadow-[0_14px_24px_rgba(15,27,45,0.14)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <div className="flex-1 text-left min-w-0">
             {selectedOption ? (
               <div>
-                <div className="font-bold text-black truncate">{selectedOption.label}</div>
+                <div className="truncate font-semibold text-[var(--foreground)]">
+                  {selectedOption.label}
+                </div>
                 {selectedOption.description && (
-                  <div className="text-xs text-gray-500 mt-1 font-normal truncate">
+                  <div className="mt-1 truncate text-xs text-[color:var(--text-subtle)]">
                     {selectedOption.description}
                   </div>
                 )}
               </div>
             ) : (
-              <span className="text-gray-400">{t('common.selectOption')}</span>
+              <span className="text-[color:var(--text-subtle)]">{t('common.selectOption')}</span>
             )}
           </div>
           <ChevronDown
@@ -97,21 +99,21 @@ export function Dropdown({
 
         {/* Dropdown Menu */}
         {isOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1 z-50 border border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] rounded-none">
+          <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl border border-[color:var(--border)] bg-white shadow-[0_16px_28px_rgba(15,27,45,0.16)]">
             <div className="max-h-64 overflow-y-auto">
               {options.map((option, index) => (
                 <React.Fragment key={option.id}>
                   <button
                     onClick={() => handleSelect(option.id)}
-                    className={`w-full px-4 py-3 text-left font-mono transition-colors duration-150 border border-black ${
+                    className={`w-full px-4 py-3 text-left transition-colors duration-150 ${
                       option.id === value
-                        ? 'bg-green-700 text-white'
-                        : 'bg-white text-black hover:bg-gray-50'
-                    } ${index > 0 ? '-mt-[1px]' : ''} active:bg-gray-100`}
+                        ? 'bg-[var(--primary)] text-white'
+                        : 'bg-white text-[var(--foreground)] hover:bg-[var(--surface-muted)]'
+                    } ${index > 0 ? 'border-t border-[color:var(--border)]' : ''} active:bg-[var(--surface-muted)]`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
-                        <div className="font-bold text-sm">{option.label}</div>
+                        <div className="text-sm font-semibold">{option.label}</div>
                         {option.description && (
                           <div className="text-xs mt-1 opacity-80">{option.description}</div>
                         )}

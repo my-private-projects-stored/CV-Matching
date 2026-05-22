@@ -56,13 +56,18 @@ export async function fetchMe(accessToken: string): Promise<{ user: AuthUser }> 
   return (await res.json()) as { user: AuthUser };
 }
 
-export async function forgotPassword(email: string): Promise<{ message: string; reset_token?: string }> {
+export async function forgotPassword(
+  email: string
+): Promise<{ message: string; reset_token?: string }> {
   const res = await apiPost('/auth/forgot-password', { email });
   await throwIfNotOk(res, 'Forgot password failed');
   return (await res.json()) as { message: string; reset_token?: string };
 }
 
-export async function resetPassword(payload: { token: string; new_password: string }): Promise<{ message: string }> {
+export async function resetPassword(payload: {
+  token: string;
+  new_password: string;
+}): Promise<{ message: string }> {
   const res = await apiPost('/auth/reset-password', payload);
   await throwIfNotOk(res, 'Reset password failed');
   return (await res.json()) as { message: string };

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { type TemplateType, TEMPLATE_OPTIONS } from '@/lib/types/template-settings';
@@ -44,7 +44,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ value, onCha
           onClick={() => onChange(template.id)}
           className={`group flex flex-col items-center rounded-xl border p-3 transition-all ${
             value === template.id
-              ? 'border-blue-500 bg-white shadow-[0_10px_20px_rgba(37,99,235,0.18)]'
+              ? 'border-[color:var(--primary)] bg-white shadow-[0_12px_24px_rgba(15,27,45,0.14)]'
               : 'border-[color:var(--border)] bg-white hover:bg-[var(--surface-muted)]'
           }`}
           title={templateLabels[template.id].description}
@@ -57,7 +57,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ value, onCha
           {/* Template Name */}
           <span
             className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${
-              value === template.id ? 'text-blue-700' : 'text-[color:var(--text-subtle)]'
+              value === template.id ? 'text-[var(--primary)]' : 'text-[color:var(--text-subtle)]'
             }`}
           >
             {templateLabels[template.id].name}
@@ -80,9 +80,9 @@ interface TemplateThumbnailProps {
 }
 
 export const TemplateThumbnail: React.FC<TemplateThumbnailProps> = ({ type, isActive }) => {
-  const lineColor = isActive ? 'bg-blue-700' : 'bg-gray-400';
-  const borderColor = isActive ? 'border-blue-700' : 'border-gray-400';
-  const accentColor = isActive ? 'bg-blue-600' : 'bg-blue-400';
+  const lineColor = isActive ? 'bg-[var(--primary)]' : 'bg-[color:var(--text-subtle)]';
+  const borderColor = isActive ? 'border-[color:var(--primary)]' : 'border-[color:var(--border)]';
+  const accentColor = isActive ? 'bg-[var(--primary-strong)]' : 'bg-[color:var(--border)]';
 
   if (type === 'swiss-single') {
     // Single column thumbnail
@@ -150,7 +150,9 @@ export const TemplateThumbnail: React.FC<TemplateThumbnailProps> = ({ type, isAc
           </div>
           {/* Right column (narrower) - with accent border and headers */}
           <div
-            className={`w-1/3 border-l-2 ${isActive ? 'border-l-blue-600' : 'border-l-blue-400'} pl-1 space-y-0.5`}
+            className={`w-1/3 border-l-2 ${
+              isActive ? 'border-l-[color:var(--primary)]' : 'border-l-[color:var(--border)]'
+            } pl-1 space-y-0.5`}
           >
             <div className={`h-0.5 ${accentColor} w-full`}></div>
             <div className={`h-0.5 ${lineColor} w-4/5 opacity-50`}></div>
@@ -183,7 +185,7 @@ export const TemplateThumbnail: React.FC<TemplateThumbnailProps> = ({ type, isAc
           <div className={`h-0.5 ${lineColor} w-5/6 opacity-50`}></div>
         </div>
         {/* Right column (narrower) */}
-        <div className="w-1/3 border-l border-gray-200 pl-1 space-y-0.5">
+        <div className="w-1/3 border-l border-[color:var(--border)] pl-1 space-y-0.5">
           <div className={`h-0.5 ${lineColor} w-full`}></div>
           <div className={`h-0.5 ${lineColor} w-4/5 opacity-50`}></div>
           <div className="h-0.5"></div>

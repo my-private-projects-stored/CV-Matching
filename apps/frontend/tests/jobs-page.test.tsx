@@ -280,7 +280,9 @@ describe('JobsPage candidate apply redirects', () => {
     render(<JobsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'jobsPage.backToApplications' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'jobsPage.backToApplications' })
+      ).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'jobsPage.backToApplications' }));
@@ -301,7 +303,9 @@ describe('JobsPage candidate apply redirects', () => {
     render(<JobsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'jobsPage.backToApplications' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'jobsPage.backToApplications' })
+      ).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'jobsPage.backToApplications' }));
@@ -348,7 +352,9 @@ describe('JobsPage candidate apply redirects', () => {
     render(<JobsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'applicationsPage.returnToFlow' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'applicationsPage.returnToFlow' })
+      ).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'applicationsPage.returnToFlow' }));
@@ -376,7 +382,9 @@ describe('JobsPage candidate apply redirects', () => {
     render(<JobsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'jobsPage.openFocusedInFlow' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'jobsPage.openFocusedInFlow' })
+      ).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'jobsPage.openFocusedInFlow' }));
@@ -411,11 +419,14 @@ describe('JobsPage candidate apply redirects', () => {
       expect(screen.getByText('jobsPage.submittedRedirecting')).toBeInTheDocument();
     });
 
-    await waitFor(() => {
-      expect(mockedPush).toHaveBeenCalledWith(
-        '/applications?candidate_id=candidate-1&application_id=app-1&candidate_focus=1'
-      );
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        expect(mockedPush).toHaveBeenCalledWith(
+          '/applications?candidate_id=candidate-1&application_id=app-1&candidate_focus=1'
+        );
+      },
+      { timeout: 2000 }
+    );
   });
 
   it('redirects duplicate apply to candidate history without focused application context', async () => {
@@ -433,9 +444,12 @@ describe('JobsPage candidate apply redirects', () => {
       expect(screen.getByText('jobsPage.duplicateRedirecting')).toBeInTheDocument();
     });
 
-    await waitFor(() => {
-      expect(mockedPush).toHaveBeenCalledWith('/applications?candidate_id=candidate-1');
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        expect(mockedPush).toHaveBeenCalledWith('/applications?candidate_id=candidate-1');
+      },
+      { timeout: 2000 }
+    );
   });
 
   it('includes jobs snapshot query when redirecting candidate apply success to applications', async () => {
@@ -452,23 +466,26 @@ describe('JobsPage candidate apply redirects', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'jobsPage.applyWithMaster' }));
 
-    await waitFor(() => {
-      const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
-      expect(href.startsWith('/applications?')).toBe(true);
+    await waitFor(
+      () => {
+        const href = String(mockedPush.mock.calls.at(-1)?.[0] || '');
+        expect(href.startsWith('/applications?')).toBe(true);
 
-      const params = new URLSearchParams(href.replace('/applications?', ''));
-      expect(params.get('candidate_id')).toBe('candidate-1');
-      expect(params.get('application_id')).toBe('app-1');
-      expect(params.get('candidate_focus')).toBe('1');
+        const params = new URLSearchParams(href.replace('/applications?', ''));
+        expect(params.get('candidate_id')).toBe('candidate-1');
+        expect(params.get('application_id')).toBe('app-1');
+        expect(params.get('candidate_focus')).toBe('1');
 
-      const returnQuery = params.get('jobs_return_query') || '';
-      const snapshot = new URLSearchParams(returnQuery);
-      expect(snapshot.get('search')).toBe('Platform Engineer');
-      expect(snapshot.get('status')).toBe('all');
-      expect(snapshot.get('page')).toBe('2');
-      expect(snapshot.get('location')).toBe('Remote');
-      expect(snapshot.get('source')).toBe('applications');
-    }, { timeout: 2000 });
+        const returnQuery = params.get('jobs_return_query') || '';
+        const snapshot = new URLSearchParams(returnQuery);
+        expect(snapshot.get('search')).toBe('Platform Engineer');
+        expect(snapshot.get('status')).toBe('all');
+        expect(snapshot.get('page')).toBe('2');
+        expect(snapshot.get('location')).toBe('Remote');
+        expect(snapshot.get('source')).toBe('applications');
+      },
+      { timeout: 2000 }
+    );
   });
 
   it('stores selected job context and opens flow for tailor-and-apply path', async () => {
@@ -549,7 +566,8 @@ describe('JobsPage candidate apply redirects', () => {
       expect(screen.getByText('jobsPage.viewRankedCandidates')).toBeInTheDocument();
     });
 
-    const href = screen.getByText('jobsPage.viewRankedCandidates').closest('a')?.getAttribute('href') || '';
+    const href =
+      screen.getByText('jobsPage.viewRankedCandidates').closest('a')?.getAttribute('href') || '';
     expect(href.startsWith('/applications?')).toBe(true);
 
     const params = new URLSearchParams(href.replace('/applications?', ''));
@@ -579,7 +597,8 @@ describe('JobsPage candidate apply redirects', () => {
       expect(screen.getByText('jobsPage.viewRankedCandidates')).toBeInTheDocument();
     });
 
-    const href = screen.getByText('jobsPage.viewRankedCandidates').closest('a')?.getAttribute('href') || '';
+    const href =
+      screen.getByText('jobsPage.viewRankedCandidates').closest('a')?.getAttribute('href') || '';
     const params = new URLSearchParams(href.replace('/applications?', ''));
     expect(params.get('job_id')).toBe('job-1');
 
@@ -603,7 +622,8 @@ describe('JobsPage candidate apply redirects', () => {
       expect(screen.getByText('jobsPage.viewRankedCandidates')).toBeInTheDocument();
     });
 
-    const href = screen.getByText('jobsPage.viewRankedCandidates').closest('a')?.getAttribute('href') || '';
+    const href =
+      screen.getByText('jobsPage.viewRankedCandidates').closest('a')?.getAttribute('href') || '';
     const params = new URLSearchParams(href.replace('/applications?', ''));
     expect(params.get('job_id')).toBe('job-1');
 

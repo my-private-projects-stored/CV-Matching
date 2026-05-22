@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Input } from '@/components/ui/input';
@@ -89,27 +89,17 @@ export const EducationForm: React.FC<EducationFormProps> = ({ data, onChange }) 
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleAdd}
-          className="rounded-none border-black hover:bg-black hover:text-white transition-colors"
-        >
+        <Button variant="outline" size="sm" onClick={handleAdd} className="rounded-xl">
           <Plus className="w-4 h-4 mr-2" /> {t('builder.forms.education.addSchool')}
         </Button>
       </div>
 
       {data.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 border border-dashed border-black">
-          <p className="font-mono text-sm text-gray-500 mb-4">
+        <div className="text-center py-12 bg-[var(--surface-muted)] border border-dashed border-[color:var(--border)] rounded-2xl">
+          <p className="text-sm text-[color:var(--text-subtle)] mb-4">
             {t('builder.genericItemForm.noEntries', { label: t('resume.sections.education') })}
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleAdd}
-            className="rounded-none border-black"
-          >
+          <Button variant="outline" size="sm" onClick={handleAdd} className="rounded-xl">
             <Plus className="w-4 h-4 mr-2" /> {t('builder.forms.education.addFirstSchool')}
           </Button>
         </div>
@@ -122,7 +112,7 @@ export const EducationForm: React.FC<EducationFormProps> = ({ data, onChange }) 
             <div className="space-y-8">
               {data.map((item) => (
                 <DraggableListItem key={item.id} id={item.id}>
-                  <div className="p-6 border border-black bg-gray-50 relative group">
+                  <div className="p-6 rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] relative group">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -134,48 +124,48 @@ export const EducationForm: React.FC<EducationFormProps> = ({ data, onChange }) 
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pr-8">
                       <div className="space-y-2">
-                        <Label className="font-mono text-xs uppercase tracking-wider text-gray-500">
+                        <Label className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                           {t('builder.forms.education.fields.institution')}
                         </Label>
                         <Input
                           value={item.institution || ''}
                           onChange={(e) => handleChange(item.id, 'institution', e.target.value)}
                           placeholder={t('builder.forms.education.placeholders.institution')}
-                          className="rounded-none border-black bg-white"
+                          className="rounded-xl border-[color:var(--border)] bg-white"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="font-mono text-xs uppercase tracking-wider text-gray-500">
+                        <Label className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                           {t('builder.forms.education.fields.degree')}
                         </Label>
                         <Input
                           value={item.degree || ''}
                           onChange={(e) => handleChange(item.id, 'degree', e.target.value)}
                           placeholder={t('builder.forms.education.placeholders.degree')}
-                          className="rounded-none border-black bg-white"
+                          className="rounded-xl border-[color:var(--border)] bg-white"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="font-mono text-xs uppercase tracking-wider text-gray-500">
+                        <Label className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                           {t('builder.genericItemForm.fields.years')}
                         </Label>
                         <Input
                           value={item.years || ''}
                           onChange={(e) => handleChange(item.id, 'years', e.target.value)}
                           placeholder={t('builder.forms.education.placeholders.years')}
-                          className="rounded-none border-black bg-white"
+                          className="rounded-xl border-[color:var(--border)] bg-white"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="font-mono text-xs uppercase tracking-wider text-gray-500">
+                      <Label className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
                         {t('builder.forms.education.fields.descriptionOptional')}
                       </Label>
                       <Textarea
                         value={item.description || ''}
                         onChange={(e) => handleChange(item.id, 'description', e.target.value)}
-                        className="min-h-[60px] text-black text-sm rounded-none border-black bg-white"
+                        className="min-h-[60px] text-[var(--foreground)] text-sm rounded-xl border-[color:var(--border)] bg-white"
                         placeholder={t('builder.forms.education.placeholders.description')}
                       />
                     </div>
