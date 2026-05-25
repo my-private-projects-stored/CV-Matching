@@ -1,5 +1,8 @@
 function getEmbeddingServiceUrl() {
-  return process.env.EMBEDDING_SERVICE_URL || "http://localhost:8010";
+  const configured = String(process.env.EMBEDDING_SERVICE_URL || "").trim();
+  return configured && configured !== "undefined" && configured !== "null"
+    ? configured
+    : "http://localhost:8010";
 }
 
 export async function generateEmbedding(text) {

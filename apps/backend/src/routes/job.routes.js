@@ -15,8 +15,8 @@ const requireAuthenticatedRole = [requireAuth, requireRoles("candidate", "recrui
 const requireRecruiterRole = [requireAuth, requireRoles("recruiter", "admin")];
 
 router.post("/upload", ...requireAuthenticatedRole, uploadJobDescriptionsHandler);
-router.get("/", listJobsHandler);
-router.get("/:id", getJobHandler);
+router.get("/", ...requireAuthenticatedRole, listJobsHandler);
+router.get("/:id", ...requireAuthenticatedRole, getJobHandler);
 router.post("/", ...requireRecruiterRole, createJobHandler);
 router.patch("/:id", ...requireRecruiterRole, updateJobHandler);
 router.delete("/:id", ...requireRecruiterRole, deleteJobHandler);

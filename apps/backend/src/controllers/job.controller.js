@@ -6,7 +6,7 @@ import {
   updateJobById,
 } from "../services/job.service.js";
 import { getResumeByPublicId } from "../services/resume.service.js";
-import Job from "../models/Job.js";
+import { enqueueJobClosedNotification } from "../services/notification-queue.service.js";
 
 const DEFAULT_RECRUITER_ID = "000000000000000000000002";
 
@@ -33,7 +33,10 @@ function inferJobTitle(description) {
 
 export async function listJobsHandler(req, res, next) {
   try {
-    const result = await listJobs(req.query || {});
+    const result = await listJobs(req.query || {}, {
+      role: getAuthRole(req),
+      userId: getAuthUserId(req),
+    });
     return res.status(200).json(result);
   } catch (error) {
     return next(error);
@@ -47,7 +50,11 @@ export async function getJobHandler(req, res, next) {
         .trim()
         .toLowerCase()
     );
-    const job = await getJobById(req.params.id, { includeDeleted });
+    const job = await getJobById(req.params.id, {
+      includeDeleted,
+      role: getAuthRole(req),
+      userId: getAuthUserId(req),
+    });
 
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
@@ -61,7 +68,11 @@ export async function getJobHandler(req, res, next) {
 
 export async function createJobHandler(req, res, next) {
   try {
-    const created = await createJob(req.body);
+    const payload = {
+      ...(req.body || {}),
+      recruiterId: getAuthUserId(req) || req.body?.recruiterId,
+    };
+    const created = await createJob(payload);
     return res.status(201).json(created);
   } catch (error) {
     return next(error);
@@ -101,7 +112,7 @@ export async function uploadJobDescriptionsHandler(req, res, next) {
         return res.status(400).json({ message: "Empty job description" });
       }
 
-      const created = await Job.create({
+      const created = await createJob({
         recruiterId: DEFAULT_RECRUITER_ID,
         title: inferJobTitle(content),
         description: content,
@@ -131,10 +142,25 @@ export async function uploadJobDescriptionsHandler(req, res, next) {
 
 export async function updateJobHandler(req, res, next) {
   try {
-    const updated = await updateJobById(req.params.id, req.body);
+    const updated = await updateJobById(req.params.id, req.body, {
+      role: getAuthRole(req),
+      userId: getAuthUserId(req),
+    });
 
     if (!updated) {
       return res.status(404).json({ message: "Job not found" });
+    }
+
+    // Fire-and-forget: notify active candidates when job is closed
+    const newStatus = String(req.body?.status || "").trim().toLowerCase();
+    if (newStatus === "closed" || newStatus === "deleted") {
+      enqueueJobClosedNotification({
+        jobId: String(updated._id),
+        jobTitle: String(updated.title || ""),
+        jobLocation: String(updated.location || ""),
+      }).catch((err) => {
+        console.warn("[job.controller] failed to enqueue job_closed notification", err.message);
+      });
     }
 
     return res.status(200).json(updated);
@@ -145,11 +171,23 @@ export async function updateJobHandler(req, res, next) {
 
 export async function deleteJobHandler(req, res, next) {
   try {
-    const deleted = await deleteJobById(req.params.id);
+    const deleted = await deleteJobById(req.params.id, {
+      role: getAuthRole(req),
+      userId: getAuthUserId(req),
+    });
 
     if (!deleted) {
       return res.status(404).json({ message: "Job not found" });
     }
+
+    // Fire-and-forget: notify active candidates that job was closed/deleted
+    enqueueJobClosedNotification({
+      jobId: String(deleted._id),
+      jobTitle: String(deleted.title || ""),
+      jobLocation: String(deleted.location || ""),
+    }).catch((err) => {
+      console.warn("[job.controller] failed to enqueue job_closed notification", err.message);
+    });
 
     return res.status(200).json({
       message: "Job deleted",

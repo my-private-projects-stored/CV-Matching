@@ -220,6 +220,21 @@ export async function fetchRankedApplications(params: {
   return res.json();
 }
 
+export async function fetchMyApplicationHistory(params?: {
+  page?: number;
+  limit?: number;
+  status?: ApplicationStatus | '';
+}): Promise<CandidateHistoryResponse> {
+  const query = new URLSearchParams();
+  if (params?.page) query.set('page', String(params.page));
+  if (params?.limit) query.set('limit', String(params.limit));
+  if (params?.status) query.set('status', params.status);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  const res = await apiFetch(`/applications/history${suffix}`);
+  await assertOk(res, 'Failed to load application history');
+  return res.json();
+}
+
 export async function fetchCandidateApplicationHistory(params: {
   candidateId: string;
   page?: number;

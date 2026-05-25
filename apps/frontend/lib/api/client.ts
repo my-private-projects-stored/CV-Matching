@@ -6,7 +6,8 @@
 
 const DEFAULT_PUBLIC_API_BASE_URL = '/';
 const DEFAULT_INTERNAL_API_BASE_URL = 'http://127.0.0.1:3001';
-const AUTH_STORAGE_KEY = 'cvm_auth_session_v1';
+export const AUTH_STORAGE_KEY = 'cvm_auth_session_v1';
+export const AUTH_TOKEN_COOKIE = 'cvm_token';
 
 function normalizeApiUrl(value: string): string {
   const trimmed = value.trim();
@@ -197,4 +198,28 @@ export async function apiDelete(endpoint: string): Promise<Response> {
  */
 export function getUploadUrl(): string {
   return `${API_BASE}/resumes/upload`;
+}
+
+/** Health check — no auth required */
+export async function fetchHealth(): Promise<{ status: string }> {
+  const res = await apiFetch('/health');
+  if (!res.ok) {
+    throw new Error('Health check failed');
+  }
+  return res.json();
+}
+
+export function setAuthTokenCookie(token: string | null) {
+  if (typeof document === 'undefined') return;
+  if (!token) {
+    document.cookie = `${AUTH_TOKEN_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
+    return;
+  }
+  document.cookie = `${AUTH_TOKEN_COOKIE}=${encodeURIComponent(token)}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
+}
+
+export function readAuthTokenCookie(): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${AUTH_TOKEN_COOKIE}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
 }

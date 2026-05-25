@@ -1,5 +1,6 @@
 import "dotenv/config";
 
+import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 
 import Application from "../src/models/Application.js";
@@ -17,17 +18,19 @@ async function main() {
   await mongoose.connect(mongoUri);
 
   const suffix = Date.now();
+  const demoPassword = "StrongPass123";
+  const passwordHash = await bcrypt.hash(demoPassword, 10);
 
   const recruiter = await User.create({
     email: `seed.recruiter.${suffix}@example.com`,
-    password: "x".repeat(60),
+    password: passwordHash,
     role: "recruiter",
     fullName: "Seed Recruiter",
   });
 
   const candidate = await User.create({
     email: `seed.candidate.${suffix}@example.com`,
-    password: "x".repeat(60),
+    password: passwordHash,
     role: "candidate",
     fullName: "Seed Candidate",
   });
@@ -68,6 +71,9 @@ async function main() {
       {
         recruiterId: String(recruiter._id),
         candidateId: String(candidate._id),
+        recruiterEmail: recruiter.email,
+        candidateEmail: candidate.email,
+        password: demoPassword,
         jobId: String(job._id),
         resumeId: String(resume._id),
         applicationId: String(application._id),

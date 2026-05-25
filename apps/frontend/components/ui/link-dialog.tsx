@@ -6,6 +6,7 @@ import { Button } from './button';
 import { Input } from './input';
 import { Label } from './label';
 import { X } from 'lucide-react';
+import { useTranslations } from '@/lib/i18n/translations';
 
 interface LinkDialogProps {
   editor: Editor;
@@ -16,6 +17,7 @@ interface LinkDialogProps {
  * Link Dialog Component
  */
 export const LinkDialog: React.FC<LinkDialogProps> = ({ editor, onClose }) => {
+  const { t } = useTranslations();
   const [url, setUrl] = useState('');
   const [text, setText] = useState('');
 
@@ -125,34 +127,32 @@ export const LinkDialog: React.FC<LinkDialogProps> = ({ editor, onClose }) => {
 
           {/* Title */}
           <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-subtle)]">
-            [ {hasExistingLink ? 'EDIT LINK' : 'ADD LINK'} ]
+            [ {hasExistingLink ? t('editor.editLink') : t('editor.addLink')} ]
           </h3>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Display Text */}
             <div className="space-y-2">
               <Label htmlFor="link-text" className="text-xs uppercase tracking-[0.2em]">
-                Display Text
+                {t('editor.displayText')}
               </Label>
               <Input
                 id="link-text"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="Link text"
+                placeholder={t('editor.linkText')}
                 autoFocus
               />
             </div>
 
-            {/* URL */}
             <div className="space-y-2">
               <Label htmlFor="link-url" className="text-xs uppercase tracking-[0.2em]">
-                URL
+                {t('editor.url')}
               </Label>
               <Input
                 id="link-url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://example.com"
+                placeholder={t('editor.urlPlaceholder')}
               />
             </div>
 
@@ -160,14 +160,14 @@ export const LinkDialog: React.FC<LinkDialogProps> = ({ editor, onClose }) => {
             <div className="flex gap-2 justify-end pt-2">
               {hasExistingLink && (
                 <Button type="button" variant="destructive" size="sm" onClick={handleRemoveLink}>
-                  Remove Link
+                  {t('editor.removeLink')}
                 </Button>
               )}
               <Button type="button" variant="outline" size="sm" onClick={onClose}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button type="submit" variant="default" size="sm">
-                {hasExistingLink ? 'Update' : 'Add'} Link
+                {hasExistingLink ? t('editor.updateLink') : t('editor.addLinkButton')}
               </Button>
             </div>
           </form>

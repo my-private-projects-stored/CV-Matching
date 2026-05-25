@@ -2,7 +2,10 @@ import {
   confirmResumeImprovement,
   createResumeFromUpload,
   createResume,
+  addResumeSection,
+  buildResumeJdMatch,
   deleteResumeById,
+  deleteResumeSection,
   downloadOriginalResumeFile,
   getMasterResume,
   generateCoverLetterPdf,
@@ -16,13 +19,18 @@ import {
   previewResumeImprovement,
   restoreFromVersion,
   retryResumeProcessing,
+  reorderResumeSections,
   setResumeAsMaster,
+  setResumeJobContext,
   toResumeFetchData,
   toResumeSummary,
   updateResumeById,
   updateResumeFields,
+  updateResumeSection,
 } from "../services/resume.service.js";
 import { assertAiGenerationAllowed, getLanguageConfig } from "../services/config.service.js";
+import Application from "../models/Application.js";
+import Job from "../models/Job.js";
 
 const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi"]);
 
@@ -56,8 +64,46 @@ function isCandidateRole(req) {
   return getAuthRole(req) === "candidate";
 }
 
+function isRecruiterRole(req) {
+  return getAuthRole(req) === "recruiter";
+}
+
 function isOwnedByActor(resume, req) {
   return String(resume?.candidateId || "") === getAuthUserId(req);
+}
+
+async function canRecruiterAccessResume(resumeId, req) {
+  const userId = getAuthUserId(req);
+  if (!resumeId || !userId) return false;
+
+  const applications = await Application.find({ resumeId }).select("jobId").lean();
+  if (!applications.length) return false;
+
+  const jobIds = applications.map((item) => item.jobId).filter(Boolean);
+  const count = await Job.countDocuments({
+    _id: { $in: jobIds },
+    recruiterId: userId,
+  });
+  return count > 0;
+}
+
+async function ensureCandidateOwnsResume(req, resumeId, action = "update") {
+  if (!isCandidateRole(req)) return null;
+
+  const resume = await getResumeByPublicId(resumeId);
+  if (!resume) {
+    const error = new Error("Resume not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (!isOwnedByActor(resume, req)) {
+    const error = new Error(`You can only ${action} your own resume`);
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return resume;
 }
 
 function getResumePayloadFromPatchBody(body = {}) {
@@ -77,6 +123,7 @@ function getResumePayloadFromPatchBody(body = {}) {
     "outreachMessage",
     "jobDescription",
     "jobId",
+    "builderData",
   ]);
 
   const hasModelKeys = Object.keys(body).some((key) => modelKeys.has(key));
@@ -271,16 +318,7 @@ export async function createResumeHandler(req, res, next) {
 
 export async function updateResumeHandler(req, res, next) {
   try {
-    if (isCandidateRole(req)) {
-      const resume = await getResumeByPublicId(req.params.id);
-      if (!resume) {
-        return res.status(404).json({ message: "Resume not found" });
-      }
-
-      if (!isOwnedByActor(resume, req)) {
-        return res.status(403).json({ message: "You can only update your own resume" });
-      }
-    }
+    await ensureCandidateOwnsResume(req, req.params.id, "update");
 
     const payload = getResumePayloadFromPatchBody(req.body);
     const updated = await updateResumeById(req.params.id, payload);
@@ -558,6 +596,90 @@ export async function getResumeJobDescriptionHandler(req, res, next) {
   }
 }
 
+export async function matchResumeToJobDescriptionHandler(req, res, next) {
+  try {
+    if (isCandidateRole(req)) {
+      const resume = await getResumeByPublicId(req.params.id);
+      if (!resume) {
+        return res.status(404).json({ message: "Resume not found" });
+      }
+
+      if (!isOwnedByActor(resume, req)) {
+        return res.status(403).json({ message: "You can only match your own resume" });
+      }
+    }
+
+    const data = await buildResumeJdMatch(req.params.id, req.body || {});
+    if (!data) {
+      return res.status(404).json({ message: "Resume or job description not found" });
+    }
+
+    return res.status(200).json({
+      request_id: requestId(),
+      data,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function reorderResumeSectionsHandler(req, res, next) {
+  try {
+    await ensureCandidateOwnsResume(req, req.params.id, "update");
+    const sectionIds = Array.isArray(req.body?.section_ids)
+      ? req.body.section_ids
+      : Array.isArray(req.body?.sectionIds)
+        ? req.body.sectionIds
+        : [];
+    const updated = await reorderResumeSections(req.params.id, sectionIds);
+    if (!updated) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+    return res.status(200).json({ request_id: requestId(), data: toResumeFetchData(updated) });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function updateResumeSectionHandler(req, res, next) {
+  try {
+    await ensureCandidateOwnsResume(req, req.params.id, "update");
+    const updated = await updateResumeSection(req.params.id, req.params.sectionId, req.body || {});
+    if (!updated) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+    return res.status(200).json({ request_id: requestId(), data: toResumeFetchData(updated) });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function addResumeSectionHandler(req, res, next) {
+  try {
+    await ensureCandidateOwnsResume(req, req.params.id, "update");
+    const updated = await addResumeSection(req.params.id, req.body || {});
+    if (!updated) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+    return res.status(201).json({ request_id: requestId(), data: toResumeFetchData(updated) });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function deleteResumeSectionHandler(req, res, next) {
+  try {
+    await ensureCandidateOwnsResume(req, req.params.id, "update");
+    const updated = await deleteResumeSection(req.params.id, req.params.sectionId);
+    if (!updated) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+    return res.status(200).json({ request_id: requestId(), data: toResumeFetchData(updated) });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 export async function generateCoverLetterHandler(req, res, next) {
   try {
     await assertAiGenerationAllowed("cover_letter_generation");
@@ -578,6 +700,13 @@ export async function generateCoverLetterHandler(req, res, next) {
       req.body?.output_language,
       configuredLanguage?.content_language
     );
+    const jobId = String(req.body?.job_id || req.body?.jobId || "").trim();
+    if (jobId) {
+      const resumeWithJob = await setResumeJobContext(req.params.id, jobId);
+      if (!resumeWithJob) {
+        return res.status(404).json({ message: "Resume or job not found" });
+      }
+    }
     const content = await generateCoverLetterContent(req.params.id, outputLanguage);
     if (!content) {
       return res.status(404).json({ message: "Resume not found" });
@@ -650,15 +779,17 @@ export async function downloadCoverLetterPdfHandler(req, res, next) {
 
 export async function downloadOriginalResumeHandler(req, res, next) {
   try {
-    if (isCandidateRole(req)) {
-      const resume = await getResumeByPublicId(req.params.id);
-      if (!resume) {
-        return res.status(404).json({ message: "Resume not found" });
-      }
+    const resume = await getResumeByPublicId(req.params.id);
+    if (!resume) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
 
-      if (!isOwnedByActor(resume, req)) {
-        return res.status(403).json({ message: "You can only access your own resume" });
-      }
+    if (isCandidateRole(req) && !isOwnedByActor(resume, req)) {
+      return res.status(403).json({ message: "You can only access your own resume" });
+    }
+
+    if (isRecruiterRole(req) && !(await canRecruiterAccessResume(req.params.id, req))) {
+      return res.status(403).json({ message: "You can only download resumes for your job applications" });
     }
 
     const result = await downloadOriginalResumeFile(req.params.id);
@@ -698,6 +829,13 @@ export async function generateOutreachHandler(req, res, next) {
       req.body?.output_language,
       configuredLanguage?.content_language
     );
+    const jobId = String(req.body?.job_id || req.body?.jobId || "").trim();
+    if (jobId) {
+      const resumeWithJob = await setResumeJobContext(req.params.id, jobId);
+      if (!resumeWithJob) {
+        return res.status(404).json({ message: "Resume or job not found" });
+      }
+    }
     const content = await generateOutreachContent(req.params.id, outputLanguage);
     if (!content) {
       return res.status(404).json({ message: "Resume not found" });

@@ -74,10 +74,12 @@ test(
       });
       assert.equal(recruiterSignup.status, 201);
       const recruiterToken = recruiterSignup.json?.access_token;
+      const recruiterId = recruiterSignup.json?.user?.id;
       assert.ok(recruiterToken);
+      assert.ok(recruiterId);
 
       const created = await Job.create({
-        recruiterId: new mongoose.Types.ObjectId(),
+        recruiterId,
         title: "Backend Engineer",
         description: "Build APIs",
         requirements: "Node.js, MongoDB",
@@ -170,10 +172,12 @@ test(
       });
       assert.equal(recruiterSignup.status, 201);
       const recruiterToken = recruiterSignup.json?.access_token;
+      const recruiterId = recruiterSignup.json?.user?.id;
       assert.ok(recruiterToken);
+      assert.ok(recruiterId);
 
       const created = await Job.create({
-        recruiterId: new mongoose.Types.ObjectId(),
+        recruiterId,
         title: "Frontend Engineer",
         description: "Build frontends",
         requirements: "React",

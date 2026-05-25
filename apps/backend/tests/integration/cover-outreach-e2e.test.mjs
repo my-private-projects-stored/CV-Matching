@@ -85,6 +85,12 @@ test(
         full_name: "Recruiter Cover Outreach",
         role: "recruiter",
       });
+      const admin = await signup(baseUrl, {
+        email: "admin.coveroutreach@example.com",
+        password: "StrongPass123",
+        full_name: "Admin Cover Outreach",
+        role: "admin",
+      });
       const candidateA = await signup(baseUrl, {
         email: "candidate.coveroutreach@example.com",
         password: "StrongPass123",
@@ -128,7 +134,7 @@ test(
 
       const privacyPut = await requestJson(baseUrl, "PUT", "/config/privacy", {
         privacy_mode: "local_only",
-      }, recruiter.token);
+      }, admin.token);
       assert.equal(privacyPut.status, 200);
 
       const blockedCover = await requestJson(
@@ -157,7 +163,7 @@ test(
         provider: "ollama",
         model: "gemma3:4b",
         api_base: "http://localhost:11434",
-      }, recruiter.token);
+      }, admin.token);
       assert.equal(llmPutOllama.status, 200);
 
       const recruiterCover = await requestJson(

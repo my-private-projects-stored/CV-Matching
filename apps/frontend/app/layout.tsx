@@ -1,18 +1,26 @@
 import type { Metadata } from 'next';
-import './(default)/css/globals.css';
+import '../styles/globals.css';
+import { Providers } from '@/components/providers';
 
 export const metadata: Metadata = {
-  title: 'CV Matching - Cầu nối tuyển dụng AI',
-  description: 'Nền tảng tuyển dụng kết nối ứng viên và doanh nghiệp bằng AI.',
+  title: 'CV Matching - AI Recruitment Platform',
+  description: 'AI recruitment platform connecting candidates and companies.',
   applicationName: 'CV Matching',
-  keywords: ['cv', 'tuyển dụng', 'ứng viên', 'doanh nghiệp', 'ai', 'matching'],
+  keywords: ['cv', 'recruitment', 'candidate', 'company', 'ai', 'matching'],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="vi" className="h-full" suppressHydrationWarning>
-      <body className="min-h-full bg-[var(--background)] text-[var(--foreground)] antialiased">
-        {children}
+      <head>
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="min-h-full bg-[var(--bg)] text-[var(--text-1)] antialiased">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

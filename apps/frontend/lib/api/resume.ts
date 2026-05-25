@@ -442,3 +442,96 @@ export async function fetchJobDescription(
   await assertOk(res, 'Failed to fetch job description');
   return res.json();
 }
+
+export interface JdMatchResult {
+  match_percentage: number;
+  keyword_score?: number;
+  matched_keywords: string[];
+  missing_keywords: string[];
+  jd_highlights: Array<{ text: string; type: string }>;
+  resume_highlights: Array<{ text: string; type: string }>;
+  recommendations?: string[];
+}
+
+/** Matches resume against a pasted job description */
+export async function matchResumeToJd(
+  resumeId: string,
+  payload: { job_description: string; include_highlights?: boolean }
+): Promise<JdMatchResult> {
+  const res = await apiPost(`/resumes/${encodeURIComponent(resumeId)}/jd-match`, payload);
+  await assertOk(res, 'Failed to match resume to job description');
+  const body = (await res.json()) as { data: JdMatchResult };
+  return body.data;
+}
+
+/** Creates a blank resume for the authenticated candidate */
+export async function createBlankResume(payload?: {
+  title?: string;
+}): Promise<ResumeResponse['data']> {
+  const res = await apiPost('/resumes', payload ?? {});
+  await assertOk(res, 'Failed to create resume');
+  const body = (await res.json()) as ResumeResponse;
+  return body.data;
+}
+
+export interface ResumeSectionMeta {
+  id: string;
+  key: string;
+  displayName?: string;
+  sectionType?: string;
+  isDefault?: boolean;
+  isVisible?: boolean;
+  order?: number;
+}
+
+/** Reorders resume sections */
+export async function reorderResumeSections(
+  resumeId: string,
+  sectionIds: string[]
+): Promise<ResumeResponse['data']> {
+  const res = await apiPatch(`/resumes/${encodeURIComponent(resumeId)}/sections/reorder`, {
+    section_ids: sectionIds,
+  });
+  await assertOk(res, 'Failed to reorder sections');
+  const body = (await res.json()) as ResumeResponse;
+  return body.data;
+}
+
+/** Adds a custom section to a resume */
+export async function addResumeSection(
+  resumeId: string,
+  payload: Partial<ResumeSectionMeta> & { content?: unknown }
+): Promise<ResumeResponse['data']> {
+  const res = await apiPost(`/resumes/${encodeURIComponent(resumeId)}/sections`, payload);
+  await assertOk(res, 'Failed to add section');
+  const body = (await res.json()) as ResumeResponse;
+  return body.data;
+}
+
+/** Updates a resume section */
+export async function updateResumeSection(
+  resumeId: string,
+  sectionId: string,
+  payload: Partial<ResumeSectionMeta> & { content?: unknown }
+): Promise<ResumeResponse['data']> {
+  const res = await apiPatch(
+    `/resumes/${encodeURIComponent(resumeId)}/sections/${encodeURIComponent(sectionId)}`,
+    payload
+  );
+  await assertOk(res, 'Failed to update section');
+  const body = (await res.json()) as ResumeResponse;
+  return body.data;
+}
+
+/** Deletes a custom resume section */
+export async function deleteResumeSection(
+  resumeId: string,
+  sectionId: string
+): Promise<ResumeResponse['data']> {
+  const res = await apiDelete(
+    `/resumes/${encodeURIComponent(resumeId)}/sections/${encodeURIComponent(sectionId)}`
+  );
+  await assertOk(res, 'Failed to delete section');
+  const body = (await res.json()) as ResumeResponse;
+  return body.data;
+}

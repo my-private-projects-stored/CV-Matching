@@ -6,3 +6,4 @@
  */
 
 export { useTranslations, getMessages, translate, type Messages } from './translations';
+export { usePageHeader } from './use-page-header';

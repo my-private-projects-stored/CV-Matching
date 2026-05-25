@@ -1,4 +1,5 @@
 import Resume from "../models/Resume.js";
+import { normalizeBuilderData } from "./resume.service.js";
 
 const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi"]);
 
@@ -113,6 +114,8 @@ function buildAnalyzePayload(parsedData, outputLanguage) {
     items.push({
       item_id: itemId,
       item_type: "experience",
+      target_section_id: "workExperience",
+      target_item_id: itemId,
       title: String(exp?.title || "Experience").trim() || "Experience",
       subtitle: String(exp?.company || "").trim() || undefined,
       current_description: current,
@@ -137,6 +140,8 @@ function buildAnalyzePayload(parsedData, outputLanguage) {
     items.push({
       item_id: itemId,
       item_type: "project",
+      target_section_id: "personalProjects",
+      target_item_id: itemId,
       title: String(project?.name || "Project").trim() || "Project",
       subtitle: String(project?.role || "").trim() || undefined,
       current_description: current,
@@ -209,9 +214,17 @@ export async function enhanceResumeDescriptions({ resumeId, answers, outputLangu
       enhancements.push({
         item_id: itemId,
         item_type: "experience",
+        target_section_id: "workExperience",
+        target_item_id: itemId,
         title: String(exp.title || "Experience").trim() || "Experience",
         original_description: original,
         enhanced_description: generated,
+        generated_bullets: generated.map((text, bulletIndex) => ({
+          id: `${itemId}_bullet_${bulletIndex}`,
+          target_section_id: "workExperience",
+          target_item_id: itemId,
+          text,
+        })),
       });
     }
 
@@ -226,9 +239,17 @@ export async function enhanceResumeDescriptions({ resumeId, answers, outputLangu
       enhancements.push({
         item_id: itemId,
         item_type: "project",
+        target_section_id: "personalProjects",
+        target_item_id: itemId,
         title: String(project.name || "Project").trim() || "Project",
         original_description: original,
         enhanced_description: generated,
+        generated_bullets: generated.map((text, bulletIndex) => ({
+          id: `${itemId}_bullet_${bulletIndex}`,
+          target_section_id: "personalProjects",
+          target_item_id: itemId,
+          text,
+        })),
       });
     }
   }
@@ -273,6 +294,7 @@ export async function applyResumeEnhancements(resumeId, enhancements = []) {
   }
 
   resume.parsedData = parsedData;
+  resume.builderData = syncBuilderDataFromParsedData(resume.builderData, parsedData);
   await resume.save();
 
   return {
@@ -380,10 +402,20 @@ export async function applyRegeneratedResumeItems(resumeId, regeneratedItems = [
   }
 
   resume.parsedData = parsedData;
+  resume.builderData = syncBuilderDataFromParsedData(resume.builderData, parsedData);
   await resume.save();
 
   return {
     message: "Regenerated content applied successfully",
     updated_items: regeneratedItems.length,
   };
+}
+
+function syncBuilderDataFromParsedData(builderData, parsedData) {
+  const normalized = normalizeBuilderData(builderData, parsedData);
+  normalized.sections = {
+    ...normalized.sections,
+    ...parsedData,
+  };
+  return normalizeBuilderData(normalized, parsedData);
 }

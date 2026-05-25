@@ -3,6 +3,7 @@ import Job from "../models/Job.js";
 import { ensureQdrantId } from "../utils/qdrant-id.js";
 import { createSimplePdf } from "../utils/simple-pdf.js";
 import { generateEmbedding } from "./embedding.service.js";
+import { renderResumePdf } from "./pdf-renderer.service.js";
 import { parseUploadedResume } from "./resume-parsing.service.js";
 import { deleteResumeVector, upsertResumeVector } from "./vector-index.service.js";
 
@@ -41,6 +42,21 @@ const JOB_KEYWORD_STOPWORDS = new Set([
   "will",
 ]);
 const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi"]);
+const DEFAULT_BUILDER_FORMAT_SETTINGS = {
+  pageSize: "A4",
+  margins: { top: 16, right: 16, bottom: 16, left: 16 },
+  fontSize: { base: 10, headerScale: 1.25, headerFont: "Instrument Serif", bodyFont: "DM Sans" },
+  spacing: { section: 12, item: 8, lineHeight: 1.4 },
+  compactMode: false,
+};
+const DEFAULT_SECTION_META = [
+  { id: "personalInfo", key: "personalInfo", displayName: "Personal Info", sectionType: "personalInfo", isDefault: true, isVisible: true, order: 0 },
+  { id: "summary", key: "summary", displayName: "Summary", sectionType: "summary", isDefault: true, isVisible: true, order: 1 },
+  { id: "workExperience", key: "workExperience", displayName: "Experience", sectionType: "experience", isDefault: true, isVisible: true, order: 2 },
+  { id: "education", key: "education", displayName: "Education", sectionType: "education", isDefault: true, isVisible: true, order: 3 },
+  { id: "personalProjects", key: "personalProjects", displayName: "Projects", sectionType: "projects", isDefault: true, isVisible: true, order: 4 },
+  { id: "additional", key: "additional", displayName: "Additional", sectionType: "additional", isDefault: true, isVisible: true, order: 5 },
+];
 
 function shouldRegenerateResumeEmbedding(payload = {}) {
   return ["rawText", "parsedData"].some((key) => key in payload);
@@ -136,6 +152,76 @@ function toResumePreviewData(parsedData) {
         : [],
       awards: Array.isArray(additional.awards) ? additional.awards : [],
     },
+  };
+}
+
+export function normalizeBuilderData(input = {}, parsedData = {}) {
+  const data = isStructuredData(input) ? input : {};
+  const template = ["classic-single", "modern-single", "classic-two-column", "modern-two-column"].includes(data.template)
+    ? data.template
+    : "classic-single";
+  const sections = isStructuredData(data.sections) ? data.sections : toResumePreviewData(parsedData);
+  const sectionMeta = normalizeSectionMeta(data.sectionMeta, sections);
+
+  return {
+    sections,
+    sectionMeta,
+    template,
+    formatSettings: {
+      ...DEFAULT_BUILDER_FORMAT_SETTINGS,
+      ...(isStructuredData(data.formatSettings) ? data.formatSettings : {}),
+    },
+    customSections: isStructuredData(data.customSections) ? data.customSections : {},
+  };
+}
+
+function normalizeSectionMeta(input, sections = {}) {
+  const provided = Array.isArray(input) ? input : [];
+  const byId = new Map();
+
+  for (const meta of provided) {
+    if (!isStructuredData(meta)) continue;
+    const id = String(meta.id || meta.key || "").trim();
+    if (!id) continue;
+    byId.set(id, {
+      id,
+      key: String(meta.key || id).trim() || id,
+      displayName: String(meta.displayName || meta.name || id).trim() || id,
+      sectionType: String(meta.sectionType || meta.type || id).trim() || id,
+      isDefault: meta.isDefault !== false,
+      isVisible: meta.isVisible !== false,
+      order: Number.isFinite(Number(meta.order)) ? Number(meta.order) : byId.size,
+    });
+  }
+
+  for (const defaultMeta of DEFAULT_SECTION_META) {
+    if (!byId.has(defaultMeta.id) && Object.prototype.hasOwnProperty.call(sections, defaultMeta.key)) {
+      byId.set(defaultMeta.id, { ...defaultMeta });
+    }
+  }
+
+  for (const key of Object.keys(sections || {})) {
+    if (!byId.has(key)) {
+      byId.set(key, {
+        id: key,
+        key,
+        displayName: key.replace(/([A-Z])/g, " $1").replace(/^./, (char) => char.toUpperCase()),
+        sectionType: "custom",
+        isDefault: false,
+        isVisible: true,
+        order: byId.size,
+      });
+    }
+  }
+
+  return [...byId.values()].sort((a, b) => a.order - b.order).map((meta, index) => ({ ...meta, order: index }));
+}
+
+function syncParsedDataFromBuilder(parsedData, builderData) {
+  const sections = isStructuredData(builderData?.sections) ? builderData.sections : {};
+  return {
+    ...(isStructuredData(parsedData) ? parsedData : {}),
+    ...sections,
   };
 }
 
@@ -334,6 +420,7 @@ export function toResumeFetchData(resumeDoc) {
       processing_status: deriveProcessingStatus(resume),
     },
     processed_resume: parsedData,
+    builder_data: normalizeBuilderData(resume.builderData, parsedData || {}),
     cover_letter: resume.coverLetter ?? null,
     outreach_message: resume.outreachMessage ?? null,
     parent_id: resume.parentResumeId ? String(resume.parentResumeId) : null,
@@ -358,6 +445,7 @@ export function toResumeSummary(resumeDoc) {
     created_at: toIsoDate(resume.createdAt),
     updated_at: toIsoDate(resume.updatedAt),
     title: resume.title ?? null,
+    template: resume.builderData?.template || "classic-single",
   };
 }
 
@@ -460,6 +548,7 @@ export async function createResumeFromUpload(file, candidateId = DEFAULT_CANDIDA
     fileUrl: `upload://${Date.now()}-${file.originalname || "resume"}`,
     rawText,
     parsedData,
+    builderData: normalizeBuilderData({}, parsedData || {}),
     filename: file.originalname || null,
     sourceFile: {
       filename: file.originalname || null,
@@ -492,6 +581,11 @@ export async function updateResumeById(resumeId, payload) {
   const resume = await Resume.findById(resumeId);
   if (!resume) return null;
 
+  if ("builderData" in resumeData) {
+    resumeData.builderData = normalizeBuilderData(resumeData.builderData, resumeData.parsedData || resume.parsedData);
+    resumeData.parsedData = syncParsedDataFromBuilder(resumeData.parsedData || resume.parsedData, resumeData.builderData);
+  }
+
   Object.assign(resume, resumeData);
   ensureQdrantId(resume);
   const saved = await resume.save();
@@ -518,6 +612,126 @@ export async function updateResumeById(resumeId, payload) {
   }
 
   return saved;
+}
+
+export async function reorderResumeSections(resumeId, sectionIds = []) {
+  const resume = await getResumeByPublicId(resumeId);
+  if (!resume) return null;
+
+  const builderData = normalizeBuilderData(resume.builderData, resume.parsedData);
+  const requested = Array.isArray(sectionIds) ? sectionIds.map((id) => String(id || "").trim()).filter(Boolean) : [];
+  const orderMap = new Map(requested.map((id, index) => [id, index]));
+  const fallbackStart = requested.length;
+  builderData.sectionMeta = builderData.sectionMeta
+    .map((meta, index) => ({
+      ...meta,
+      order: orderMap.has(meta.id) ? orderMap.get(meta.id) : fallbackStart + index,
+    }))
+    .sort((a, b) => a.order - b.order)
+    .map((meta, index) => ({ ...meta, order: index }));
+
+  resume.builderData = builderData;
+  resume.parsedData = syncParsedDataFromBuilder(resume.parsedData, builderData);
+  await resume.save();
+  return resume;
+}
+
+export async function updateResumeSection(resumeId, sectionId, updates = {}) {
+  const resume = await getResumeByPublicId(resumeId);
+  if (!resume) return null;
+
+  const id = String(sectionId || "").trim();
+  if (!id) {
+    const error = new Error("sectionId is required");
+    error.statusCode = 400;
+    error.error_code = "missing_section_id";
+    throw error;
+  }
+
+  const builderData = normalizeBuilderData(resume.builderData, resume.parsedData);
+  const sectionKey = String(updates.key || id).trim() || id;
+  if ("content" in updates) {
+    builderData.sections[sectionKey] = updates.content;
+  }
+
+  builderData.sectionMeta = normalizeSectionMeta(builderData.sectionMeta, builderData.sections).map((meta) => {
+    if (meta.id !== id && meta.key !== id) return meta;
+    return {
+      ...meta,
+      displayName: "displayName" in updates ? String(updates.displayName || meta.displayName).trim() || meta.displayName : meta.displayName,
+      isVisible: "isVisible" in updates ? Boolean(updates.isVisible) : meta.isVisible,
+      sectionType: "sectionType" in updates ? String(updates.sectionType || meta.sectionType).trim() || meta.sectionType : meta.sectionType,
+    };
+  });
+
+  resume.builderData = normalizeBuilderData(builderData, resume.parsedData);
+  resume.parsedData = syncParsedDataFromBuilder(resume.parsedData, resume.builderData);
+  await resume.save();
+  return resume;
+}
+
+export async function addResumeSection(resumeId, payload = {}) {
+  const resume = await getResumeByPublicId(resumeId);
+  if (!resume) return null;
+
+  const builderData = normalizeBuilderData(resume.builderData, resume.parsedData);
+  const rawId = String(payload.id || payload.key || payload.displayName || `custom_${Date.now()}`).trim();
+  const id = rawId.replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") || `custom_${Date.now()}`;
+  if (Object.prototype.hasOwnProperty.call(builderData.sections, id)) {
+    const error = new Error("Section already exists");
+    error.statusCode = 409;
+    error.error_code = "section_already_exists";
+    throw error;
+  }
+
+  builderData.sections[id] = "content" in payload ? payload.content : "";
+  builderData.customSections[id] = builderData.sections[id];
+  builderData.sectionMeta = normalizeSectionMeta(
+    [
+      ...builderData.sectionMeta,
+      {
+        id,
+        key: id,
+        displayName: String(payload.displayName || payload.name || id).trim() || id,
+        sectionType: String(payload.sectionType || "custom").trim() || "custom",
+        isDefault: false,
+        isVisible: payload.isVisible !== false,
+        order: builderData.sectionMeta.length,
+      },
+    ],
+    builderData.sections
+  );
+
+  resume.builderData = normalizeBuilderData(builderData, resume.parsedData);
+  resume.parsedData = syncParsedDataFromBuilder(resume.parsedData, resume.builderData);
+  await resume.save();
+  return resume;
+}
+
+export async function deleteResumeSection(resumeId, sectionId) {
+  const resume = await getResumeByPublicId(resumeId);
+  if (!resume) return null;
+
+  const id = String(sectionId || "").trim();
+  const builderData = normalizeBuilderData(resume.builderData, resume.parsedData);
+  const meta = builderData.sectionMeta.find((item) => item.id === id || item.key === id);
+  if (meta?.isDefault) {
+    const error = new Error("Default sections cannot be deleted");
+    error.statusCode = 400;
+    error.error_code = "default_section_not_deletable";
+    throw error;
+  }
+
+  delete builderData.sections[id];
+  delete builderData.customSections[id];
+  builderData.sectionMeta = builderData.sectionMeta
+    .filter((item) => item.id !== id && item.key !== id)
+    .map((item, index) => ({ ...item, order: index }));
+
+  resume.builderData = normalizeBuilderData(builderData, resume.parsedData);
+  resume.parsedData = syncParsedDataFromBuilder(resume.parsedData, resume.builderData);
+  await resume.save();
+  return resume;
 }
 
 export async function getResumeByPublicId(resumeId) {
@@ -606,6 +820,7 @@ export async function restoreFromVersion(resumeId, versionId) {
     rawText: resume.rawText,
     qdrantId: resume.qdrantId,
     parsedData: deepClone(resume.parsedData),
+    builderData: deepClone(resume.builderData),
     processingStatus: resume.processingStatus,
     filename: resume.filename,
     sourceFile: deepClone(resume.sourceFile),
@@ -625,6 +840,7 @@ export async function restoreFromVersion(resumeId, versionId) {
   resume.title = version.title || resume.title;
   resume.rawText = version.rawText || resume.rawText;
   resume.parsedData = deepClone(version.parsedData) || resume.parsedData;
+  resume.builderData = normalizeBuilderData(version.builderData, resume.parsedData);
 
   // Optionally preserve job context if version had it
   if (version.jobDescription) {
@@ -739,6 +955,7 @@ export async function confirmResumeImprovement({
     fileUrl: `tailored://${Date.now()}-${parentFilename}`,
     rawText: JSON.stringify(safePreview, null, 2),
     parsedData: safePreview,
+    builderData: normalizeBuilderData({ sections: safePreview }, safePreview),
     filename: `tailored_${parentFilename}`,
     title: title || `Tailored ${parentFilename}`,
     isMaster: false,
@@ -799,6 +1016,84 @@ function resolveOutputLanguage(language) {
   }
 
   return "en";
+}
+
+function tokenizeForMatch(value = "") {
+  const words = String(value || "")
+    .toLowerCase()
+    .match(/[a-z0-9+#.]{3,}/g);
+  if (!Array.isArray(words)) return [];
+  return words.filter((word) => !JOB_KEYWORD_STOPWORDS.has(word));
+}
+
+function buildHighlights(text, matchedKeywords = [], missingKeywords = []) {
+  const matched = new Set(matchedKeywords.map((item) => String(item).toLowerCase()));
+  const missing = new Set(missingKeywords.map((item) => String(item).toLowerCase()));
+  const source = String(text || "");
+  const segments = [];
+  const pattern = /[a-zA-Z0-9+#.]{3,}/g;
+  let cursor = 0;
+  let match;
+
+  while ((match = pattern.exec(source))) {
+    if (match.index > cursor) {
+      segments.push({ text: source.slice(cursor, match.index), type: "plain" });
+    }
+    const token = match[0];
+    const normalized = token.toLowerCase();
+    const type = matched.has(normalized) ? "matched" : missing.has(normalized) ? "missing" : "plain";
+    segments.push({ text: token, type });
+    cursor = match.index + token.length;
+  }
+
+  if (cursor < source.length) {
+    segments.push({ text: source.slice(cursor), type: "plain" });
+  }
+
+  return segments;
+}
+
+export async function buildResumeJdMatch(resumeId, input = {}) {
+  const resume = await getResumeByPublicId(resumeId);
+  if (!resume) return null;
+
+  let jobText = String(input.job_description || "").trim();
+  if (!jobText && input.job_id) {
+    const job = await getJobByPublicId(String(input.job_id));
+    if (!job) return null;
+    jobText = [job.title, job.description, job.requirements, job.benefits].filter(Boolean).join("\n");
+  }
+
+  if (!jobText) {
+    const error = new Error("job_id or job_description is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const resumeText = String(resume.rawText || JSON.stringify(resume.parsedData || {}));
+  const jdKeywords = [...new Set(tokenizeForMatch(jobText))].slice(0, 80);
+  const resumeTokens = new Set(tokenizeForMatch(resumeText));
+  const matchedKeywords = jdKeywords.filter((keyword) => resumeTokens.has(keyword)).map(toDisplayKeyword);
+  const missingKeywords = jdKeywords.filter((keyword) => !resumeTokens.has(keyword)).map(toDisplayKeyword);
+  const matchPercentage = jdKeywords.length
+    ? Math.round((matchedKeywords.length / jdKeywords.length) * 100)
+    : 0;
+  const includeHighlights = input.include_highlights !== false;
+  const recommendations = missingKeywords.slice(0, 8).map(
+    (keyword) => `Add evidence for ${keyword} where it is truthful and relevant.`
+  );
+
+  return {
+    resume_id: String(resume._id),
+    job_id: input.job_id || null,
+    match_percentage: matchPercentage,
+    keyword_score: matchPercentage,
+    matched_keywords: matchedKeywords,
+    missing_keywords: missingKeywords,
+    jd_highlights: includeHighlights ? buildHighlights(jobText, matchedKeywords, missingKeywords) : [],
+    resume_highlights: includeHighlights ? buildHighlights(resumeText, matchedKeywords, []) : [],
+    recommendations,
+  };
 }
 
 function collectResumePdfLines(resume) {
@@ -909,6 +1204,17 @@ export async function generateCoverLetterContent(resumeId, outputLanguage = "en"
   return content;
 }
 
+export async function setResumeJobContext(resumeId, jobId) {
+  const resume = await getResumeByPublicId(resumeId);
+  const job = await getJobByPublicId(jobId);
+  if (!resume || !job) return null;
+
+  resume.jobId = String(job._id);
+  resume.jobDescription = [job.title, job.description, job.requirements, job.benefits].filter(Boolean).join("\n");
+  await resume.save();
+  return resume;
+}
+
 export async function generateOutreachContent(resumeId, outputLanguage = "en") {
   const resume = await getResumeByPublicId(resumeId);
   if (!resume) return null;
@@ -934,8 +1240,12 @@ export async function generateResumePdf(resumeId) {
   const resume = await getResumeByPublicId(resumeId);
   if (!resume) return null;
 
-  const lines = collectResumePdfLines(resume);
-  const buffer = createSimplePdf(lines);
+  const builderData = normalizeBuilderData(resume.builderData, resume.parsedData);
+  const buffer = await renderResumePdf({
+    title: resume.title || resume.filename || `resume_${String(resume._id)}`,
+    parsedData: resume.parsedData,
+    builderData,
+  });
   return {
     buffer,
     filename: `resume_${String(resume._id)}.pdf`,

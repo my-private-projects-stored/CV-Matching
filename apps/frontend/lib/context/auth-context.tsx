@@ -12,6 +12,7 @@ import {
 
 import type { AuthUser } from '@/lib/api/auth';
 import { fetchMe, login, signup, type UserRole } from '@/lib/api/auth';
+import { AUTH_STORAGE_KEY, setAuthTokenCookie } from '@/lib/api/client';
 
 type AuthSession = {
   accessToken: string;
@@ -33,8 +34,6 @@ type AuthContextValue = {
   signOut: () => void;
   refreshProfile: () => Promise<void>;
 };
-
-const AUTH_STORAGE_KEY = 'cvm_auth_session_v1';
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -70,10 +69,12 @@ function writeSessionToStorage(session: AuthSession | null) {
 
   if (!session) {
     window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    setAuthTokenCookie(null);
     return;
   }
 
   window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+  setAuthTokenCookie(session.accessToken);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

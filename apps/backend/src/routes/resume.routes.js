@@ -4,7 +4,9 @@ import multer from "multer";
 import {
   confirmImproveResumeHandler,
   createResumeHandler,
+  addResumeSectionHandler,
   deleteResumeHandler,
+  deleteResumeSectionHandler,
   downloadCoverLetterPdfHandler,
   downloadOriginalResumeHandler,
   downloadResumePdfHandler,
@@ -14,15 +16,18 @@ import {
   getResumeHandler,
   getResumeHistoryHandler,
   getResumeJobDescriptionHandler,
+  matchResumeToJobDescriptionHandler,
   improveResumeHandler,
   listResumesHandler,
   previewImproveResumeHandler,
+  reorderResumeSectionsHandler,
   restoreFromVersionHandler,
   retryResumeProcessingHandler,
   setMasterResumeHandler,
   updateCoverLetterHandler,
   updateOutreachMessageHandler,
   updateResumeHandler,
+  updateResumeSectionHandler,
   updateResumeTitleHandler,
   uploadResumeHandler,
 } from "../controllers/resume.controller.js";
@@ -55,6 +60,11 @@ router.get("/:id/pdf", downloadResumePdfHandler);
 router.get("/:id/cover-letter/pdf", downloadCoverLetterPdfHandler);
 router.get("/:id/download", downloadOriginalResumeHandler);
 router.get("/:id/job-description", getResumeJobDescriptionHandler);
+router.post("/:id/jd-match", ...requireCandidateRole, matchResumeToJobDescriptionHandler);
+router.patch("/:id/sections/reorder", ...requireCandidateRole, reorderResumeSectionsHandler);
+router.post("/:id/sections", ...requireCandidateRole, addResumeSectionHandler);
+router.patch("/:id/sections/:sectionId", ...requireCandidateRole, updateResumeSectionHandler);
+router.delete("/:id/sections/:sectionId", ...requireCandidateRole, deleteResumeSectionHandler);
 router.patch("/:id", ...requireCandidateRole, updateResumeHandler);
 router.patch("/:id/cover-letter", ...requireCandidateRole, updateCoverLetterHandler);
 router.patch("/:id/outreach-message", ...requireCandidateRole, updateOutreachMessageHandler);

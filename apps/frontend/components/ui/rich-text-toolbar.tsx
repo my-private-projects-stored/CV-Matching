@@ -5,6 +5,7 @@ import { Editor } from '@tiptap/react';
 import { Bold, Italic, Underline, Link } from 'lucide-react';
 import { Button } from './button';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/lib/i18n/translations';
 
 interface RichTextToolbarProps {
   editor: Editor;
@@ -18,31 +19,32 @@ interface RichTextToolbarProps {
  * Active states shown with Hyper Blue background.
  */
 export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({ editor, onLinkClick }) => {
+  const { t } = useTranslations();
   const tools = [
     {
       icon: Bold,
-      label: 'Bold',
+      label: t('editor.bold'),
       action: () => editor.chain().focus().toggleBold().run(),
       isActive: editor.isActive('bold'),
       shortcut: 'Ctrl+B',
     },
     {
       icon: Italic,
-      label: 'Italic',
+      label: t('editor.italic'),
       action: () => editor.chain().focus().toggleItalic().run(),
       isActive: editor.isActive('italic'),
       shortcut: 'Ctrl+I',
     },
     {
       icon: Underline,
-      label: 'Underline',
+      label: t('editor.underline'),
       action: () => editor.chain().focus().toggleUnderline().run(),
       isActive: editor.isActive('underline'),
       shortcut: 'Ctrl+U',
     },
     {
       icon: Link,
-      label: 'Link',
+      label: t('editor.link'),
       action: onLinkClick,
       isActive: editor.isActive('link'),
       shortcut: 'Ctrl+K',

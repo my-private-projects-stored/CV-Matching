@@ -1,4 +1,5 @@
 import { runApplicationAiPipeline } from "../services/application-ai.service.js";
+import { enqueueAiScoringCompletedNotification } from "../services/notification-queue.service.js";
 
 function readWorkerTokenFromHeader(req) {
   const authHeader = String(req.headers?.authorization || "").trim();
@@ -62,6 +63,15 @@ export async function processApplicationAiHandler(req, res, next) {
           }
         : undefined
     );
+
+    // Fire-and-forget: notify candidate when scoring completes
+    if (updated?.aiStatus === "completed") {
+      enqueueAiScoringCompletedNotification({ applicationId: String(updated._id || applicationId) }).catch(
+        (err) => {
+          console.warn("[internal-application] failed to enqueue ai_scoring_completed notification", err.message);
+        }
+      );
+    }
 
     return res.status(200).json({
       request_id: `req_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,

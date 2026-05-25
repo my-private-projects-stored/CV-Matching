@@ -7,6 +7,8 @@ import {
   type SupportedLanguage,
 } from '@/lib/api/config';
 import { locales, defaultLocale, localeNames, type Locale } from '@/i18n/config';
+import { normalizeStoredLocale } from '@/lib/i18n/route-title';
+import { syncLocaleCookie } from '@/lib/i18n/locale-cookie';
 import { logError } from '@/lib/utils/logger';
 
 const CONTENT_STORAGE_KEY = 'resume_matcher_content_language';
@@ -29,31 +31,29 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [uiLanguage, setUiLanguageState] = useState<Locale>(defaultLocale);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load languages from localStorage first, then sync content language with backend
   useEffect(() => {
     const loadLanguages = async () => {
       try {
-        // Load UI language from localStorage (client-side only)
-        const cachedUiLang = localStorage.getItem(UI_STORAGE_KEY);
-        if (cachedUiLang && locales.includes(cachedUiLang as Locale)) {
-          setUiLanguageState(cachedUiLang as Locale);
-        }
+        const cachedUiLang = normalizeStoredLocale(localStorage.getItem(UI_STORAGE_KEY), defaultLocale);
+        setUiLanguageState(cachedUiLang);
+        syncLocaleCookie(cachedUiLang);
 
-        // Try localStorage first for content language
-        const cachedContentLang = localStorage.getItem(CONTENT_STORAGE_KEY);
-        if (cachedContentLang && locales.includes(cachedContentLang as Locale)) {
-          setContentLanguageState(cachedContentLang as SupportedLanguage);
-        }
+        const cachedContentLang = normalizeStoredLocale(
+          localStorage.getItem(CONTENT_STORAGE_KEY),
+          defaultLocale
+        );
+        setContentLanguageState(cachedContentLang);
 
-        // Then fetch content language from backend to ensure sync
         const config = await fetchLanguageConfig();
-        if (config.content_language && locales.includes(config.content_language as Locale)) {
-          setContentLanguageState(config.content_language);
-          localStorage.setItem(CONTENT_STORAGE_KEY, config.content_language);
-        }
+        const configUi = normalizeStoredLocale(config.ui_language, cachedUiLang);
+        const configContent = normalizeStoredLocale(config.content_language, cachedContentLang);
+        setUiLanguageState(configUi);
+        setContentLanguageState(configContent);
+        localStorage.setItem(UI_STORAGE_KEY, configUi);
+        localStorage.setItem(CONTENT_STORAGE_KEY, configContent);
+        syncLocaleCookie(configUi);
       } catch (error) {
         logError('language-context', 'Failed to load language config', error);
-        // Keep using cached/default values
       } finally {
         setIsLoading(false);
       }
@@ -64,36 +64,31 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const setContentLanguage = useCallback(
     async (lang: SupportedLanguage) => {
-      if (!locales.includes(lang as Locale)) {
-        logError('language-context', `Unsupported language: ${lang}`);
-        return;
-      }
-
+      const normalized = normalizeStoredLocale(lang, defaultLocale);
       const previousLang = contentLanguage;
       try {
-        // Optimistically update UI
-        setContentLanguageState(lang);
-        localStorage.setItem(CONTENT_STORAGE_KEY, lang);
-
-        // Persist to backend
-        await updateLanguageConfig({ content_language: lang });
+        setContentLanguageState(normalized);
+        localStorage.setItem(CONTENT_STORAGE_KEY, normalized);
+        await updateLanguageConfig({ content_language: normalized, ui_language: uiLanguage });
       } catch (error) {
         logError('language-context', 'Failed to update content language', error);
-        // Revert on error
         setContentLanguageState(previousLang);
         localStorage.setItem(CONTENT_STORAGE_KEY, previousLang);
       }
     },
-    [contentLanguage]
+    [contentLanguage, uiLanguage]
   );
 
   const setUiLanguage = useCallback((lang: Locale) => {
-    if (!locales.includes(lang)) {
-      logError('language-context', `Unsupported UI language: ${lang}`);
-      return;
-    }
-    setUiLanguageState(lang);
-    localStorage.setItem(UI_STORAGE_KEY, lang);
+    const normalized = normalizeStoredLocale(lang, defaultLocale);
+    setUiLanguageState(normalized);
+    setContentLanguageState(normalized);
+    localStorage.setItem(UI_STORAGE_KEY, normalized);
+    localStorage.setItem(CONTENT_STORAGE_KEY, normalized);
+    syncLocaleCookie(normalized);
+    updateLanguageConfig({ ui_language: normalized, content_language: normalized }).catch((error) => {
+      logError('language-context', 'Failed to sync language config', error);
+    });
   }, []);
 
   return (

@@ -6,6 +6,7 @@ import {
   regenerateResumeItems,
 } from "../services/enrichment.service.js";
 import { assertAiGenerationAllowed, getLanguageConfig } from "../services/config.service.js";
+import { getResumeByPublicId } from "../services/resume.service.js";
 
 const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi"]);
 
@@ -23,6 +24,28 @@ function resolveOutputLanguage(value, fallback = "en") {
   return "en";
 }
 
+function getAuthRole(req) {
+  return String(req.auth?.role || "").trim().toLowerCase();
+}
+
+function getAuthUserId(req) {
+  return String(req.auth?.userId || "").trim();
+}
+
+async function ensureResumeAccess(req, resumeId) {
+  const resume = await getResumeByPublicId(resumeId);
+  if (!resume) return null;
+
+  if (getAuthRole(req) === "candidate" && String(resume.candidateId || "") !== getAuthUserId(req)) {
+    const error = new Error("You can only enrich your own resume");
+    error.statusCode = 403;
+    error.error_code = "resume_forbidden";
+    throw error;
+  }
+
+  return resume;
+}
+
 export async function analyzeResumeHandler(req, res, next) {
   try {
     await assertAiGenerationAllowed("enrichment_analyze");
@@ -33,11 +56,12 @@ export async function analyzeResumeHandler(req, res, next) {
       configuredLanguage?.content_language
     );
 
-    const result = await analyzeResumeEnrichment(req.params.resumeId, outputLanguage);
-    if (!result) {
+    const resume = await ensureResumeAccess(req, req.params.resumeId);
+    if (!resume) {
       return res.status(404).json({ detail: "Resume not found" });
     }
 
+    const result = await analyzeResumeEnrichment(req.params.resumeId, outputLanguage);
     return res.status(200).json(result);
   } catch (error) {
     return next(error);
@@ -61,11 +85,12 @@ export async function enhanceResumeHandler(req, res, next) {
       configuredLanguage?.content_language
     );
 
-    const result = await enhanceResumeDescriptions({ resumeId, answers, outputLanguage });
-    if (!result) {
+    const resume = await ensureResumeAccess(req, resumeId);
+    if (!resume) {
       return res.status(404).json({ detail: "Resume not found" });
     }
 
+    const result = await enhanceResumeDescriptions({ resumeId, answers, outputLanguage });
     return res.status(200).json(result);
   } catch (error) {
     return next(error);
@@ -75,12 +100,12 @@ export async function enhanceResumeHandler(req, res, next) {
 export async function applyEnhancementsHandler(req, res, next) {
   try {
     const enhancements = Array.isArray(req.body?.enhancements) ? req.body.enhancements : [];
-    const result = await applyResumeEnhancements(req.params.resumeId, enhancements);
-
-    if (!result) {
+    const resume = await ensureResumeAccess(req, req.params.resumeId);
+    if (!resume) {
       return res.status(404).json({ detail: "Resume not found" });
     }
 
+    const result = await applyResumeEnhancements(req.params.resumeId, enhancements);
     return res.status(200).json(result);
   } catch (error) {
     return next(error);
@@ -111,11 +136,12 @@ export async function regenerateItemsHandler(req, res, next) {
       return res.status(400).json({ detail: "No items selected for regeneration" });
     }
 
-    const result = await regenerateResumeItems({ ...payload, outputLanguage });
-    if (!result) {
+    const resume = await ensureResumeAccess(req, payload.resumeId);
+    if (!resume) {
       return res.status(404).json({ detail: "Resume not found" });
     }
 
+    const result = await regenerateResumeItems({ ...payload, outputLanguage });
     if (!result.regenerated_items.length) {
       return res.status(500).json({ detail: "Failed to regenerate content. Please try again." });
     }
@@ -129,12 +155,12 @@ export async function regenerateItemsHandler(req, res, next) {
 export async function applyRegeneratedItemsHandler(req, res, next) {
   try {
     const items = Array.isArray(req.body) ? req.body : [];
-    const result = await applyRegeneratedResumeItems(req.params.resumeId, items);
-
-    if (!result) {
+    const resume = await ensureResumeAccess(req, req.params.resumeId);
+    if (!resume) {
       return res.status(404).json({ detail: "Resume not found" });
     }
 
+    const result = await applyRegeneratedResumeItems(req.params.resumeId, items);
     return res.status(200).json(result);
   } catch (error) {
     return next(error);

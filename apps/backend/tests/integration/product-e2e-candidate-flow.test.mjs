@@ -157,6 +157,16 @@ test(
       const recruiterToken = recruiterSignup.json?.access_token;
       assert.ok(recruiterToken);
 
+      const adminSignup = await requestJson(baseUrl, "POST", "/auth/signup", {
+        email: "admin.product.e2e@example.com",
+        password: "StrongPass123",
+        full_name: "Admin Product E2E",
+        role: "admin",
+      });
+      assert.equal(adminSignup.status, 201);
+      const adminToken = adminSignup.json?.access_token;
+      assert.ok(adminToken);
+
       const llmConfig = await requestJson(
         baseUrl,
         "PUT",
@@ -166,7 +176,7 @@ test(
           model: "gemma3:4b",
           api_base: "http://localhost:11434",
         },
-        recruiterToken
+        adminToken
       );
       assert.equal(llmConfig.status, 200);
 

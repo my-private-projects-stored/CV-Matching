@@ -224,23 +224,36 @@ services:
       - workers
 
   worker-notification:
-    image: python:3.11-slim
+    build:
+      context: ./workers/notification
     container_name: cvm-worker-notification
-    working_dir: /workspace
-    command: ["sh", "-c", "echo 'workers/notification is scaffolded. Replace with notification worker startup.'; tail -f /dev/null"]
-    volumes:
-      - ./workers/notification:/workspace
     environment:
       REDIS_URL: redis://redis:6379
-      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongo:27017
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongo:27017/?authSource=admin
+      NOTIFICATION_QUEUE_NAME: notification_queue
+      NOTIFICATION_DLQ_NAME: notification_queue_dlq
+      NOTIFICATION_MAX_RETRIES: "3"
+      NOTIFICATION_METRICS_LOG_INTERVAL_MS: "30000"
+      # SMTP — leave SMTP_HOST blank to run in no-op (log-only) mode
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-"CV Matching Platform <noreply@cv-matching.local>"}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+      BRAND_PRIMARY_COLOR: ${BRAND_PRIMARY_COLOR:-#1D4ED8}
     depends_on:
       redis:
         condition: service_healthy
       mongo:
         condition: service_healthy
+      gateway-backend:
+        condition: service_healthy
     networks:
       - cvm_net
     profiles:
+      - app
       - workers
 
   worker-embedding-sbert:

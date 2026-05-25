@@ -223,12 +223,18 @@ test(
       assert.equal(statusTotal, 2);
       assert.equal(summary.json?.data?.by_ai_status?.completed, 2);
 
-      const jobsList = await requestJson(baseUrl, "GET", "/jobs");
+      const jobsList = await requestJson(baseUrl, "GET", "/jobs", undefined, candidateToken);
       assert.equal(jobsList.status, 200);
       assert.equal(Array.isArray(jobsList.json?.data), true);
       assert.equal(jobsList.json.data[0]?.applications_count, 2);
 
-      const jobDetail = await requestJson(baseUrl, "GET", `/jobs/${encodeURIComponent(String(job._id))}`);
+      const jobDetail = await requestJson(
+        baseUrl,
+        "GET",
+        `/jobs/${encodeURIComponent(String(job._id))}`,
+        undefined,
+        candidateToken
+      );
       assert.equal(jobDetail.status, 200);
       assert.equal(jobDetail.json?.applications_count, 2);
 

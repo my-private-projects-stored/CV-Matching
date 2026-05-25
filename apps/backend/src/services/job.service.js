@@ -1,5 +1,6 @@
 import Job from "../models/Job.js";
 import Application from "../models/Application.js";
+import Company from "../models/Company.js";
 import { ensureQdrantId } from "../utils/qdrant-id.js";
 import { generateEmbedding } from "./embedding.service.js";
 import { deleteJobVector, upsertJobVector } from "./vector-index.service.js";
@@ -150,6 +151,33 @@ function buildJobListFilter(query = {}) {
   return filter;
 }
 
+function isAdmin(options = {}) {
+  return String(options.role || "").trim().toLowerCase() === "admin";
+}
+
+function applyOwnershipFilter(filter, options = {}) {
+  const role = String(options.role || "").trim().toLowerCase();
+  const userId = String(options.userId || "").trim();
+  if (role === "recruiter" && userId) {
+    filter.recruiterId = userId;
+  }
+  return filter;
+}
+
+function canAccessJob(job, options = {}) {
+  if (!job) return false;
+  if (isAdmin(options)) return true;
+  const role = String(options.role || "").trim().toLowerCase();
+  if (role !== "recruiter") return true;
+  return String(job.recruiterId || "") === String(options.userId || "");
+}
+
+function createForbiddenError() {
+  const error = new Error("You do not have permission to access this job");
+  error.statusCode = 403;
+  return error;
+}
+
 function shouldRegenerateJobEmbedding(payload = {}) {
   return ["cleanText", "description", "requirements", "title", "benefits"].some(
     (key) => key in payload
@@ -194,6 +222,12 @@ async function getApplicationCountsByJobIds(jobIds = []) {
 // Tao JD moi va gan qdrantId de dong bo voi vector store.
 export async function createJob(payload) {
   const { embeddingVector, ...jobData } = normalizeJobPayload(payload);
+  if (!jobData.companyId && jobData.recruiterId) {
+    const company = await Company.findOne({ recruiterId: jobData.recruiterId }).select("_id").lean();
+    if (company?._id) {
+      jobData.companyId = company._id;
+    }
+  }
   if (!jobData.cleanText) {
     jobData.cleanText = [jobData.title, jobData.description, jobData.requirements, jobData.benefits]
       .filter(Boolean)
@@ -205,32 +239,44 @@ export async function createJob(payload) {
   let vector = embeddingVector;
 
   if (!Array.isArray(vector) || vector.length === 0) {
-    vector = await generateEmbedding(extractJobEmbeddingText(saved));
+    try {
+      vector = await generateEmbedding(extractJobEmbeddingText(saved));
+    } catch (error) {
+      console.warn("[job-index] embedding generation failed, job saved without vector", error.message);
+      vector = null;
+    }
   }
 
   if (Array.isArray(vector) && vector.length > 0 && saved.status === "active") {
-    await upsertJobVector({
-      qdrantId: saved.qdrantId,
-      vector,
-      payload: {
-        mongoId: String(saved._id),
-        category: saved.category,
-        status: saved.status,
-      },
-    });
+    try {
+      await upsertJobVector({
+        qdrantId: saved.qdrantId,
+        vector,
+        payload: {
+          mongoId: String(saved._id),
+          category: saved.category,
+          status: saved.status,
+        },
+      });
 
-    saved.isAnalyzed = true;
-    await saved.save();
+      saved.isAnalyzed = true;
+      await saved.save();
+    } catch (error) {
+      console.warn("[job-index] vector upsert failed, job saved without vector", error.message);
+    }
   }
 
   return saved;
 }
 
 // Cap nhat JD va dam bao qdrantId ton tai cho ban ghi cu.
-export async function updateJobById(jobId, payload) {
+export async function updateJobById(jobId, payload, options = {}) {
   const { embeddingVector, ...jobData } = normalizeJobPayload(payload);
   const job = await Job.findById(jobId);
   if (!job) return null;
+  if (!canAccessJob(job, options)) {
+    throw createForbiddenError();
+  }
 
   if (!hasOwn(jobData, "cleanText") && shouldRegenerateJobEmbedding(jobData)) {
     const title = hasOwn(jobData, "title") ? jobData.title : job.title;
@@ -291,9 +337,12 @@ export async function updateJobById(jobId, payload) {
   return saved;
 }
 
-export async function deleteJobById(jobId) {
+export async function deleteJobById(jobId, options = {}) {
   const job = await Job.findById(jobId);
   if (!job) return null;
+  if (!canAccessJob(job, options)) {
+    throw createForbiddenError();
+  }
 
   if (job.status !== "deleted") {
     const deletedAt = new Date();
@@ -327,6 +376,9 @@ export async function deleteJobById(jobId) {
 export async function getJobById(jobId, options = {}) {
   const job = await Job.findById(jobId).lean();
   if (!job) return null;
+  if (!canAccessJob(job, options)) {
+    throw createForbiddenError();
+  }
 
   const includeDeleted = Boolean(options.includeDeleted);
   if (job.status === "deleted" && !includeDeleted) {
@@ -340,12 +392,12 @@ export async function getJobById(jobId, options = {}) {
   };
 }
 
-export async function listJobs(query = {}) {
+export async function listJobs(query = {}, options = {}) {
   const page = Math.max(1, Number.parseInt(String(query.page || "1"), 10) || 1);
   const limit = Math.min(100, Math.max(1, Number.parseInt(String(query.limit || "20"), 10) || 20));
   const skip = (page - 1) * limit;
 
-  const filter = buildJobListFilter(query);
+  const filter = applyOwnershipFilter(buildJobListFilter(query), options);
 
   const [items, total] = await Promise.all([
     Job.find(filter)

@@ -1,4 +1,5 @@
 import Application from "../models/Application.js";
+import Company from "../models/Company.js";
 import Job from "../models/Job.js";
 import Resume from "../models/Resume.js";
 import SystemConfig from "../models/SystemConfig.js";
@@ -451,6 +452,7 @@ export async function resetDatabase(confirm) {
 
   await Promise.all([
     Application.deleteMany({}),
+    Company.deleteMany({}),
     Job.deleteMany({}),
     Resume.deleteMany({}),
     SystemConfig.deleteMany({ key: { $in: [FEATURE_CONFIG_KEY, LANGUAGE_CONFIG_KEY, LLM_CONFIG_KEY, PROMPT_CONFIG_KEY, API_KEYS_CONFIG_KEY, COMPANY_PROFILE_CONFIG_KEY, PRIVACY_CONFIG_KEY] } }),

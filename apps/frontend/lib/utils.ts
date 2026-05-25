@@ -12,6 +12,18 @@ export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
+export function scoreColor(score: number) {
+  if (score >= 0.75) return 'var(--success)';
+  if (score >= 0.5) return 'var(--warning)';
+  return 'var(--danger)';
+}
+
+export function scoreLabel(score: number) {
+  if (score >= 0.75) return 'Strong match';
+  if (score >= 0.5) return 'Potential';
+  return 'Weak match';
+}
+
 /**
  * Formats a date range string with a hyphen separator for ATS compatibility.
  * Uses ASCII hyphen-minus (-) instead of en-dash for reliable PDF text extraction.

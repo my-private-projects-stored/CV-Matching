@@ -57,6 +57,12 @@ const userSchema = new Schema(
       default: 0,
       min: 0,
     },
+
+    disabled: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,

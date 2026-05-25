@@ -44,3 +44,12 @@
 | UC-RM-10 | WYSIWYG PDF Export | Playwright renders PDF matching live preview |
 | UC-RM-11 | Multi-language UI + AI content | EN / ES / ZH / JA / PT |
 | UC-RM-12 | Privacy mode + AI provider config | Local (Ollama) or Cloud, API key configuration |
+
+## UC-NEW: New Features (added 2026-05-23)
+
+| ID | Name | Actor | Endpoint | Summary |
+|---|---|---|---|---|
+| UC-NEW-01 | Job Recommendations from CV | Candidate | `GET /api/recommendations/jobs?resume_id=` | Embed CV text via SBERT → search Qdrant jobs collection → compute hybrid score (semantic + keyword) → return ranked list of matching active Jobs |
+| UC-NEW-02 | CV Recommendations from JD | Recruiter | `GET /api/recommendations/resumes?job_id=` | Embed JD text via SBERT → search Qdrant resumes collection → compute hybrid score → return ranked list of matching Candidates (including passive, non-applicants) |
+| UC-NEW-03 | Interview Question Generator | Recruiter | `POST /api/interviews/questions` | Given a candidate resume (+ optional Job), generate structured bilingual (EN/VI) interview question sets grouped by: Technical, Experience, Project, Behavioral, Closing |
+| UC-NEW-04 | Email Notifications (Async) | System | `worker-notification` (Redis queue) | Event-driven email delivery for: application status changes, AI scoring completed, job closed; uses nodemailer SMTP + MongoDB lookup for recipient info |

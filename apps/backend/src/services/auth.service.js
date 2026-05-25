@@ -180,6 +180,10 @@ export async function loginUser(input = {}) {
     throw createHttpError(401, "Invalid email or password");
   }
 
+  if (user.disabled) {
+    throw createHttpError(403, "This account has been disabled");
+  }
+
   const isValidPassword = await bcrypt.compare(password, user.password);
   if (!isValidPassword) {
     throw createHttpError(401, "Invalid email or password");

@@ -76,6 +76,16 @@ test(
       const recruiterToken = recruiterSignup.json?.access_token;
       assert.ok(recruiterToken);
 
+      const adminSignup = await requestJson(baseUrl, "POST", "/auth/signup", {
+        email: "admin.tailor@example.com",
+        password: "StrongPass123",
+        full_name: "Admin Tailor",
+        role: "admin",
+      });
+      assert.equal(adminSignup.status, 201);
+      const adminToken = adminSignup.json?.access_token;
+      assert.ok(adminToken);
+
       const candidateSignup = await requestJson(baseUrl, "POST", "/auth/signup", {
         email: "candidate.tailor@example.com",
         password: "StrongPass123",
@@ -130,7 +140,7 @@ test(
 
       const privacyPut = await requestJson(baseUrl, "PUT", "/config/privacy", {
         privacy_mode: "local_only",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(privacyPut.status, 200);
 
       const blockedPreview = await requestJson(baseUrl, "POST", "/resumes/improve/preview", {
@@ -145,13 +155,13 @@ test(
         provider: "ollama",
         model: "gemma3:4b",
         api_base: "http://localhost:11434",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(llmPutOllama.status, 200);
 
       const languagePut = await requestJson(baseUrl, "PUT", "/config/language", {
         ui_language: "vi",
         content_language: "vi",
-      }, recruiterToken);
+      }, adminToken);
       assert.equal(languagePut.status, 200);
 
       const preview = await requestJson(baseUrl, "POST", "/resumes/improve/preview", {

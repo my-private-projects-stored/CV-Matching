@@ -3,6 +3,9 @@ import Job from "../models/Job.js";
 import Resume from "../models/Resume.js";
 import User from "../models/User.js";
 import { enqueueApplicationScoring } from "./application-queue.service.js";
+import {
+  enqueueStatusChangedNotification,
+} from "./notification-queue.service.js";
 
 const APPLICATION_STATUSES = new Set(["new", "screening", "interview", "offer", "hired", "rejected"]);
 const APPLICATION_STATUS_ORDER = ["new", "screening", "interview", "offer", "hired", "rejected"];
@@ -379,6 +382,11 @@ export async function listRankedApplicationsByJob(jobId, query = {}) {
     filter.status = status;
   }
 
+  const aiStatus = normalizeText(query.ai_status || query.aiStatus).toLowerCase();
+  if (aiStatus && AI_STATUS_ORDER.includes(aiStatus)) {
+    filter.aiStatus = aiStatus;
+  }
+
   const changedByFilter = normalizeText(query.changed_by).toLowerCase();
   const changedAfter = parseDateFilter(query.changed_after, "start");
   if (changedAfter?.error) {
@@ -390,7 +398,7 @@ export async function listRankedApplicationsByJob(jobId, query = {}) {
   }
 
   const items = await Application.find(filter)
-    .sort({ "aiScores.semanticScore": -1, "aiScores.hybridScore": -1, updatedAt: -1 })
+    .sort({ "aiScores.hybridScore": -1, updatedAt: -1 })
     .populate({
       path: "resumeId",
       populate: {
@@ -401,6 +409,29 @@ export async function listRankedApplicationsByJob(jobId, query = {}) {
     .lean();
 
   let candidates = items.map(toRankedApplicationDto);
+
+  const minScore = Number.parseFloat(String(query.min_score ?? query.minScore ?? ""));
+  if (Number.isFinite(minScore)) {
+    candidates = candidates.filter((item) => item.scores.hybrid_score >= minScore);
+  }
+
+  const maxScore = Number.parseFloat(String(query.max_score ?? query.maxScore ?? ""));
+  if (Number.isFinite(maxScore)) {
+    candidates = candidates.filter((item) => item.scores.hybrid_score <= maxScore);
+  }
+
+  const search = normalizeText(query.search).toLowerCase();
+  if (search) {
+    candidates = candidates.filter((item) =>
+      [
+        item.candidate?.full_name,
+        item.candidate?.email,
+        item.resume?.title,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(search))
+    );
+  }
   if (changedByFilter) {
     candidates = candidates.filter((item) =>
       String(item.status_audit?.changed_by || "system")
@@ -532,6 +563,15 @@ export async function updateApplicationStatus(applicationId, status, changedByIn
 
   const updated = await application.save();
 
+  // Fire-and-forget: enqueue notification for the candidate
+  enqueueStatusChangedNotification({
+    applicationId: String(updated._id),
+    fromStatus: currentStatus,
+    toStatus: normalizedStatus,
+  }).catch((err) => {
+    console.warn("[application.service] failed to enqueue status_changed notification", err.message);
+  });
+
   return {
     data: {
       application_id: String(updated._id),
@@ -577,6 +617,15 @@ export async function bulkUpdateApplicationStatus(payload = {}) {
     });
     await application.save();
     updatedIds.push(String(application._id));
+
+    // Fire-and-forget: enqueue notification per candidate
+    enqueueStatusChangedNotification({
+      applicationId: String(application._id),
+      fromStatus: currentStatus,
+      toStatus: normalizedStatus,
+    }).catch((err) => {
+      console.warn("[application.service] bulk: failed to enqueue status_changed notification", err.message);
+    });
   }
 
   return {

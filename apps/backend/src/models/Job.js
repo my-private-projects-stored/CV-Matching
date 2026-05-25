@@ -12,6 +12,13 @@ const jobSchema = new Schema(
       index: true,
     },
 
+    companyId: {
+      type: Schema.Types.ObjectId,
+      ref: "Company",
+      default: null,
+      index: true,
+    },
+
     // Tiêu đề vị trí tuyển dụng dùng để hiển thị và tìm kiếm nhanh.
     title: {
       type: String,

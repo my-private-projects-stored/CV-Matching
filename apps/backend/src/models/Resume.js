@@ -40,6 +40,30 @@ const resumeSchema = new Schema(
       default: {},
     },
 
+    builderData: {
+      sections: {
+        type: Schema.Types.Mixed,
+        default: {},
+      },
+      sectionMeta: {
+        type: [Schema.Types.Mixed],
+        default: [],
+      },
+      template: {
+        type: String,
+        enum: ["classic-single", "modern-single", "classic-two-column", "modern-two-column"],
+        default: "classic-single",
+      },
+      formatSettings: {
+        type: Schema.Types.Mixed,
+        default: {},
+      },
+      customSections: {
+        type: Schema.Types.Mixed,
+        default: {},
+      },
+    },
+
     // Trạng thái xử lý hiển thị cho frontend dashboard.
     processingStatus: {
       type: String,
