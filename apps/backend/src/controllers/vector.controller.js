@@ -1,14 +1,17 @@
 import Job from "../models/Job.js";
 import Resume from "../models/Resume.js";
+import { ensureQdrantId } from "../utils/qdrant-id.js";
 import {
   upsertJobVector,
   upsertResumeVector,
 } from "../services/vector-index.service.js";
 import {
   buildHybridScoreForPair,
+  computeSemanticScoreForPair,
   getTopJobsForResumeVector,
   getTopResumesForJobVector,
 } from "../services/semantic-search.service.js";
+import { HYBRID_SEMANTIC_WEIGHT } from "../constants/scoring.js";
 
 export async function indexJobVectorHandler(req, res, next) {
   try {
@@ -18,21 +21,27 @@ export async function indexJobVectorHandler(req, res, next) {
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
     }
-
-    if (!job.qdrantId) {
-      return res.status(400).json({ message: "Job does not have qdrantId" });
+    if (job.status !== "active") {
+      return res.status(409).json({
+        message: "Only active jobs can be indexed",
+        error_code: "job_not_active",
+      });
     }
+
+    ensureQdrantId(job);
 
     await upsertJobVector({
       qdrantId: job.qdrantId,
       vector,
       payload: {
+        ...payload,
         mongoId: String(job._id),
         category: job.category,
         status: job.status,
-        ...payload,
       },
     });
+    job.isAnalyzed = true;
+    await job.save();
 
     return res.status(200).json({ message: "Job vector indexed", qdrantId: job.qdrantId });
   } catch (error) {
@@ -49,19 +58,23 @@ export async function indexResumeVectorHandler(req, res, next) {
       return res.status(404).json({ message: "Resume not found" });
     }
 
-    if (!resume.qdrantId) {
-      return res.status(400).json({ message: "Resume does not have qdrantId" });
-    }
+    ensureQdrantId(resume);
 
     await upsertResumeVector({
       qdrantId: resume.qdrantId,
       vector,
       payload: {
+        ...payload,
         mongoId: String(resume._id),
         candidateId: String(resume.candidateId),
-        ...payload,
+        isAnalyzed: true,
       },
     });
+    resume.isAnalyzed = true;
+    if (resume.processingStatus === "pending" || resume.processingStatus === "processing") {
+      resume.processingStatus = "ready";
+    }
+    await resume.save();
 
     return res.status(200).json({ message: "Resume vector indexed", qdrantId: resume.qdrantId });
   } catch (error) {
@@ -101,16 +114,32 @@ export async function searchJobsByResumeVectorHandler(req, res, next) {
 
 export async function hybridScorePairHandler(req, res, next) {
   try {
-    const { jobId, resumeId, semanticScore = 0, semanticWeight = 0.7 } = req.body;
+    const jobId = req.body?.jobId ?? req.body?.job_id;
+    const resumeId = req.body?.resumeId ?? req.body?.resume_id;
+    const semanticWeight = req.body?.semanticWeight ?? req.body?.semantic_weight ?? HYBRID_SEMANTIC_WEIGHT;
+    const hasSemanticScore =
+      Object.prototype.hasOwnProperty.call(req.body || {}, "semanticScore") ||
+      Object.prototype.hasOwnProperty.call(req.body || {}, "semantic_score");
+    const semanticScore = hasSemanticScore
+      ? Number(req.body.semanticScore ?? req.body.semantic_score)
+      : await computeSemanticScoreForPair({ jobId, resumeId });
 
     const score = await buildHybridScoreForPair({
       jobId,
       resumeId,
-      semanticScore: Number(semanticScore),
+      semanticScore,
       semanticWeight: Number(semanticWeight),
     });
 
-    return res.status(200).json(score);
+    return res.status(200).json({
+      data: {
+        semantic_score: score.semanticScore,
+        keyword_score: score.keywordScore,
+        hybrid_score: score.hybridScore,
+        matched_keywords: score.matchedKeywords,
+        missing_keywords: score.missingKeywords,
+      },
+    });
   } catch (error) {
     return next(error);
   }

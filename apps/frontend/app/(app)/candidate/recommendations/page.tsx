@@ -5,17 +5,15 @@ import { useTranslations } from '@/lib/i18n/translations';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { MapPin, Briefcase, Calendar, RefreshCw, Sparkles, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
+import { PageHeader, ScoreBar, ErrorBanner, EmptyState } from '@/components/ui';
 import {
-  PageHeader,
-  ScoreBar,
-  ErrorBanner,
-  EmptyState,
-  SkeletonCard,
-} from '@/components/ui';
-import {
+  createApplication,
+  fetchMasterResume,
+  fetchResumeList,
   getJobRecommendations,
   type JobRecommendation,
   type RecommendationMeta,
+  type ResumeListItem,
 } from '@/lib/api';
 
 // ── Score Circle ──────────────────────────────────────────────────────────────
@@ -24,11 +22,7 @@ function ScoreCircle({ value }: { value: number }) {
   const { t } = useTranslations();
   const pct = Math.round(value * 100);
   const color =
-    value >= 0.75
-      ? 'var(--success)'
-      : value >= 0.5
-        ? 'var(--warning)'
-        : 'var(--danger)';
+    value >= 0.75 ? 'var(--success)' : value >= 0.5 ? 'var(--warning)' : 'var(--danger)';
   const label =
     value >= 0.75
       ? t('scores.strongMatch')
@@ -77,7 +71,15 @@ function KeywordPills({ keywords, max = 5 }: { keywords: string[]; max?: number 
 
 // ── Job Card ──────────────────────────────────────────────────────────────────
 
-function JobRecommendationCard({ job }: { job: JobRecommendation }) {
+function JobRecommendationCard({
+  job,
+  onApply,
+  disabled,
+}: {
+  job: JobRecommendation;
+  onApply: (job: JobRecommendation) => void;
+  disabled?: boolean;
+}) {
   const { t } = useTranslations();
   const tierColor =
     job.scores.hybrid_score >= 0.75
@@ -122,8 +124,16 @@ function JobRecommendationCard({ job }: { job: JobRecommendation }) {
 
       {/* Score bars */}
       <div className="space-y-1.5">
-        <ScoreBar label={t('scores.semantic')} value={job.scores.semantic_score} />
-        <ScoreBar label={t('scores.keyword')} value={job.scores.keyword_score} />
+        <ScoreBar
+          label={t('scores.semantic')}
+          value={job.scores.semantic_score}
+          color="var(--blue-600)"
+        />
+        <ScoreBar
+          label={t('scores.keyword')}
+          value={job.scores.keyword_score}
+          color="var(--success)"
+        />
       </div>
 
       {/* Matched keywords */}
@@ -146,6 +156,8 @@ function JobRecommendationCard({ job }: { job: JobRecommendation }) {
         </Link>
         <button
           type="button"
+          onClick={() => onApply(job)}
+          disabled={disabled}
           className="flex-1 rounded-lg border border-[var(--border)] py-2 text-sm font-semibold text-[var(--text-2)] transition hover:border-[var(--blue-700)] hover:text-[var(--blue-700)]"
         >
           {t('common.apply')}
@@ -191,27 +203,43 @@ export default function CandidateRecommendationsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [masterResumeId, setMasterResumeId] = useState<string | null>(null);
+  const [resumes, setResumes] = useState<ResumeListItem[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState('');
+  const [applyJob, setApplyJob] = useState<JobRecommendation | null>(null);
+  const [applyLoading, setApplyLoading] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [applyMessage, setApplyMessage] = useState<string | null>(null);
 
   // Filter state
   const [limit, setLimit] = useState(10);
-  const [semanticWeight, setSemanticWeight] = useState(0.7);
+  const [semanticWeight, setSemanticWeight] = useState(0.65);
 
-  // Load master resume id first
   useEffect(() => {
-    import('@/lib/api').then(({ getPath }) => {
-      getPath<{ resume_id?: string; candidate_id?: string }>('resumes/master').then((res) => {
-        if (!res.error && res.data?.resume_id) {
-          setMasterResumeId(res.data.resume_id);
+    let active = true;
+    Promise.all([fetchMasterResume().catch(() => null), fetchResumeList(true).catch(() => [])]).then(
+      ([masterResume, resumeItems]) => {
+        if (!active) return;
+        if (masterResume?.resume_id) {
+          setMasterResumeId(masterResume.resume_id);
         }
-      });
-    });
+        setResumes(resumeItems);
+        const master = resumeItems.find((item) => item.is_master);
+        setSelectedResumeId(master?.resume_id || resumeItems[0]?.resume_id || '');
+      }
+    );
+    return () => {
+      active = false;
+    };
   }, []);
 
   const fetchRecommendations = useCallback(
     async (resumeId: string) => {
       setLoading(true);
       setError(null);
-      const result = await getJobRecommendations(resumeId, { limit, semantic_weight: semanticWeight });
+      const result = await getJobRecommendations(resumeId, {
+        limit,
+        semantic_weight: semanticWeight,
+      });
       if ('error' in result) {
         setError(result.error);
         setJobs([]);
@@ -232,15 +260,39 @@ export default function CandidateRecommendationsPage() {
 
   const avgScore = useMemo(() => {
     if (!jobs.length) return 0;
-    return Math.round((jobs.reduce((acc, j) => acc + j.scores.hybrid_score, 0) / jobs.length) * 100);
+    return Math.round(
+      (jobs.reduce((acc, j) => acc + j.scores.hybrid_score, 0) / jobs.length) * 100
+    );
   }, [jobs]);
+
+  function openApplyModal(job: JobRecommendation) {
+    setApplyJob(job);
+    setApplyError(null);
+    setApplyMessage(null);
+  }
+
+  async function handleApply() {
+    if (!applyJob || !selectedResumeId) return;
+    setApplyLoading(true);
+    setApplyError(null);
+    setApplyMessage(null);
+    try {
+      await createApplication({ job_id: applyJob.job_id, resume_id: selectedResumeId });
+      setApplyMessage(t('jobs.applicationSubmitted'));
+      setTimeout(() => {
+        setApplyJob(null);
+        setApplyMessage(null);
+      }, 1200);
+    } catch (requestError) {
+      setApplyError(requestError instanceof Error ? requestError.message : t('errors.apply'));
+    } finally {
+      setApplyLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={header.title}
-        subtitle={header.subtitle}
-      />
+      <PageHeader title={header.title} subtitle={header.subtitle} />
 
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-4 rounded-2xl border border-[var(--border)] bg-white p-4 shadow-[var(--shadow-elev-1)]">
@@ -355,10 +407,75 @@ export default function CandidateRecommendationsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {jobs.map((job) => (
-            <JobRecommendationCard key={job.job_id} job={job} />
+            <JobRecommendationCard
+              key={job.job_id}
+              job={job}
+              onApply={openApplyModal}
+              disabled={applyLoading}
+            />
           ))}
         </div>
       )}
+
+      {applyJob ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="text-base font-semibold">
+              {t('jobs.applyForTitle', { title: applyJob.title })}
+            </h2>
+            <p className="mt-1 text-sm text-[var(--text-2)]">{t('jobs.selectResumeToApply')}</p>
+            {resumes.length === 0 ? (
+              <div className="mt-4 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {t('jobs.noResumesYet')}{' '}
+                <Link href="/candidate/resumes" className="underline">
+                  {t('jobs.uploadFirst')}
+                </Link>
+              </div>
+            ) : (
+              <select
+                className="mt-4 w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
+                value={selectedResumeId}
+                onChange={(event) => setSelectedResumeId(event.target.value)}
+              >
+                {resumes.map((resume) => (
+                  <option key={resume.resume_id} value={resume.resume_id}>
+                    {resume.title || t('resumes.defaultTitle')}
+                    {resume.is_master ? t('forms.masterSuffix') : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+            {applyError ? (
+              <p className="mt-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-[var(--danger)]">
+                {applyError}
+              </p>
+            ) : null}
+            {applyMessage ? (
+              <p className="mt-3 rounded-lg border border-green-100 bg-green-50 px-3 py-2 text-xs text-[var(--success)]">
+                {applyMessage}
+              </p>
+            ) : null}
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm"
+                onClick={() => setApplyJob(null)}
+                disabled={applyLoading}
+                type="button"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                className="rounded-lg bg-[var(--blue-700)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                onClick={handleApply}
+                disabled={applyLoading || !selectedResumeId || resumes.length === 0}
+                type="button"
+              >
+                {applyLoading ? t('jobs.submitting') : t('jobs.submitApplication')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ErrorBanner, PageHeader } from '@/components/ui';
+import { GenerationModeBadge } from '@/components/ui/GenerationModeBadge';
 import { generateInterviewQuestions, type InterviewQuestionsResult, type QuestionGroup } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -222,7 +223,7 @@ export default function InterviewQuestionsPage() {
       {/* ── LEFT PANEL ── */}
       <aside className="hidden w-72 shrink-0 flex-col gap-6 bg-[#1e293b] p-6 text-white md:flex">
         <Link
-          href={`/recruiter/jobs/${jobId}/find-candidates`}
+          href={`/recruiter/jobs/${jobId}/candidates`}
           className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white"
         >
           <ArrowLeft className="size-4" />
@@ -277,6 +278,11 @@ export default function InterviewQuestionsPage() {
                 count: result.question_groups.length,
               })}
             </p>
+            {result.generation_mode && (
+              <div className="mt-3">
+                <GenerationModeBadge mode={result.generation_mode} />
+              </div>
+            )}
           </div>
         )}
 
@@ -296,7 +302,7 @@ export default function InterviewQuestionsPage() {
         <div className="flex-1 overflow-y-auto p-6">
           {/* Mobile back button */}
           <Link
-            href={`/recruiter/jobs/${jobId}/find-candidates`}
+            href={`/recruiter/jobs/${jobId}/candidates`}
             className="mb-4 inline-flex items-center gap-1.5 text-sm text-[var(--text-2)] hover:text-[var(--blue-700)] md:hidden"
           >
             <ArrowLeft className="size-4" />

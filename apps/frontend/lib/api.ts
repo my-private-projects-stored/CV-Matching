@@ -20,6 +20,7 @@ type ApiResult<T> = {
   data: T | null;
   error?: string;
   pagination?: ApiPagination;
+  meta?: unknown;
 };
 
 type QueryParams = Record<string, string | number | boolean | undefined | null>;
@@ -145,6 +146,11 @@ function getPagination(payload: unknown): ApiPagination | undefined {
   };
 }
 
+function getMeta(payload: unknown): unknown {
+  const object = getObject(payload);
+  return Object.prototype.hasOwnProperty.call(object, 'meta') ? object.meta : undefined;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
   try {
     const response = await apiFetch(path, {
@@ -163,6 +169,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T
     return {
       data: getData(payload) as T,
       pagination: getPagination(payload),
+      meta: getMeta(payload),
     };
   } catch (error) {
     return { data: null, error: error instanceof Error ? error.message : 'Request failed' };
@@ -519,10 +526,9 @@ export async function getJobRecommendations(
     buildUrl('/recommendations/jobs', { resume_id: resumeId, ...params })
   );
   if (result.error) return { error: result.error };
-  const payload = getObject(result.data);
   return {
-    data: Array.isArray(payload.data) ? (payload.data as JobRecommendation[]) : [],
-    meta: (payload.meta as RecommendationMeta) ?? { total: 0, semantic_weight: 0.7 },
+    data: Array.isArray(result.data) ? (result.data as JobRecommendation[]) : [],
+    meta: (result.meta as RecommendationMeta) ?? { total: 0, semantic_weight: 0.65 },
   };
 }
 
@@ -534,10 +540,9 @@ export async function getResumeRecommendations(
     buildUrl('/recommendations/resumes', { job_id: jobId, ...params })
   );
   if (result.error) return { error: result.error };
-  const payload = getObject(result.data);
   return {
-    data: Array.isArray(payload.data) ? (payload.data as ResumeRecommendation[]) : [],
-    meta: (payload.meta as RecommendationMeta) ?? { total: 0, semantic_weight: 0.7 },
+    data: Array.isArray(result.data) ? (result.data as ResumeRecommendation[]) : [],
+    meta: (result.meta as RecommendationMeta) ?? { total: 0, semantic_weight: 0.65 },
   };
 }
 
@@ -568,6 +573,14 @@ export type InterviewQuestionsResult = {
   generated_at: string;
   question_groups: QuestionGroup[];
   total_questions: number;
+  generation_mode?: 'llm' | 'template_fallback';
+  llm_metadata?: {
+    provider?: string;
+    model?: string;
+    response_model?: string;
+    prompt_tokens?: number | null;
+    completion_tokens?: number | null;
+  } | null;
 };
 
 export async function generateInterviewQuestions(

@@ -8,6 +8,19 @@ import User from "../src/models/User.js";
 import { createJob } from "../src/services/job.service.js";
 import { createResume } from "../src/services/resume.service.js";
 
+// Seed data is for UI smoke tests only; do not use it to judge real matching quality.
+function createDemoVector(seedText, size = Number(process.env.QDRANT_VECTOR_SIZE || 384)) {
+  let seed = 0;
+  for (const char of String(seedText || "seed")) {
+    seed = (seed * 31 + char.charCodeAt(0)) % 100_000;
+  }
+
+  return Array.from({ length: size }, (_, index) => {
+    const raw = Math.sin(seed + index * 17) * 10_000;
+    return raw - Math.floor(raw);
+  });
+}
+
 async function main() {
   const mongoUri = process.env.MONGO_URI;
 
@@ -35,8 +48,12 @@ async function main() {
     fullName: "Seed Candidate",
   });
 
-  const dim = Number(process.env.QDRANT_VECTOR_SIZE || 384);
-  const vector = Array.from({ length: dim }, (_, i) => (i % 7) / 10);
+  const candidate2 = await User.create({
+    email: `seed.candidate.marketing.${suffix}@example.com`,
+    password: passwordHash,
+    role: "candidate",
+    fullName: "Seed Marketing Candidate",
+  });
 
   const job = await createJob({
     recruiterId: recruiter._id,
@@ -46,7 +63,18 @@ async function main() {
     cleanText: "Node.js MongoDB Qdrant scalable services",
     keywords: ["node.js", "mongodb", "qdrant"],
     category: "IT",
-    embeddingVector: vector,
+    embeddingVector: createDemoVector("backend-engineer-job"),
+  });
+
+  const job2 = await createJob({
+    recruiterId: recruiter._id,
+    title: "Seed Marketing Analyst",
+    description: "Analyze campaign performance and improve lifecycle marketing",
+    requirements: "SEO analytics content strategy",
+    cleanText: "SEO analytics content strategy campaign performance",
+    keywords: ["seo", "analytics", "content"],
+    category: "Marketing",
+    embeddingVector: createDemoVector("marketing-analyst-job"),
   });
 
   const resume = await createResume({
@@ -56,7 +84,20 @@ async function main() {
     parsedData: {
       skills: ["Node.js", "MongoDB", "Qdrant"],
     },
-    embeddingVector: vector,
+    embeddingVector: createDemoVector("backend-engineer-resume"),
+  });
+
+  const resume2 = await createResume({
+    candidateId: candidate2._id,
+    fileUrl: "https://example.com/seed-marketing-resume.pdf",
+    rawText: "Marketing analyst focused on SEO analytics and content strategy",
+    parsedData: {
+      skills: ["SEO", "Analytics", "Content Strategy"],
+      additional: {
+        technicalSkills: ["SEO", "Analytics", "Content Strategy"],
+      },
+    },
+    embeddingVector: createDemoVector("marketing-analyst-resume"),
   });
 
   const application = await Application.create({
@@ -71,11 +112,15 @@ async function main() {
       {
         recruiterId: String(recruiter._id),
         candidateId: String(candidate._id),
+        candidate2Id: String(candidate2._id),
         recruiterEmail: recruiter.email,
         candidateEmail: candidate.email,
+        candidate2Email: candidate2.email,
         password: demoPassword,
         jobId: String(job._id),
+        job2Id: String(job2._id),
         resumeId: String(resume._id),
+        resume2Id: String(resume2._id),
         applicationId: String(application._id),
       },
       null,

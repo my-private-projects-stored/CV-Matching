@@ -1,7 +1,10 @@
 import Resume from "../models/Resume.js";
-import { normalizeBuilderData } from "./resume.service.js";
+import { getPromptConfig, resolveLlmRuntimeConfig } from "./config.service.js";
+import { completeJson, getLlmFailureReason, logLlmFallback } from "./llm.service.js";
+import { normalizeBuilderData, updateResumeById } from "./resume.service.js";
+import { detectLanguageOfResume } from "../utils/language-detector.js";
 
-const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi"]);
+const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi", "auto"]);
 
 function resolveOutputLanguage(language) {
   const normalized = String(language || "").trim().toLowerCase();
@@ -60,6 +63,89 @@ function isStructuredData(value) {
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function renderTemplate(template = "", values = {}) {
+  return String(template || "").replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) =>
+    values[key] === undefined || values[key] === null ? "" : String(values[key])
+  );
+}
+
+function outputLanguageName(language) {
+  return language === "vi" ? "Vietnamese" : "English";
+}
+
+function normalizeAnalyzeItems(items = []) {
+  return (Array.isArray(items) ? items : [])
+    .map((item, index) => {
+      const itemId = String(item?.item_id || item?.id || `item_${index}`).trim();
+      return {
+        item_id: itemId,
+        item_type: String(item?.item_type || item?.type || "experience").trim(),
+        target_section_id: item?.target_section_id || item?.section_id || undefined,
+        target_item_id: item?.target_item_id || itemId,
+        title: String(item?.title || "Item").trim(),
+        subtitle: item?.subtitle ? String(item.subtitle).trim() : undefined,
+        current_description: normalizeLines(item?.current_description || item?.description),
+        weakness_reason: String(item?.weakness_reason || item?.reason || "").trim(),
+      };
+    })
+    .filter((item) => item.item_id && item.title);
+}
+
+function normalizeAnalyzeQuestions(questions = []) {
+  return (Array.isArray(questions) ? questions : [])
+    .map((question, index) => ({
+      question_id: String(question?.question_id || question?.id || `q_${index}`).trim(),
+      item_id: String(question?.item_id || question?.target_item_id || "").trim(),
+      question: String(question?.question || question?.text || "").trim(),
+      placeholder: String(question?.placeholder || question?.example || "").trim(),
+    }))
+    .filter((question) => question.question_id && question.question)
+    .slice(0, 6);
+}
+
+function normalizeRegeneratedItems(items = [], outputLanguage = "en") {
+  const copy = getEnrichmentCopy(outputLanguage);
+  return (Array.isArray(items) ? items : [])
+    .map((item) => {
+      const newContent = normalizeLines(item?.new_content || item?.new_bullets || item?.content);
+      return {
+        item_id: String(item?.item_id || "").trim(),
+        item_type: String(item?.item_type || "experience").trim(),
+        title: String(item?.title || "Item").trim() || "Item",
+        subtitle: item?.subtitle ? String(item.subtitle).trim() : undefined,
+        original_content: normalizeLines(item?.original_content || item?.current_content),
+        new_content: newContent,
+        diff_summary:
+          String(item?.diff_summary || item?.change_summary || "").trim() ||
+          copy.diffSummary(newContent.length),
+      };
+    })
+    .filter((item) => item.item_id && item.new_content.length);
+}
+
+async function getRuntimeAndPromptConfig() {
+  const [runtimeConfig, promptConfig] = await Promise.all([
+    resolveLlmRuntimeConfig(),
+    getPromptConfig(),
+  ]);
+  return { runtimeConfig, promptConfig };
+}
+
+async function logEnrichmentFallback(feature, error) {
+  let fallbackConfig = null;
+  try {
+    fallbackConfig = await resolveLlmRuntimeConfig();
+  } catch {
+    fallbackConfig = null;
+  }
+  logLlmFallback({
+    feature,
+    error,
+    config: fallbackConfig,
+    reason: getLlmFailureReason(error),
+  });
 }
 
 function normalizeLines(value) {
@@ -168,7 +254,54 @@ export async function analyzeResumeEnrichment(resumeId, outputLanguage = "en") {
   if (!resume) return null;
 
   const parsedData = getResumeData(resume);
-  return buildAnalyzePayload(parsedData, outputLanguage);
+  
+  let resolvedLang = outputLanguage;
+  if (resolvedLang === "auto") {
+    resolvedLang = detectLanguageOfResume(parsedData);
+  }
+
+  try {
+    const { runtimeConfig, promptConfig } = await getRuntimeAndPromptConfig();
+    const prompt = renderTemplate(promptConfig.templates?.enrichment?.analyze, {
+      output_language: outputLanguageName(resolvedLang),
+      resume_json: JSON.stringify(parsedData, null, 2),
+    });
+    const result = await completeJson({
+      feature: "enrichment_analyze",
+      prompt,
+      systemPrompt:
+        "You are a resume analyst. Return structured JSON only and do not invent facts.",
+      maxTokens: 4096,
+      retries: 1,
+      config: runtimeConfig,
+    });
+    const itemsToEnrich = normalizeAnalyzeItems(result.data?.items_to_enrich);
+    const questions = normalizeAnalyzeQuestions(result.data?.questions);
+    if (!questions.length) {
+      const error = new Error("LLM returned no enrichment questions");
+      error.code = "invalid_json";
+      throw error;
+    }
+
+    return {
+      items_to_enrich: itemsToEnrich,
+      questions,
+      analysis_summary: String(result.data?.analysis_summary || ""),
+      generation_mode: "llm",
+      llm_metadata: result.metadata,
+    };
+  } catch (error) {
+    await logEnrichmentFallback("enrichment_analyze", error);
+    let resolvedLang = outputLanguage;
+    if (resolvedLang === "auto") {
+      resolvedLang = detectLanguageOfResume(parsedData);
+    }
+    return {
+      ...buildAnalyzePayload(parsedData, resolvedLang),
+      generation_mode: "template_fallback",
+      llm_metadata: null,
+    };
+  }
 }
 
 function groupAnswersByItem(answers = []) {
@@ -197,9 +330,46 @@ export async function enhanceResumeDescriptions({ resumeId, answers, outputLangu
   const resume = await Resume.findById(resumeId);
   if (!resume) return null;
 
-  const copy = getEnrichmentCopy(outputLanguage);
   const parsedData = getResumeData(resume);
+  let resolvedLang = outputLanguage;
+  if (resolvedLang === "auto") {
+    resolvedLang = detectLanguageOfResume(parsedData);
+  }
+
+  const copy = getEnrichmentCopy(resolvedLang);
   const grouped = groupAnswersByItem(answers);
+
+  try {
+    const { runtimeConfig, promptConfig } = await getRuntimeAndPromptConfig();
+    const prompt = renderTemplate(promptConfig.templates?.enrichment?.enhance, {
+      output_language: outputLanguageName(resolvedLang),
+      resume_json: JSON.stringify(parsedData, null, 2),
+      answers_json: JSON.stringify(answers || [], null, 2),
+    });
+    const result = await completeJson({
+      feature: "enrichment_enhance",
+      prompt,
+      systemPrompt:
+        "You are a resume writer. Only use candidate-provided facts. Return JSON only.",
+      maxTokens: 4096,
+      retries: 1,
+      config: runtimeConfig,
+    });
+
+    const enhancements = Array.isArray(result.data?.enhancements)
+      ? result.data.enhancements
+      : [];
+    if (enhancements.length) {
+      return {
+        enhancements,
+        generation_mode: "llm",
+        llm_metadata: result.metadata,
+      };
+    }
+  } catch (error) {
+    await logEnrichmentFallback("enrichment_enhance", error);
+  }
+
   const enhancements = [];
 
   for (const [itemId, answerTexts] of grouped.entries()) {
@@ -254,7 +424,11 @@ export async function enhanceResumeDescriptions({ resumeId, answers, outputLangu
     }
   }
 
-  return { enhancements };
+  return {
+    enhancements,
+    generation_mode: "template_fallback",
+    llm_metadata: null,
+  };
 }
 
 export async function applyResumeEnhancements(resumeId, enhancements = []) {
@@ -293,9 +467,10 @@ export async function applyResumeEnhancements(resumeId, enhancements = []) {
     }
   }
 
-  resume.parsedData = parsedData;
-  resume.builderData = syncBuilderDataFromParsedData(resume.builderData, parsedData);
-  await resume.save();
+  await updateResumeById(resumeId, {
+    parsedData,
+    builderData: syncBuilderDataFromParsedData(resume.builderData, parsedData),
+  });
 
   return {
     message: "Enhancements applied successfully",
@@ -314,8 +489,47 @@ export async function regenerateResumeItems({ resumeId, items, instruction, outp
   const resume = await Resume.findById(resumeId);
   if (!resume) return null;
 
-  const copy = getEnrichmentCopy(outputLanguage);
+  const parsedData = getResumeData(resume);
+  let resolvedLang = outputLanguage;
+  if (resolvedLang === "auto") {
+    resolvedLang = detectLanguageOfResume(parsedData);
+  }
+
+  const copy = getEnrichmentCopy(resolvedLang);
   const normalizedInstruction = String(instruction || "").trim() || copy.defaultInstruction;
+
+  try {
+    const { runtimeConfig, promptConfig } = await getRuntimeAndPromptConfig();
+    const prompt = renderTemplate(promptConfig.templates?.enrichment?.regenerate, {
+      output_language: outputLanguageName(resolvedLang),
+      items_json: JSON.stringify(items || [], null, 2),
+      instruction: normalizedInstruction,
+    });
+    const result = await completeJson({
+      feature: "enrichment_regenerate",
+      prompt,
+      systemPrompt:
+        "You are a resume editor. Rewrite only with provided facts. Return JSON only.",
+      maxTokens: 4096,
+      retries: 1,
+      config: runtimeConfig,
+    });
+    const regeneratedItems = normalizeRegeneratedItems(
+      result.data?.regenerated_items,
+      resolvedLang
+    );
+    if (regeneratedItems.length) {
+      return {
+        regenerated_items: regeneratedItems,
+        errors: Array.isArray(result.data?.errors) ? result.data.errors : [],
+        generation_mode: "llm",
+        llm_metadata: result.metadata,
+      };
+    }
+  } catch (error) {
+    await logEnrichmentFallback("enrichment_regenerate", error);
+  }
+
   const regeneratedItems = [];
   const errors = [];
 
@@ -351,12 +565,16 @@ export async function regenerateResumeItems({ resumeId, items, instruction, outp
     return {
       regenerated_items: [],
       errors,
+      generation_mode: "template_fallback",
+      llm_metadata: null,
     };
   }
 
   return {
     regenerated_items: regeneratedItems,
     errors,
+    generation_mode: "template_fallback",
+    llm_metadata: null,
   };
 }
 
@@ -401,9 +619,10 @@ export async function applyRegeneratedResumeItems(resumeId, regeneratedItems = [
     }
   }
 
-  resume.parsedData = parsedData;
-  resume.builderData = syncBuilderDataFromParsedData(resume.builderData, parsedData);
-  await resume.save();
+  await updateResumeById(resumeId, {
+    parsedData,
+    builderData: syncBuilderDataFromParsedData(resume.builderData, parsedData),
+  });
 
   return {
     message: "Regenerated content applied successfully",

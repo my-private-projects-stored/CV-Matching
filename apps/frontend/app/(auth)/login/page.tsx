@@ -2,7 +2,6 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { RoleToggle } from '@/components/ui/RoleToggle';
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher';
 import { useAuth } from '@/lib/context/auth-context';
 import { useTranslations } from '@/lib/i18n/translations';
@@ -15,7 +14,6 @@ function dashboardPath(role: UserRole) {
 }
 
 export default function LoginPage() {
-  const [role, setRole] = useState<'candidate' | 'recruiter'>('candidate');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +50,9 @@ export default function LoginPage() {
         <h1 className="mt-2 font-display text-4xl">{t('auth.welcome')}</h1>
         <p className="mt-2 text-sm text-[var(--text-2)]">{t('auth.signInSubtitle')}</p>
       </div>
-      <RoleToggle value={role} onChange={setRole} />
+      <p className="rounded-lg bg-[var(--blue-50)] px-3 py-2 text-xs text-[var(--blue-700)]">
+        {t('auth.roleDeterminedByAccount')}
+      </p>
       <div className="space-y-3">
         <input
           className="w-full rounded-lg border border-[var(--border)] px-4 py-3 text-sm"
@@ -87,8 +87,12 @@ export default function LoginPage() {
           {loading ? t('auth.signingIn') : `${t('auth.signIn')} ->`}
         </button>
         <div className="text-center text-xs text-[var(--text-3)]">{t('auth.orContinue')}</div>
-        <button type="button" className="w-full rounded-lg border border-[var(--border)] px-4 py-3 text-sm">
-          {t('auth.google')}
+        <button
+          type="button"
+          disabled
+          className="w-full rounded-lg border border-[var(--border)] px-4 py-3 text-sm text-[var(--text-3)] disabled:opacity-60"
+        >
+          {t('auth.googleNotConfigured')}
         </button>
       </div>
       <div className="flex justify-center gap-4 text-xs text-[var(--text-3)]">

@@ -1,5 +1,8 @@
 import mongoose from "mongoose";
 
+import Application from "../models/Application.js";
+import Job from "../models/Job.js";
+import Resume from "../models/Resume.js";
 import User from "../models/User.js";
 
 const MAX_TEXT = 500;
@@ -270,13 +273,74 @@ async function loadCandidateUserById(candidateUserId) {
   return user;
 }
 
+async function assertRecruiterCanReadCandidateProfile(candidateUserId, recruiterUserId) {
+  if (!recruiterUserId) {
+    throw createHttpError(401, "Authentication is required", "candidate_profile_auth_required");
+  }
+
+  const recruiterJobs = await Job
+    .find({ recruiterId: recruiterUserId })
+    .select("_id")
+    .lean();
+  const jobIds = recruiterJobs.map((item) => item._id);
+  if (jobIds.length === 0) {
+    throw createHttpError(
+      403,
+      "You do not have permission to view this candidate profile",
+      "candidate_profile_forbidden_recruiter"
+    );
+  }
+
+  const candidateResumes = await Resume
+    .find({ candidateId: candidateUserId })
+    .select("_id")
+    .lean();
+  const resumeIds = candidateResumes.map((item) => item._id);
+  if (resumeIds.length === 0) {
+    throw createHttpError(
+      403,
+      "You do not have permission to view this candidate profile",
+      "candidate_profile_forbidden_recruiter"
+    );
+  }
+
+  const application = await Application
+    .findOne({
+      jobId: { $in: jobIds },
+      resumeId: { $in: resumeIds },
+    })
+    .select("_id")
+    .lean();
+
+  if (!application) {
+    throw createHttpError(
+      403,
+      "You do not have permission to view this candidate profile",
+      "candidate_profile_forbidden_recruiter"
+    );
+  }
+}
+
 export async function getMyCandidateProfile(userId) {
   const user = await loadCandidateUser(userId);
   return toCandidateProfileDto(user);
 }
 
-export async function getCandidateProfileById(candidateUserId) {
+export async function getCandidateProfileById(candidateUserId, actor = {}) {
   const user = await loadCandidateUserById(candidateUserId);
+  const role = String(actor.role || "").trim().toLowerCase();
+  const actorUserId = String(actor.userId || "").trim();
+
+  if (role === "recruiter") {
+    await assertRecruiterCanReadCandidateProfile(String(user._id), actorUserId);
+  } else if (role !== "admin") {
+    throw createHttpError(
+      403,
+      "You do not have permission to view this candidate profile",
+      "candidate_profile_forbidden_role"
+    );
+  }
+
   return toCandidateProfileDto(user);
 }
 

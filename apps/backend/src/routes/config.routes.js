@@ -1,5 +1,4 @@
 import { Router } from "express";
-
 import {
   clearAllApiKeysHandler,
   deleteApiKeyHandler,
@@ -8,6 +7,7 @@ import {
   getFeatureConfigHandler,
   getLanguageConfigHandler,
   getLlmConfigHandler,
+  getLlmEventsHandler,
   getPrivacyConfigHandler,
   getPromptConfigHandler,
   resetDatabaseHandler,
@@ -51,5 +51,7 @@ router.delete("/api-keys/:provider", ...requireAdminRole, deleteApiKeyHandler);
 router.delete("/api-keys", ...requireAdminRole, clearAllApiKeysHandler);
 
 router.post("/reset", ...requireAdminRole, resetDatabaseHandler);
+
+router.get("/llm-events", ...requireAdminRole, getLlmEventsHandler);
 
 export default router;

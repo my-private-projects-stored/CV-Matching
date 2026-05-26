@@ -8,7 +8,7 @@ import {
 import { assertAiGenerationAllowed, getLanguageConfig } from "../services/config.service.js";
 import { getResumeByPublicId } from "../services/resume.service.js";
 
-const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi"]);
+const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi", "auto"]);
 
 function resolveOutputLanguage(value, fallback = "en") {
   const normalized = String(value || "").trim().toLowerCase();

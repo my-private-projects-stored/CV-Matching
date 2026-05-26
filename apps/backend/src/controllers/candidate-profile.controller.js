@@ -15,7 +15,10 @@ export async function getMyCandidateProfileHandler(req, res, next) {
 
 export async function getCandidateProfileByIdHandler(req, res, next) {
   try {
-    const data = await getCandidateProfileById(req.params?.userId);
+    const data = await getCandidateProfileById(req.params?.userId, {
+      role: req.auth?.role,
+      userId: req.auth?.userId,
+    });
     return res.status(200).json({ data });
   } catch (error) {
     return next(error);

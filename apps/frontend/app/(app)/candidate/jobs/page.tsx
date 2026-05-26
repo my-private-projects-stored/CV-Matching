@@ -1,20 +1,19 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PageHeader, EmptyState, ErrorBanner, SkeletonRow } from '@/components/ui';
 import { usePageHeader } from '@/lib/i18n/use-page-header';
 import { useTranslations } from '@/lib/i18n/translations';
 import { fetchJobs, type JobItem, type JobCategory } from '@/lib/api/jobs';
 import { createApplication, fetchMyApplicationHistory } from '@/lib/api/applications';
-import { getList } from '@/lib/api';
-import type { Resume } from '@/types';
+import { fetchResumeList, type ResumeListItem } from '@/lib/api/resume';
 
 const JOB_CATEGORIES: JobCategory[] = ['IT', 'Accounting', 'Marketing'];
 
 export default function CandidateBrowseJobsPage() {
   const { t, locale } = useTranslations();
   const [jobs, setJobs] = useState<JobItem[]>([]);
-  const [resumes, setResumes] = useState<Resume[]>([]);
+  const [resumes, setResumes] = useState<ResumeListItem[]>([]);
   const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,10 +33,10 @@ export default function CandidateBrowseJobsPage() {
     setLoading(true);
     Promise.all([
       fetchJobs({ status: 'active', search, category, location, page, limit: 12 }),
-      getList<Resume>('resumes', { limit: 20 }),
+      fetchResumeList(true),
       fetchMyApplicationHistory({ limit: 100 }).then((payload) => payload.data?.applications ?? []),
     ])
-      .then(([jobsRes, resumesRes, applications]) => {
+      .then(([jobsRes, resumeItems, applications]) => {
         if (!active) return;
         setJobs(jobsRes.data);
         setTotalPages(jobsRes.pagination?.totalPages ?? 1);
@@ -46,10 +45,9 @@ export default function CandidateBrowseJobsPage() {
             applications.map((item) => item.job?.id).filter((id): id is string => Boolean(id))
           )
         );
-        const loadedResumes = resumesRes.data ?? [];
-        setResumes(loadedResumes);
-        const master = loadedResumes.find((r) => r.isMaster);
-        setSelectedResumeId(master?._id || loadedResumes[0]?._id || '');
+        setResumes(resumeItems);
+        const master = resumeItems.find((r) => r.is_master);
+        setSelectedResumeId(master?.resume_id || resumeItems[0]?.resume_id || '');
         setLoading(false);
       })
       .catch((err: Error) => {
@@ -62,11 +60,7 @@ export default function CandidateBrowseJobsPage() {
     };
   }, [category, location, page, search, t]);
 
-  const filtered = useMemo(() => {
-    return jobs;
-  }, [jobs]);
-
-  const pageHeader = usePageHeader('candidateJobs', { count: filtered.length });
+  const pageHeader = usePageHeader('candidateJobs', { count: jobs.length });
 
   function formatDeadline(value: string) {
     return new Date(value).toLocaleDateString(locale);
@@ -138,7 +132,7 @@ export default function CandidateBrowseJobsPage() {
         </div>
       ) : null}
       {error ? <ErrorBanner message={error} /> : null}
-      {!loading && !error && filtered.length === 0 ? (
+      {!loading && !error && jobs.length === 0 ? (
         <EmptyState
           title={t('emptyStates.noJobsFound.title')}
           description={t('emptyStates.noJobsFound.description')}
@@ -146,7 +140,7 @@ export default function CandidateBrowseJobsPage() {
       ) : null}
       {!loading && !error ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((job) => (
+          {jobs.map((job) => (
             <div
               key={job._id}
               className="card-hover flex flex-col rounded-2xl border border-[var(--border)] bg-white p-5"
@@ -246,9 +240,9 @@ export default function CandidateBrowseJobsPage() {
                 onChange={(e) => setSelectedResumeId(e.target.value)}
               >
                 {resumes.map((r) => (
-                  <option key={r._id} value={r._id}>
+                  <option key={r.resume_id} value={r.resume_id}>
                     {r.title || t('resumes.defaultTitle')}
-                    {r.isMaster ? t('forms.masterSuffix') : ''}
+                    {r.is_master ? t('forms.masterSuffix') : ''}
                   </option>
                 ))}
               </select>

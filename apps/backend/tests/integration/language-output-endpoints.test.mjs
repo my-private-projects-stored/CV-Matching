@@ -149,7 +149,11 @@ test(
         candidateToken
       );
       assert.equal(coverLetter.status, 200);
-      assert.match(String(coverLetter.json?.content || ""), /Kinh gui/i);
+      assert.ok(String(coverLetter.json?.content || "").trim().length > 20);
+      assert.ok(["llm", "template_fallback"].includes(coverLetter.json?.generation_mode));
+      if (coverLetter.json?.generation_mode === "template_fallback") {
+        assert.match(String(coverLetter.json?.content || ""), /Kinh gui/i);
+      }
 
       const outreach = await requestJson(
         baseUrl,
@@ -159,7 +163,11 @@ test(
         candidateToken
       );
       assert.equal(outreach.status, 200);
-      assert.match(String(outreach.json?.content || ""), /Chao/i);
+      assert.ok(String(outreach.json?.content || "").trim().length > 20);
+      assert.ok(["llm", "template_fallback"].includes(outreach.json?.generation_mode));
+      if (outreach.json?.generation_mode === "template_fallback") {
+        assert.match(String(outreach.json?.content || ""), /Chao/i);
+      }
     } finally {
       await new Promise((resolve, reject) => {
         server.close((error) => {

@@ -3,10 +3,9 @@ import { usePageHeader } from '@/lib/i18n/use-page-header';
 import { useTranslations } from '@/lib/i18n/translations';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import {
   ChevronDown,
-  MessageSquare,
   Search,
   UserCircle,
   Mail,
@@ -20,7 +19,7 @@ import {
   type ResumeRecommendation,
   type RecommendationMeta,
 } from '@/lib/api';
-import { getPath } from '@/lib/api';
+import { fetchJobById } from '@/lib/api/jobs';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -38,7 +37,11 @@ function tierColor(score: number) {
 }
 
 function tierLabel(score: number, t: (key: string) => string) {
-  return score >= 0.75 ? t('scores.strong') : score >= 0.5 ? t('scores.potential') : t('scores.weak');
+  return score >= 0.75
+    ? t('scores.strong')
+    : score >= 0.5
+      ? t('scores.potential')
+      : t('scores.weak');
 }
 
 // ── Keyword Pills ─────────────────────────────────────────────────────────────
@@ -69,7 +72,6 @@ function CandidateRecommendationRow({
   jobId: string;
   t: (key: string, params?: Record<string, string | number>) => string;
 }) {
-  const router = useRouter();
   const color = tierColor(resume.scores.hybrid_score);
   const label = tierLabel(resume.scores.hybrid_score, t);
   const pct = Math.round(resume.scores.hybrid_score * 100);
@@ -103,9 +105,7 @@ function CandidateRecommendationRow({
             </p>
           )}
         </div>
-        {resume.matched_keywords.length > 0 && (
-          <KeywordPills keywords={resume.matched_keywords} />
-        )}
+        {resume.matched_keywords.length > 0 && <KeywordPills keywords={resume.matched_keywords} />}
         {resume.top_skills.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {resume.top_skills.slice(0, 5).map((sk) => (
@@ -127,32 +127,45 @@ function CandidateRecommendationRow({
             {label} · {pct}%
           </span>
         </div>
-        <ScoreBar label={t('scores.hybrid')} value={resume.scores.hybrid_score} />
-        <ScoreBar label={t('scores.semantic')} value={resume.scores.semantic_score} />
-        <ScoreBar label={t('scores.keyword')} value={resume.scores.keyword_score} />
+        <ScoreBar
+          label={t('scores.hybrid')}
+          value={resume.scores.hybrid_score}
+          color="var(--gold)"
+        />
+        <ScoreBar
+          label={t('scores.semantic')}
+          value={resume.scores.semantic_score}
+          color="var(--blue-600)"
+        />
+        <ScoreBar
+          label={t('scores.keyword')}
+          value={resume.scores.keyword_score}
+          color="var(--success)"
+        />
       </div>
 
       {/* Actions */}
       <div className="flex flex-col gap-2">
+        {resume.candidate_id ? (
+          <Link
+            href={`/recruiter/candidates/${resume.candidate_id}`}
+            className="flex items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--text-2)] transition hover:border-[var(--blue-700)] hover:text-[var(--blue-700)]"
+          >
+            <FileText className="size-3.5" />
+            {t('recruiter.findCandidates.viewCv')}
+          </Link>
+        ) : (
+          <span className="flex items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--text-3)]">
+            <FileText className="size-3.5" />
+            {t('recruiter.findCandidates.viewCv')}
+          </span>
+        )}
         <Link
-          href={`/recruiter/candidates/${resume.candidate_id ?? resume.resume_id}`}
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--text-2)] transition hover:border-[var(--blue-700)] hover:text-[var(--blue-700)]"
+          href={`/recruiter/jobs/${jobId}/candidates`}
+          className="flex items-center justify-center rounded-lg bg-[var(--blue-700)] px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90"
         >
-          <FileText className="size-3.5" />
-          {t('recruiter.findCandidates.viewCv')}
+          {t('recruiter.findCandidates.reviewApplicants')}
         </Link>
-        <button
-          type="button"
-          onClick={() =>
-            router.push(
-              `/recruiter/jobs/${jobId}/interview?resume_id=${resume.resume_id}`
-            )
-          }
-          className="flex items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-violet-700"
-        >
-          <MessageSquare className="size-3.5" />
-          {t('recruiter.findCandidates.questions')}
-        </button>
       </div>
     </article>
   );
@@ -198,14 +211,14 @@ export default function FindCandidatesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [limit, setLimit] = useState(10);
-  const [semanticWeight, setSemanticWeight] = useState(0.7);
+  const [semanticWeight, setSemanticWeight] = useState(0.65);
 
   // Fetch job title
   useEffect(() => {
     if (!jobId) return;
-    getPath<{ title?: string }>(`jobs/${jobId}`).then((res) => {
-      if (!res.error && res.data?.title) setJobTitle(res.data.title);
-    });
+    fetchJobById(jobId)
+      .then((job) => setJobTitle(job.title))
+      .catch(() => undefined);
   }, [jobId]);
 
   const fetchCandidates = useCallback(async () => {
@@ -321,7 +334,9 @@ export default function FindCandidatesPage() {
               <span className="text-[var(--text-2)]">·</span>
               <span>{t('recruiter.findCandidates.avgMatch', { score: avgScore })}</span>
               <span className="text-[var(--text-2)]">·</span>
-              <span className="text-[var(--text-3)]">{t('recruiter.findCandidates.passiveCandidatesHint')}</span>
+              <span className="text-[var(--text-3)]">
+                {t('recruiter.findCandidates.passiveCandidatesHint')}
+              </span>
             </>
           )}
         </div>

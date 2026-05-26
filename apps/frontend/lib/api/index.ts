@@ -146,6 +146,9 @@ export {
   type NotificationType,
 } from './notifications';
 
+// User admin operations
+export { fetchUsers, updateUserDisabled, type UserListResponse } from './users';
+
 // Enrichment operations
 export {
   analyzeResume,
@@ -156,7 +159,21 @@ export {
 } from './enrichment';
 
 // Jobs
-export { fetchJobs, fetchJobById, updateJob, closeJob, reopenJob, deleteJob } from './jobs';
+export {
+  fetchJobs,
+  fetchJobById,
+  createJob,
+  uploadJobDescriptionsForJob,
+  updateJob,
+  closeJob,
+  reopenJob,
+  deleteJob,
+  type JobItem,
+  type JobStatus,
+  type JobCategory,
+  type CreateJobPayload,
+  type UpdateJobPayload,
+} from './jobs';
 
 // Auth
 export { signup, login, fetchMe, forgotPassword, resetPassword, changePassword } from './auth';

@@ -1,5 +1,8 @@
 import Job from "../models/Job.js";
 import Resume from "../models/Resume.js";
+import { getPromptConfig, resolveLlmRuntimeConfig } from "./config.service.js";
+import { detectLanguageOfResume } from "../utils/language-detector.js";
+import { completeJson, getLlmFailureReason, logLlmFallback } from "./llm.service.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -18,13 +21,175 @@ function normalizeLines(value) {
 }
 
 function resolveLanguage(value) {
-  const supported = new Set(["en", "vi"]);
+  const supported = new Set(["en", "vi", "auto"]);
   const normalized = normalizeText(value).toLowerCase();
   return supported.has(normalized) ? normalized : "en";
 }
 
 function safeSlice(arr, n) {
   return Array.isArray(arr) ? arr.slice(0, n) : [];
+}
+
+function renderTemplate(template = "", values = {}) {
+  return String(template || "").replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) =>
+    values[key] === undefined || values[key] === null ? "" : String(values[key])
+  );
+}
+
+function outputLanguageName(language) {
+  return language === "vi" ? "Vietnamese" : "English";
+}
+
+function buildJobContext(job) {
+  if (!job) return "";
+  return [job.title, job.description, job.requirements, job.benefits, job.cleanText]
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+}
+
+function countQuestions(questionGroups = []) {
+  return questionGroups.reduce((sum, group) => {
+    const questions = Array.isArray(group?.questions) ? group.questions : [];
+    return sum + questions.length;
+  }, 0);
+}
+
+/**
+ * Normalize LLM question_groups output into the canonical shape.
+ * Handles several common LLM output variants:
+ *   1. Standard: [{group, label, description, questions:[{question,...}]}]
+ *   2. Alias "groups" instead of "question_groups"
+ *   3. Flat questions array with a "category" field: [{question, category}]
+ *   4. Object-by-category: {technical:[...], behavioral:[...]}
+ *   5. Each item may use "text" instead of "question"
+ */
+function normalizeQuestionGroups(value, language) {
+  let raw = value;
+
+  // Variant: object keyed by category name (e.g. {technical:[...], behavioral:[...]})
+  if (raw && !Array.isArray(raw) && typeof raw === "object") {
+    raw = Object.entries(raw).map(([key, val]) => ({
+      group: key,
+      label: key,
+      questions: Array.isArray(val) ? val : [],
+    }));
+  }
+
+  const groups = Array.isArray(raw) ? raw : [];
+
+  // Variant: flat list of questions (no group nesting) — group by category
+  if (groups.length > 0 && groups[0] && !Array.isArray(groups[0]?.questions) && (groups[0]?.question || groups[0]?.text)) {
+    const byCategory = {};
+    for (const item of groups) {
+      const cat = normalizeText(item?.category || "general");
+      if (!byCategory[cat]) byCategory[cat] = [];
+      byCategory[cat].push(item);
+    }
+    return normalizeQuestionGroups(byCategory, language);
+  }
+
+  return groups
+    .map((group, groupIndex) => {
+      const groupName = normalizeText(group?.group || group?.category || group?.name || `group_${groupIndex + 1}`);
+      const questions = Array.isArray(group?.questions) ? group.questions : [];
+      return {
+        group: groupName || `group_${groupIndex + 1}`,
+        label: normalizeText(group?.label || group?.title || groupName || "Questions"),
+        description: normalizeText(group?.description || ""),
+        questions: questions
+          .map((item, index) => ({
+            id: normalizeText(item?.id || `${groupName || "question"}_${index + 1}`),
+            category: normalizeText(item?.category || groupName || "general"),
+            question: normalizeText(item?.question || item?.text || item?.q),
+            focus_skill: item?.focus_skill ?? null,
+            context: item?.context || undefined,
+          }))
+          .filter((item) => item.question),
+      };
+    })
+    .filter((group) => group.questions.length)
+    .slice(0, 8)
+    .map((group) => ({
+      ...group,
+      label: group.label || (language === "vi" ? "Câu hỏi" : "Questions"),
+    }));
+}
+
+/**
+ * Extract question_groups from various LLM response shapes.
+ * Tries "question_groups", "groups", then the root object itself.
+ */
+function extractQuestionGroups(data) {
+  if (!data || typeof data !== "object") return null;
+  if (Array.isArray(data.question_groups)) return data.question_groups;
+  if (Array.isArray(data.groups)) return data.groups;
+  if (Array.isArray(data.questions)) return data.questions; // flat
+  // Object-by-category: {technical: [...], behavioral: [...]}
+  const keys = Object.keys(data);
+  if (keys.length > 0 && keys.every((k) => Array.isArray(data[k]))) return data;
+  return null;
+}
+
+async function buildInterviewWithLlm({ resume, job, language, candidateName, candidateTitle }) {
+  const [runtimeConfig, promptConfig] = await Promise.all([
+    resolveLlmRuntimeConfig(),
+    getPromptConfig(),
+  ]);
+  const truthfulnessBlock = Array.isArray(promptConfig.truthfulness_rules) && promptConfig.truthfulness_rules.length
+    ? `\n\nTruthfulness rules:\n${promptConfig.truthfulness_rules.map((r) => `- ${r}`).join("\n")}`
+    : "";
+    
+  let resolvedLang = language;
+  if (resolvedLang === "auto") {
+    resolvedLang = detectLanguageOfResume(resume.parsedData);
+  }
+
+  const prompt = renderTemplate(promptConfig.templates?.interview, {
+    output_language: outputLanguageName(resolvedLang),
+    job_description: buildJobContext(job),
+    resume_json: JSON.stringify(resume.parsedData || {}, null, 2),
+  }) + truthfulnessBlock;
+
+  const result = await completeJson({
+    feature: "interview_questions",
+    prompt,
+    systemPrompt:
+      "You are a structured interview designer. Generate specific, job-relevant questions. " +
+      "Return ONLY a JSON object with the key \"question_groups\". " +
+      "Each group must have: group (string), label (string), description (string), questions (array). " +
+      "Each question must have: id (string), category (string), question (string). " +
+      "Do not add any text outside the JSON object.",
+    maxTokens: 4096,
+    retries: 1,
+    config: runtimeConfig,
+  });
+
+  // Try to extract question_groups from various shapes the LLM might return
+  const rawGroups = extractQuestionGroups(result.data);
+  const questionGroups = normalizeQuestionGroups(rawGroups, language);
+
+  if (!questionGroups.length) {
+    const error = new Error("LLM returned no usable interview questions after normalization");
+    error.code = "invalid_json";
+    throw error;
+  }
+
+  return {
+    data: {
+      resume_id: String(resume._id),
+      job_id: job ? String(job._id) : null,
+      job_title: job ? normalizeText(job.title) : null,
+      candidate_name: candidateName,
+      candidate_title: candidateTitle,
+      language,
+      generated_at: new Date().toISOString(),
+      question_groups: questionGroups,
+      total_questions: countQuestions(questionGroups),
+      generation_mode: "llm",
+      llm_metadata: result.metadata,
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -304,6 +469,38 @@ export async function generateInterviewQuestions(resumeId, jobId, options = {}) 
     ];
   }
 
+  const candidateName =
+    normalizeText(parsedData.personalInfo?.fullName) ||
+    normalizeText(parsedData.personalInfo?.name) ||
+    "the candidate";
+  const candidateTitle =
+    normalizeText(parsedData.personalInfo?.title) ||
+    normalizeText(workExperience[0]?.title) ||
+    "";
+
+  try {
+    return await buildInterviewWithLlm({
+      resume,
+      job,
+      language,
+      candidateName,
+      candidateTitle,
+    });
+  } catch (error) {
+    let fallbackConfig = null;
+    try {
+      fallbackConfig = await resolveLlmRuntimeConfig();
+    } catch {
+      fallbackConfig = null;
+    }
+    logLlmFallback({
+      feature: "interview_questions",
+      error,
+      config: fallbackConfig,
+      reason: getLlmFailureReason(error),
+    });
+  }
+
   // Build question groups
   const technicalQuestions = buildTechnicalQuestions(focusSkills, language);
   const experienceQuestions = buildExperienceQuestions(workExperience, language);
@@ -312,13 +509,6 @@ export async function generateInterviewQuestions(resumeId, jobId, options = {}) 
   const allBehavioral = buildBehavioralQuestions(language);
   const behavioralQuestions = allBehavioral.slice(0, 3);
   const closingQuestions = buildClosingQuestions(language);
-
-  const candidateName =
-    normalizeText(parsedData.personalInfo?.fullName) || "the candidate";
-  const candidateTitle =
-    normalizeText(parsedData.personalInfo?.title) ||
-    normalizeText(workExperience[0]?.title) ||
-    "";
 
   return {
     data: {
@@ -382,6 +572,8 @@ export async function generateInterviewQuestions(resumeId, jobId, options = {}) 
         projectQuestions.length +
         behavioralQuestions.length +
         closingQuestions.length,
+      generation_mode: "template_fallback",
+      llm_metadata: null,
     },
   };
 }

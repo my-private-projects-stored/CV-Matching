@@ -20,6 +20,7 @@ import {
   updateLlmConfig,
   updatePromptConfig,
   updatePrivacyConfig,
+  fetchLlmEvents,
   type ApiKeyProvider,
   type ApiKeyStatusResponse,
   type ApiKeysUpdateRequest,
@@ -28,11 +29,12 @@ import {
   type LLMConfig,
   type PromptConfig,
   type PrivacyConfig,
+  type LlmEvent,
 } from '@/lib/api/config';
 import { usePageHeader } from '@/lib/i18n/use-page-header';
 import { useTranslations } from '@/lib/i18n/translations';
 
-type Tab = 'llm' | 'prompts' | 'features' | 'apiKeys' | 'language' | 'privacy';
+type Tab = 'llm' | 'prompts' | 'features' | 'apiKeys' | 'language' | 'privacy' | 'llmEvents';
 
 export default function AdminConfigPage() {
   const header = usePageHeader('adminConfig');
@@ -44,7 +46,13 @@ export default function AdminConfigPage() {
   const [prompts, setPrompts] = useState<PromptConfig | null>(null);
   const [privacy, setPrivacy] = useState<PrivacyConfig | null>(null);
   const [apiKeyStatus, setApiKeyStatus] = useState<ApiKeyStatusResponse | null>(null);
+  const [truthfulnessRulesInput, setTruthfulnessRulesInput] = useState<string>('');
   const [apiKeyInputs, setApiKeyInputs] = useState<ApiKeysUpdateRequest>({});
+  const [llmEvents, setLlmEvents] = useState<LlmEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventFeature, setEventFeature] = useState('');
+  const [eventMode, setEventMode] = useState('');
+  const [eventLimit, setEventLimit] = useState(50);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +80,8 @@ export default function AdminConfigPage() {
           setLlm(llmConfig);
           setFeatures(featureConfig);
           setLanguage(languageConfig);
-          setPrompts(promptConfig);
+           setPrompts(promptConfig);
+          setTruthfulnessRulesInput(promptConfig.truthfulness_rules?.join('\n') || '');
           setPrivacy(privacyConfig);
           setApiKeyStatus(apiKeyStatus);
           setError(null);
@@ -89,6 +98,30 @@ export default function AdminConfigPage() {
       active = false;
     };
   }, []);
+
+  async function loadLlmEvents() {
+    setEventsLoading(true);
+    fetchLlmEvents({
+      feature: eventFeature.trim() || undefined,
+      generation_mode: eventMode || undefined,
+      limit: eventLimit,
+    })
+      .then((res) => {
+        setLlmEvents(res.data || []);
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : t('errors.loadLlmEvents'));
+      })
+      .finally(() => {
+        setEventsLoading(false);
+      });
+  }
+
+  useEffect(() => {
+    if (tab !== 'llmEvents') return;
+    void loadLlmEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   async function runSave(operation: () => Promise<void>) {
     setSaving(true);
@@ -148,6 +181,7 @@ export default function AdminConfigPage() {
             ['apiKeys', 'admin.tabs.apiKeys'],
             ['language', 'admin.tabs.language'],
             ['privacy', 'admin.tabs.privacy'],
+            ['llmEvents', 'admin.tabs.llmEvents'],
           ] as const
         ).map(([id, labelKey]) => (
           <button
@@ -291,9 +325,11 @@ export default function AdminConfigPage() {
               })
             }
           >
-            {['en', 'vi'].map((locale) => (
+            {['en', 'vi', 'auto'].map((locale) => (
               <option key={locale} value={locale}>
-                {t('admin.config.language.contentLocale', { locale: locale.toUpperCase() })}
+                {locale === 'auto'
+                  ? t('admin.config.language.autoDetect')
+                  : t('admin.config.language.contentLocale', { locale: locale.toUpperCase() })}
               </option>
             ))}
           </select>
@@ -311,28 +347,254 @@ export default function AdminConfigPage() {
       ) : null}
 
       {!loading && prompts && tab === 'prompts' ? (
-        <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-white p-5">
-          <select
-            className="w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
-            value={prompts.default_prompt_id}
-            onChange={(event) => setPrompts({ ...prompts, default_prompt_id: event.target.value })}
-          >
-            {prompts.prompt_options.map((prompt) => (
-              <option key={prompt.id} value={prompt.id}>
-                {prompt.label}
-              </option>
-            ))}
-          </select>
-          <button
-            className="rounded-lg bg-[var(--blue-700)] px-4 py-2 text-sm text-white"
-            onClick={() =>
-              askSave(async () => {
-                setPrompts(await updatePromptConfig(prompts));
-              })
-            }
-          >
-            {t('common.save')}
-          </button>
+        <section className="space-y-6 rounded-2xl border border-[var(--border)] bg-white p-5">
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-[var(--text-3)]">
+              {t('admin.config.prompts.defaultTailorStyle')}
+            </label>
+            <select
+              className="w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
+              value={prompts.default_prompt_id}
+              onChange={(event) => setPrompts({ ...prompts, default_prompt_id: event.target.value })}
+            >
+              {prompts.prompt_options.map((prompt) => (
+                <option key={prompt.id} value={prompt.id}>
+                  {prompt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-[var(--text-3)]">
+              {t('admin.config.prompts.truthfulnessRules')}
+            </label>
+            <p className="text-xs text-[var(--text-2)]">
+              {t('admin.config.prompts.truthfulnessHelp')}
+            </p>
+            <textarea
+              className="w-full min-h-28 rounded-lg border border-[var(--border)] p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)] leading-6 font-mono"
+              value={truthfulnessRulesInput}
+              onChange={(event) => setTruthfulnessRulesInput(event.target.value)}
+              placeholder={t('admin.config.prompts.truthfulnessPlaceholder')}
+            />
+          </div>
+
+          <hr className="border-[var(--border)]" />
+
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-[var(--text-1)]">{t('admin.config.prompts.templates')}</h3>
+            <p className="text-xs text-[var(--text-2)]">
+              {t('admin.config.prompts.templatesHelp')}
+            </p>
+
+            <div className="space-y-3">
+              {/* Accordion for Tailor Resume Templates */}
+              <details className="group border border-[var(--border)] rounded-xl bg-white overflow-hidden" open>
+                <summary className="flex items-center justify-between p-4 text-sm font-semibold cursor-pointer hover:bg-gray-50 list-none">
+                  <span>{t('admin.config.prompts.tailor')}</span>
+                  <span className="text-xs text-[var(--text-3)] group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="p-4 border-t border-[var(--border)] bg-gray-50/30 space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.tailorNudge')}</label>
+                    <textarea
+                      className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
+                      value={prompts.templates?.tailor?.nudge ?? ''}
+                      onChange={(e) => setPrompts({
+                        ...prompts,
+                        templates: {
+                          ...prompts.templates,
+                          tailor: {
+                            ...prompts.templates?.tailor,
+                            nudge: e.target.value
+                          }
+                        }
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.tailorKeywords')}</label>
+                    <textarea
+                      className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
+                      value={prompts.templates?.tailor?.keywords ?? ''}
+                      onChange={(e) => setPrompts({
+                        ...prompts,
+                        templates: {
+                          ...prompts.templates,
+                          tailor: {
+                            ...prompts.templates?.tailor,
+                            keywords: e.target.value
+                          }
+                        }
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.tailorFull')}</label>
+                    <textarea
+                      className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
+                      value={prompts.templates?.tailor?.full ?? ''}
+                      onChange={(e) => setPrompts({
+                        ...prompts,
+                        templates: {
+                          ...prompts.templates,
+                          tailor: {
+                            ...prompts.templates?.tailor,
+                            full: e.target.value
+                          }
+                        }
+                      })}
+                    />
+                  </div>
+                </div>
+              </details>
+
+              {/* Accordion for Cover Letter & Outreach Templates */}
+              <details className="group border border-[var(--border)] rounded-xl bg-white overflow-hidden">
+                <summary className="flex items-center justify-between p-4 text-sm font-semibold cursor-pointer hover:bg-gray-50 list-none">
+                  <span>{t('admin.config.prompts.coverOutreach')}</span>
+                  <span className="text-xs text-[var(--text-3)] group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="p-4 border-t border-[var(--border)] bg-gray-50/30 space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.coverLetter')}</label>
+                    <textarea
+                      className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
+                      value={prompts.templates?.cover_letter ?? ''}
+                      onChange={(e) => setPrompts({
+                        ...prompts,
+                        templates: {
+                          ...prompts.templates,
+                          cover_letter: e.target.value
+                        }
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.outreach')}</label>
+                    <textarea
+                      className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
+                      value={prompts.templates?.outreach ?? ''}
+                      onChange={(e) => setPrompts({
+                        ...prompts,
+                        templates: {
+                          ...prompts.templates,
+                          outreach: e.target.value
+                        }
+                      })}
+                    />
+                  </div>
+                </div>
+              </details>
+
+              {/* Accordion for Interview questions Template */}
+              <details className="group border border-[var(--border)] rounded-xl bg-white overflow-hidden">
+                <summary className="flex items-center justify-between p-4 text-sm font-semibold cursor-pointer hover:bg-gray-50 list-none">
+                  <span>{t('admin.config.prompts.interview')}</span>
+                  <span className="text-xs text-[var(--text-3)] group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="p-4 border-t border-[var(--border)] bg-gray-50/30 space-y-2">
+                  <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.interviewDirectives')}</label>
+                  <textarea
+                    className="w-full min-h-36 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
+                    value={prompts.templates?.interview ?? ''}
+                    onChange={(e) => setPrompts({
+                      ...prompts,
+                      templates: {
+                        ...prompts.templates,
+                        interview: e.target.value
+                      }
+                    })}
+                  />
+                </div>
+              </details>
+
+              {/* Accordion for CV Enrichment Templates */}
+              <details className="group border border-[var(--border)] rounded-xl bg-white overflow-hidden">
+                <summary className="flex items-center justify-between p-4 text-sm font-semibold cursor-pointer hover:bg-gray-50 list-none">
+                  <span>{t('admin.config.prompts.enrichment')}</span>
+                  <span className="text-xs text-[var(--text-3)] group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="p-4 border-t border-[var(--border)] bg-gray-50/30 space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.enrichmentAnalyze')}</label>
+                    <textarea
+                      className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
+                      value={prompts.templates?.enrichment?.analyze ?? ''}
+                      onChange={(e) => setPrompts({
+                        ...prompts,
+                        templates: {
+                          ...prompts.templates,
+                          enrichment: {
+                            ...prompts.templates?.enrichment,
+                            analyze: e.target.value
+                          }
+                        }
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.enrichmentEnhance')}</label>
+                    <textarea
+                      className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
+                      value={prompts.templates?.enrichment?.enhance ?? ''}
+                      onChange={(e) => setPrompts({
+                        ...prompts,
+                        templates: {
+                          ...prompts.templates,
+                          enrichment: {
+                            ...prompts.templates?.enrichment,
+                            enhance: e.target.value
+                          }
+                        }
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.enrichmentRegenerate')}</label>
+                    <textarea
+                      className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
+                      value={prompts.templates?.enrichment?.regenerate ?? ''}
+                      onChange={(e) => setPrompts({
+                        ...prompts,
+                        templates: {
+                          ...prompts.templates,
+                          enrichment: {
+                            ...prompts.templates?.enrichment,
+                            regenerate: e.target.value
+                          }
+                        }
+                      })}
+                    />
+                  </div>
+                </div>
+              </details>
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <button
+              className="rounded-lg bg-[var(--blue-700)] px-4 py-2 text-sm text-white disabled:opacity-60 font-semibold"
+              disabled={saving}
+              onClick={() =>
+                askSave(async () => {
+                  const rulesArray = truthfulnessRulesInput
+                    .split('\n')
+                    .map((r) => r.trim())
+                    .filter(Boolean);
+                  const updated = await updatePromptConfig({
+                    ...prompts,
+                    truthfulness_rules: rulesArray,
+                  });
+                  setPrompts(updated);
+                  setTruthfulnessRulesInput(updated.truthfulness_rules?.join('\n') || '');
+                })
+              }
+            >
+              {saving ? t('forms.saving') : t('common.save')}
+            </button>
+          </div>
         </section>
       ) : null}
 
@@ -444,6 +706,117 @@ export default function AdminConfigPage() {
         </section>
       ) : null}
 
+      {!loading && tab === 'llmEvents' ? (
+        <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-white p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">{t('admin.config.llmEvents.title')}</h2>
+            <button
+              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-1 disabled:opacity-60"
+              disabled={eventsLoading}
+              onClick={() => void loadLlmEvents()}
+              type="button"
+            >
+              <svg className={`h-3 w-3 ${eventsLoading ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </svg>
+              {t('admin.config.llmEvents.refresh')}
+            </button>
+          </div>
+          <div className="grid gap-3 md:grid-cols-[1fr_180px_120px]">
+            <input
+              className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
+              placeholder={t('admin.config.llmEvents.filters.feature')}
+              value={eventFeature}
+              onChange={(event) => setEventFeature(event.target.value)}
+            />
+            <select
+              className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
+              value={eventMode}
+              onChange={(event) => setEventMode(event.target.value)}
+            >
+              <option value="">{t('admin.config.llmEvents.filters.allModes')}</option>
+              <option value="llm">{t('admin.config.llmEvents.modes.llm')}</option>
+              <option value="template_fallback">{t('admin.config.llmEvents.modes.fallback')}</option>
+            </select>
+            <input
+              className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
+              type="number"
+              min={1}
+              max={200}
+              value={eventLimit}
+              aria-label={t('admin.config.llmEvents.filters.limit')}
+              onChange={(event) => setEventLimit(Number(event.target.value) || 50)}
+            />
+          </div>
+
+          {eventsLoading && llmEvents.length === 0 ? (
+            <div className="py-12 text-center text-sm text-[var(--text-3)]">{t('admin.config.llmEvents.loading')}</div>
+          ) : llmEvents.length === 0 ? (
+            <div className="py-12 text-center text-sm text-[var(--text-3)]">{t('admin.config.llmEvents.empty')}</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border)] text-xs font-semibold uppercase tracking-wider text-[var(--text-3)]">
+                    <th className="pb-3 pr-4">{t('admin.config.llmEvents.columns.timestamp')}</th>
+                    <th className="pb-3 px-4">{t('admin.config.llmEvents.columns.feature')}</th>
+                    <th className="pb-3 px-4">{t('admin.config.llmEvents.columns.mode')}</th>
+                    <th className="pb-3 px-4">{t('admin.config.llmEvents.columns.providerModel')}</th>
+                    <th className="pb-3 px-4">{t('admin.config.llmEvents.columns.statusReason')}</th>
+                    <th className="pb-3 pl-4">{t('admin.config.llmEvents.columns.requestId')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)]">
+                  {llmEvents.map((event) => {
+                    const isLlm = event.generation_mode === 'llm';
+                    const dateStr = new Date(event.createdAt).toLocaleString();
+                    return (
+                      <tr key={event._id} className="hover:bg-gray-50/50">
+                        <td className="py-3.5 pr-4 text-xs font-mono text-[var(--text-2)] whitespace-nowrap">{dateStr}</td>
+                        <td className="py-3.5 px-4 font-semibold text-[var(--text-1)]">{event.feature}</td>
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                            isLlm
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}>
+                            {isLlm ? t('admin.config.llmEvents.modes.llm') : t('admin.config.llmEvents.modes.fallback')}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-xs">
+                          {event.provider ? (
+                            <div className="font-medium text-[var(--text-1)]">
+                              {event.provider}
+                              {event.model && <span className="text-[var(--text-3)] font-normal font-mono ml-1">({event.model})</span>}
+                            </div>
+                          ) : (
+                            <span className="text-[var(--text-3)]">—</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-xs">
+                          {isLlm ? (
+                            <span className="text-green-600 font-semibold">{t('admin.config.llmEvents.status.success')}</span>
+                          ) : (
+                            <span className="text-amber-600 font-medium whitespace-nowrap" title={event.reason || ''}>
+                              {t('admin.config.llmEvents.status.failed', {
+                                reason: event.reason || t('admin.config.llmEvents.status.unknown')
+                              })}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 pl-4 text-xs font-mono text-[var(--text-3)] whitespace-nowrap">
+                          {event.request_id || '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      ) : null}
+
       {!loading ? (
         <section className="space-y-3 rounded-2xl border border-red-200 bg-red-50/40 p-5">
           <h2 className="text-sm font-semibold text-[var(--danger)]">
@@ -489,6 +862,7 @@ export default function AdminConfigPage() {
         description={t('admin.config.confirm.saveDescription')}
         confirmLabel={t('common.confirm')}
         cancelLabel={t('common.cancel')}
+        disabled={saving}
         onConfirm={() => (confirmSave ? runSave(confirmSave) : undefined)}
         onCancel={() => setConfirmSave(null)}
       />
@@ -498,6 +872,8 @@ export default function AdminConfigPage() {
         description={confirmDanger?.description}
         confirmLabel={t('common.confirm')}
         cancelLabel={t('common.cancel')}
+        confirmVariant="danger"
+        disabled={saving}
         onConfirm={() => (confirmDanger ? runDanger(confirmDanger.action) : undefined)}
         onCancel={() => setConfirmDanger(null)}
       />

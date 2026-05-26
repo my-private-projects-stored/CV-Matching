@@ -33,6 +33,11 @@ export function SystemHealthBadge({ className }: { className?: string }) {
   const systemReady = status?.status === 'ready';
   const llmHealthy = status?.llm_healthy ?? false;
   const loading = healthLoading || statusLoading;
+  const llmLabel = status?.llm_health_stale
+    ? `${t('admin.health.llm')} (${t('admin.health.stale')})`
+    : status?.llm_health_checked_at
+      ? `${t('admin.health.llm')} ${new Date(status.llm_health_checked_at).toLocaleString()}`
+      : t('admin.health.llm');
 
   return (
     <div
@@ -44,7 +49,7 @@ export function SystemHealthBadge({ className }: { className?: string }) {
       <span className="font-semibold text-[var(--text-2)]">{t('admin.health.system')}</span>
       <HealthDot label={t('admin.health.api')} ok={apiHealthy} loading={loading} />
       <HealthDot label={t('admin.health.ready')} ok={systemReady} loading={loading} />
-      <HealthDot label={t('admin.health.llm')} ok={llmHealthy} loading={loading} />
+      <HealthDot label={llmLabel} ok={llmHealthy && !status?.llm_health_stale} loading={loading} />
     </div>
   );
 }

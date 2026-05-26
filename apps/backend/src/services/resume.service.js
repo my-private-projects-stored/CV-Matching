@@ -2,7 +2,10 @@ import Resume from "../models/Resume.js";
 import Job from "../models/Job.js";
 import { ensureQdrantId } from "../utils/qdrant-id.js";
 import { createSimplePdf } from "../utils/simple-pdf.js";
+import { getPromptConfig, resolveLlmRuntimeConfig } from "./config.service.js";
+import { detectLanguageOfResume } from "../utils/language-detector.js";
 import { generateEmbedding } from "./embedding.service.js";
+import { completeJson, completeText, getLlmFailureReason, logLlmFallback } from "./llm.service.js";
 import { renderResumePdf } from "./pdf-renderer.service.js";
 import { parseUploadedResume } from "./resume-parsing.service.js";
 import { deleteResumeVector, upsertResumeVector } from "./vector-index.service.js";
@@ -41,7 +44,7 @@ const JOB_KEYWORD_STOPWORDS = new Set([
   "your",
   "will",
 ]);
-const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi"]);
+const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi", "auto"]);
 const DEFAULT_BUILDER_FORMAT_SETTINGS = {
   pageSize: "A4",
   margins: { top: 16, right: 16, bottom: 16, left: 16 },
@@ -68,6 +71,13 @@ function extractResumeEmbeddingText(resume) {
   }
 
   return JSON.stringify(resume.parsedData || {});
+}
+
+async function markResumeVectorStale(resume, reason, error) {
+  console.warn(`[resume-index] ${reason}`, error?.message || error);
+  resume.isAnalyzed = false;
+  await resume.save();
+  await deleteResumeVector(resume.qdrantId);
 }
 
 function deriveProcessingStatus(resume) {
@@ -300,7 +310,12 @@ function applyJobImprovements(basePreview, jobText, outputLanguage) {
 
   const existingSummary = String(preview.summary || "").trim();
   const shortKeywords = suggestedSkills.slice(0, 3).join(", ");
-  const copy = getTailorCopy(outputLanguage);
+  
+  let resolvedLang = outputLanguage;
+  if (resolvedLang === "auto") {
+    resolvedLang = detectLanguageOfResume(preview);
+  }
+  const copy = getTailorCopy(resolvedLang);
   const summaryAddon = shortKeywords
     ? copy.summaryWithKeywords(shortKeywords)
     : copy.summaryNoKeywords;
@@ -372,9 +387,122 @@ function buildImprovementSuggestions(keywords = [], outputLanguage) {
   }));
 }
 
+function renderTemplate(template = "", values = {}) {
+  return String(template || "").replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) =>
+    values[key] === undefined || values[key] === null ? "" : String(values[key])
+  );
+}
+
+function outputLanguageName(language) {
+  return language === "vi" ? "Vietnamese" : "English";
+}
+
 async function getResumeAndJob(resumeId, jobId) {
   const [resume, job] = await Promise.all([getResumeByPublicId(resumeId), getJobByPublicId(jobId)]);
   return { resume, job };
+}
+
+function buildJobContext(job) {
+  return [job?.title, job?.description, job?.requirements, job?.benefits, job?.cleanText]
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+}
+
+function technicalSkillsOf(preview = {}) {
+  return Array.isArray(preview.additional?.technicalSkills)
+    ? preview.additional.technicalSkills.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
+}
+
+function findAddedSkills(originalPreview, improvedPreview) {
+  const original = new Set(technicalSkillsOf(originalPreview).map((item) => item.toLowerCase()));
+  return technicalSkillsOf(improvedPreview).filter((skill) => !original.has(skill.toLowerCase()));
+}
+
+function normalizeLlmImprovements(value, outputLanguage) {
+  const copy = getTailorCopy(outputLanguage);
+  const items = Array.isArray(value) ? value : [];
+  return items
+    .map((item, index) => {
+      if (typeof item === "string") {
+        return { suggestion: item.trim(), lineNumber: index + 1 };
+      }
+      return {
+        suggestion: String(item?.suggestion || item?.text || "").trim(),
+        lineNumber: item?.lineNumber ?? item?.line_number ?? null,
+      };
+    })
+    .filter((item) => item.suggestion)
+    .slice(0, 8)
+    .concat(items.length ? [] : [{ suggestion: copy.defaultSuggestion, lineNumber: null }]);
+}
+
+function normalizeTailorJsonResult(result, originalPreview, outputLanguage) {
+  const container = isStructuredData(result) ? result : {};
+  const rawPreview =
+    container.resume_preview ||
+    container.resumePreview ||
+    container.resume ||
+    container.improved_resume ||
+    container.data ||
+    container;
+
+  const merged = isStructuredData(rawPreview)
+    ? {
+        ...originalPreview,
+        ...rawPreview,
+        personalInfo: originalPreview.personalInfo,
+      }
+    : originalPreview;
+
+  let resolvedLang = outputLanguage;
+  if (resolvedLang === "auto") {
+    resolvedLang = detectLanguageOfResume(originalPreview);
+  }
+
+  return {
+    improved: toResumePreviewData(merged),
+    improvements: normalizeLlmImprovements(container.improvements || container.suggestions, resolvedLang),
+  };
+}
+
+async function buildTailorWithLlm({ originalPreview, jobText, outputLanguage }) {
+  const [runtimeConfig, promptConfig] = await Promise.all([
+    resolveLlmRuntimeConfig(),
+    getPromptConfig(),
+  ]);
+  const promptId = promptConfig.default_prompt_id || "keywords";
+  const template =
+    promptConfig.templates?.tailor?.[promptId] ||
+    promptConfig.templates?.tailor?.keywords;
+    
+  let resolvedLang = outputLanguage;
+  if (resolvedLang === "auto") {
+    resolvedLang = detectLanguageOfResume(originalPreview);
+  }
+
+  const prompt = renderTemplate(template, {
+    output_language: outputLanguageName(resolvedLang),
+    job_description: jobText,
+    resume_json: JSON.stringify(originalPreview, null, 2),
+  });
+
+  const result = await completeJson({
+    feature: "resume_tailor",
+    prompt,
+    systemPrompt:
+      "You are an expert resume editor. Preserve facts. Return JSON only.",
+    maxTokens: 8192,
+    retries: 1,
+    config: runtimeConfig,
+  });
+
+  return {
+    ...normalizeTailorJsonResult(result.data, originalPreview, outputLanguage),
+    llmMetadata: result.metadata,
+    runtimeConfig,
+  };
 }
 
 function buildImproveResponse({
@@ -387,6 +515,8 @@ function buildImproveResponse({
   keywords,
   diffSummary,
   detailedChanges,
+  generationMode = "template_fallback",
+  llmMetadata = null,
 }) {
   return {
     request_id: requestId,
@@ -400,6 +530,8 @@ function buildImproveResponse({
       job_keywords: keywords.join(", "),
       diff_summary: diffSummary,
       detailed_changes: detailedChanges,
+      generation_mode: generationMode,
+      llm_metadata: llmMetadata,
     },
   };
 }
@@ -473,22 +605,39 @@ export async function createResume(payload) {
   let vector = embeddingVector;
 
   if (!Array.isArray(vector) || vector.length === 0) {
-    vector = await generateEmbedding(extractResumeEmbeddingText(saved));
+    try {
+      vector = await generateEmbedding(extractResumeEmbeddingText(saved));
+    } catch (error) {
+      vector = null;
+      await markResumeVectorStale(
+        saved,
+        "embedding generation failed on create, resume marked stale",
+        error
+      );
+    }
   }
 
   if (Array.isArray(vector) && vector.length > 0) {
-    await upsertResumeVector({
-      qdrantId: saved.qdrantId,
-      vector,
-      payload: {
-        mongoId: String(saved._id),
-        candidateId: String(saved.candidateId),
-        isAnalyzed: saved.isAnalyzed,
-      },
-    });
+    try {
+      await upsertResumeVector({
+        qdrantId: saved.qdrantId,
+        vector,
+        payload: {
+          mongoId: String(saved._id),
+          candidateId: String(saved.candidateId),
+          isAnalyzed: true,
+        },
+      });
 
-    saved.isAnalyzed = true;
-    await saved.save();
+      saved.isAnalyzed = true;
+      await saved.save();
+    } catch (error) {
+      await markResumeVectorStale(
+        saved,
+        "vector upsert failed on create, resume marked stale",
+        error
+      );
+    }
   }
 
   return saved;
@@ -586,29 +735,54 @@ export async function updateResumeById(resumeId, payload) {
     resumeData.parsedData = syncParsedDataFromBuilder(resumeData.parsedData || resume.parsedData, resumeData.builderData);
   }
 
+  const mustRegenerate = shouldRegenerateResumeEmbedding(resumeData);
+  if (mustRegenerate) {
+    resumeData.isAnalyzed = false;
+  }
+
   Object.assign(resume, resumeData);
   ensureQdrantId(resume);
   const saved = await resume.save();
-  const mustRegenerate = shouldRegenerateResumeEmbedding(resumeData);
 
   let vector = embeddingVector;
+  if (mustRegenerate) {
+    await deleteResumeVector(saved.qdrantId);
+  }
+
   if ((!Array.isArray(vector) || vector.length === 0) && mustRegenerate) {
-    vector = await generateEmbedding(extractResumeEmbeddingText(saved));
+    try {
+      vector = await generateEmbedding(extractResumeEmbeddingText(saved));
+    } catch (error) {
+      vector = null;
+      await markResumeVectorStale(
+        saved,
+        "embedding generation failed on update, stale vector removed",
+        error
+      );
+    }
   }
 
   if (Array.isArray(vector) && vector.length > 0) {
-    await upsertResumeVector({
-      qdrantId: saved.qdrantId,
-      vector,
-      payload: {
-        mongoId: String(saved._id),
-        candidateId: String(saved.candidateId),
-        isAnalyzed: saved.isAnalyzed,
-      },
-    });
+    try {
+      await upsertResumeVector({
+        qdrantId: saved.qdrantId,
+        vector,
+        payload: {
+          mongoId: String(saved._id),
+          candidateId: String(saved.candidateId),
+          isAnalyzed: true,
+        },
+      });
 
-    saved.isAnalyzed = true;
-    await saved.save();
+      saved.isAnalyzed = true;
+      await saved.save();
+    } catch (error) {
+      await markResumeVectorStale(
+        saved,
+        "vector upsert failed on update, stale vector removed",
+        error
+      );
+    }
   }
 
   return saved;
@@ -907,15 +1081,42 @@ export async function previewResumeImprovement(resumeId, jobId, outputLanguage =
     return null;
   }
 
-  const jobText = String(job.description || job.cleanText || job.requirements || "").trim();
+  const jobText = buildJobContext(job);
   const originalPreview = toResumePreviewData(resume.parsedData);
-  const { improved, keywords, addedSkills } = applyJobImprovements(
-    originalPreview,
-    jobText,
-    outputLanguage
-  );
+  const keywords = extractJobKeywords(jobText);
+  let generationMode = "template_fallback";
+  let llmMetadata = null;
+  let improved = null;
+  let improvements = null;
+
+  try {
+    const llmResult = await buildTailorWithLlm({ originalPreview, jobText, outputLanguage });
+    improved = llmResult.improved;
+    improvements = llmResult.improvements;
+    generationMode = "llm";
+    llmMetadata = llmResult.llmMetadata;
+  } catch (error) {
+    let fallbackConfig = null;
+    try {
+      fallbackConfig = await resolveLlmRuntimeConfig();
+    } catch {
+      fallbackConfig = null;
+    }
+    logLlmFallback({
+      feature: "resume_tailor",
+      error,
+      config: fallbackConfig,
+      reason: getLlmFailureReason(error),
+    });
+    const fallback = applyJobImprovements(originalPreview, jobText, outputLanguage);
+    improved = fallback.improved;
+  }
+
+  const addedSkills = findAddedSkills(originalPreview, improved);
   const { diffSummary, detailedChanges } = buildDiffAndChanges(originalPreview, improved, addedSkills);
-  const improvements = buildImprovementSuggestions(keywords, outputLanguage);
+  if (!improvements) {
+    improvements = buildImprovementSuggestions(keywords, outputLanguage);
+  }
   const requestId = makeRequestId();
 
   return buildImproveResponse({
@@ -928,6 +1129,8 @@ export async function previewResumeImprovement(resumeId, jobId, outputLanguage =
     keywords,
     diffSummary,
     detailedChanges,
+    generationMode,
+    llmMetadata,
   });
 }
 
@@ -937,6 +1140,8 @@ export async function confirmResumeImprovement({
   improvedData,
   improvements,
   outputLanguage = "en",
+  generationMode = "template_fallback",
+  llmMetadata = null,
 }) {
   const { resume, job } = await getResumeAndJob(resumeId, jobId);
   if (!resume || !job) {
@@ -946,11 +1151,11 @@ export async function confirmResumeImprovement({
   const safePreview = toResumePreviewData(improvedData);
   const parentPreview = toResumePreviewData(resume.parsedData);
   const parentFilename = String(resume.filename || "resume").trim() || "resume";
-  const jobText = String(job.description || job.cleanText || job.requirements || "").trim();
+  const jobText = buildJobContext(job);
   const title = [safePreview.personalInfo?.title, job.title].filter(Boolean).join(" - ").slice(0, 120);
   const { diffSummary, detailedChanges } = buildDiffAndChanges(parentPreview, safePreview, []);
 
-  const tailored = await Resume.create({
+  const tailored = await createResume({
     candidateId: resume.candidateId || DEFAULT_CANDIDATE_ID,
     fileUrl: `tailored://${Date.now()}-${parentFilename}`,
     rawText: JSON.stringify(safePreview, null, 2),
@@ -963,7 +1168,6 @@ export async function confirmResumeImprovement({
     processingStatus: "ready",
     jobDescription: jobText,
     jobId: String(job._id),
-    isAnalyzed: false,
   });
 
   const requestId = makeRequestId();
@@ -985,6 +1189,8 @@ export async function confirmResumeImprovement({
     keywords: extractJobKeywords(jobText),
     diffSummary,
     detailedChanges,
+    generationMode,
+    llmMetadata,
   });
 }
 
@@ -1000,6 +1206,8 @@ export async function improveResume(resumeId, jobId, outputLanguage = "en") {
     improvedData: preview.data.resume_preview,
     improvements: preview.data.improvements,
     outputLanguage,
+    generationMode: preview.data.generation_mode,
+    llmMetadata: preview.data.llm_metadata,
   });
 }
 
@@ -1171,10 +1379,7 @@ function buildContextLine(resume, outputLanguage = "en") {
   return `Your role expectations align with my background, especially around ${clipped.toLowerCase()}.`;
 }
 
-export async function generateCoverLetterContent(resumeId, outputLanguage = "en") {
-  const resume = await getResumeByPublicId(resumeId);
-  if (!resume) return null;
-
+function buildTemplateCoverLetter(resume, outputLanguage = "en") {
   const language = resolveOutputLanguage(outputLanguage);
   const { name, role } = buildRoleLine(resume);
   const contextLine = normalizeSentence(buildContextLine(resume, language));
@@ -1198,10 +1403,94 @@ export async function generateCoverLetterContent(resumeId, outputLanguage = "en"
           "Thank you for considering my application. I would welcome the opportunity to discuss how I can contribute to your organization.\n\nSincerely,\n" +
           name;
 
-  const content = [intro, contextLine, impact, closing].join("\n\n");
+  return [intro, contextLine, impact, closing].join("\n\n");
+}
+
+function buildTemplateOutreach(resume, outputLanguage = "en") {
+  const language = resolveOutputLanguage(outputLanguage);
+  const { name, role } = buildRoleLine(resume);
+  const line1 =
+    language === "vi" ? `Chao anh/chi, toi la ${name}, hien la ${role}.` : `Hi, I am ${name}, a ${role}.`;
+  const line2 = normalizeSentence(buildContextLine(resume, language));
+  const line3 =
+    language === "vi"
+      ? "Neu phu hop, toi san long chia se cach kinh nghiem cua minh co the ho tro muc tieu cua doi ngu cua anh/chi."
+      : "If useful, I would be glad to share how my background can support your team goals.";
+  const line4 = language === "vi" ? "Cam on anh/chi da danh thoi gian." : "Thank you for your time.";
+
+  return [line1, line2, line3, line4].join(" ");
+}
+
+async function generateTextWithLlm({ feature, resume, outputLanguage, templateKey, maxTokens }) {
+  const [runtimeConfig, promptConfig] = await Promise.all([
+    resolveLlmRuntimeConfig(),
+    getPromptConfig(),
+  ]);
+  const template = promptConfig.templates?.[templateKey];
+
+  let resolvedLang = outputLanguage;
+  if (resolvedLang === "auto") {
+    resolvedLang = detectLanguageOfResume(resume.parsedData);
+  }
+
+  const prompt = renderTemplate(template, {
+    output_language: outputLanguageName(resolvedLang),
+    job_description: String(resume.jobDescription || "").trim(),
+    resume_json: JSON.stringify(toResumePreviewData(resume.parsedData), null, 2),
+  });
+  return completeText({
+    feature,
+    prompt,
+    systemPrompt:
+      "You are a professional career writing assistant. Preserve facts and output only the requested text.",
+    maxTokens,
+    temperature: 0.4,
+    config: runtimeConfig,
+  });
+}
+
+export async function generateCoverLetterContent(resumeId, outputLanguage = "en") {
+  const resume = await getResumeByPublicId(resumeId);
+  if (!resume) return null;
+
+  let content = "";
+  let generationMode = "template_fallback";
+  let llmMetadata = null;
+
+  try {
+    const result = await generateTextWithLlm({
+      feature: "cover_letter_generation",
+      resume,
+      outputLanguage,
+      templateKey: "cover_letter",
+      maxTokens: 2048,
+    });
+    content = result.content.trim();
+    generationMode = "llm";
+    llmMetadata = result.metadata;
+  } catch (error) {
+    let fallbackConfig = null;
+    try {
+      fallbackConfig = await resolveLlmRuntimeConfig();
+    } catch {
+      fallbackConfig = null;
+    }
+    logLlmFallback({
+      feature: "cover_letter_generation",
+      error,
+      config: fallbackConfig,
+      reason: getLlmFailureReason(error),
+    });
+    content = buildTemplateCoverLetter(resume, outputLanguage);
+  }
+
   resume.coverLetter = content;
   await resume.save();
-  return content;
+  return {
+    content,
+    generation_mode: generationMode,
+    llm_metadata: llmMetadata,
+  };
 }
 
 export async function setResumeJobContext(resumeId, jobId) {
@@ -1219,21 +1508,44 @@ export async function generateOutreachContent(resumeId, outputLanguage = "en") {
   const resume = await getResumeByPublicId(resumeId);
   if (!resume) return null;
 
-  const language = resolveOutputLanguage(outputLanguage);
-  const { name, role } = buildRoleLine(resume);
-  const line1 =
-    language === "vi" ? `Chao anh/chi, toi la ${name}, hien la ${role}.` : `Hi, I am ${name}, a ${role}.`;
-  const line2 = normalizeSentence(buildContextLine(resume, language));
-  const line3 =
-    language === "vi"
-      ? "Neu phu hop, toi san long chia se cach kinh nghiem cua minh co the ho tro muc tieu cua doi ngu cua anh/chi."
-      : "If useful, I would be glad to share how my background can support your team goals.";
-  const line4 = language === "vi" ? "Cam on anh/chi da danh thoi gian." : "Thank you for your time.";
+  let content = "";
+  let generationMode = "template_fallback";
+  let llmMetadata = null;
 
-  const content = [line1, line2, line3, line4].join(" ");
+  try {
+    const result = await generateTextWithLlm({
+      feature: "outreach_generation",
+      resume,
+      outputLanguage,
+      templateKey: "outreach",
+      maxTokens: 1024,
+    });
+    content = result.content.trim();
+    generationMode = "llm";
+    llmMetadata = result.metadata;
+  } catch (error) {
+    let fallbackConfig = null;
+    try {
+      fallbackConfig = await resolveLlmRuntimeConfig();
+    } catch {
+      fallbackConfig = null;
+    }
+    logLlmFallback({
+      feature: "outreach_generation",
+      error,
+      config: fallbackConfig,
+      reason: getLlmFailureReason(error),
+    });
+    content = buildTemplateOutreach(resume, outputLanguage);
+  }
+
   resume.outreachMessage = content;
   await resume.save();
-  return content;
+  return {
+    content,
+    generation_mode: generationMode,
+    llm_metadata: llmMetadata,
+  };
 }
 
 export async function generateResumePdf(resumeId) {

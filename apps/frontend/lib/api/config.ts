@@ -36,6 +36,8 @@ export interface SystemStatus {
   llm_configured: boolean;
   llm_healthy: boolean;
   llm_provider?: string;
+  llm_health_checked_at?: string | null;
+  llm_health_stale?: boolean;
   privacy_mode?: PrivacyMode;
   has_master_resume: boolean;
   database_stats: DatabaseStats;
@@ -233,7 +235,7 @@ export async function updateCompanyProfileConfig(
 }
 
 // Language configuration types
-export type SupportedLanguage = 'en' | 'vi';
+export type SupportedLanguage = 'en' | 'vi' | 'auto';
 
 export interface LanguageConfig {
   ui_language: SupportedLanguage;
@@ -274,13 +276,33 @@ export interface PromptOption {
   description: string;
 }
 
+export interface PromptTemplates {
+  tailor?: {
+    nudge?: string;
+    keywords?: string;
+    full?: string;
+  };
+  cover_letter?: string;
+  outreach?: string;
+  interview?: string;
+  enrichment?: {
+    analyze?: string;
+    enhance?: string;
+    regenerate?: string;
+  };
+}
+
 export interface PromptConfig {
   default_prompt_id: string;
   prompt_options: PromptOption[];
+  truthfulness_rules?: string[];
+  templates?: PromptTemplates;
 }
 
 export interface PromptConfigUpdate {
   default_prompt_id?: string;
+  truthfulness_rules?: string[];
+  templates?: PromptTemplates;
 }
 
 // Fetch prompt configuration
@@ -398,4 +420,36 @@ export async function resetDatabase(): Promise<void> {
   });
 
   await assertOk(res, 'Failed to reset database');
+}
+
+export interface LlmEvent {
+  _id: string;
+  feature: string;
+  generation_mode: 'llm' | 'template_fallback';
+  provider: string | null;
+  model: string | null;
+  reason: string | null;
+  request_id: string | null;
+  createdAt: string;
+}
+
+export interface LlmEventsResponse {
+  data: LlmEvent[];
+  count: number;
+}
+
+// Fetch LLM logs / events
+export async function fetchLlmEvents(params?: {
+  feature?: string;
+  generation_mode?: string;
+  limit?: number;
+}): Promise<LlmEventsResponse> {
+  const query = new URLSearchParams();
+  if (params?.feature) query.set('feature', params.feature);
+  if (params?.generation_mode) query.set('generation_mode', params.generation_mode);
+  if (params?.limit) query.set('limit', String(params.limit));
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  const res = await apiFetch(`/config/llm-events${suffix}`, { credentials: 'include' });
+  await assertOk(res, 'Failed to fetch LLM logs');
+  return res.json();
 }

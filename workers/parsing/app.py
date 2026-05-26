@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import re
 from typing import Any
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -25,17 +26,77 @@ def _fallback_text_decode(file_bytes: bytes) -> str:
     return text
 
 
+def _dedupe(items: list[str], limit: int = 40) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for item in items:
+        normalized = re.sub(r"\s+", " ", item).strip(" \t\r\n,;|")
+        if not normalized:
+            continue
+        key = normalized.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(normalized)
+        if len(result) >= limit:
+            break
+    return result
+
+
+def _extract_skills(raw_text: str) -> list[str]:
+    lines = [line.strip() for line in raw_text.splitlines()]
+    heading_pattern = re.compile(r"^(technical\s+skills|skills|core\s+skills|technologies|tools)\s*:?\s*$", re.I)
+    next_heading_pattern = re.compile(r"^[A-Z][A-Za-z /&-]{2,40}:?$")
+    collected: list[str] = []
+
+    for index, line in enumerate(lines):
+        if not heading_pattern.match(line):
+            continue
+
+        for following in lines[index + 1 : index + 8]:
+            if not following:
+                if collected:
+                    break
+                continue
+            if next_heading_pattern.match(following) and not re.search(r"[,;|/]", following):
+                break
+            collected.append(following)
+
+        break
+
+    if not collected:
+        inline = re.search(
+            r"(?:technical\s+skills|skills|technologies|tools)\s*:\s*(.+)",
+            raw_text,
+            re.I,
+        )
+        if inline:
+            collected.append(inline.group(1))
+
+    tokens: list[str] = []
+    for chunk in collected:
+        cleaned = re.sub(r"^[\-*\u2022]\s*", "", chunk)
+        parts = re.split(r"[,;|/]| {2,}", cleaned)
+        for part in parts:
+            value = part.strip(" \t\r\n-\u2022")
+            if 1 < len(value) <= 40:
+                tokens.append(value)
+
+    return _dedupe(tokens)
+
+
 def _to_parsed_payload(raw_text: str) -> dict[str, Any]:
     lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
     top_lines = lines[:5]
+    skills = _extract_skills(raw_text)
     return {
         "summary": " ".join(top_lines)[:700],
-        "skills": [],
+        "skills": skills,
         "workExperience": [],
         "education": [],
         "personalProjects": [],
         "additional": {
-            "technicalSkills": [],
+            "technicalSkills": skills,
             "languages": [],
             "certificationsTraining": [],
             "awards": [],

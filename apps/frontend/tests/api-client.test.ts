@@ -82,4 +82,79 @@ describe('api client', () => {
     expect(result.data?.name).toBe('Acme');
     expect(result.data?.description).toBe('Hiring platform');
   });
+
+  it('preserves recommendation data and meta from top-level backend response', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          request_id: 'req_1',
+          data: [
+            {
+              job_id: 'job-1',
+              title: 'Backend Engineer',
+              category: 'IT',
+              location: 'Remote',
+              experience_level: 'Senior',
+              status: 'active',
+              description_preview: 'Build APIs',
+              scores: {
+                semantic_score: 0.9,
+                keyword_score: 0.7,
+                hybrid_score: 0.83,
+              },
+              matched_keywords: ['node.js'],
+              application_deadline: null,
+              created_at: null,
+            },
+          ],
+          meta: { resume_id: 'resume-1', total: 1, semantic_weight: 0.65 },
+        }),
+        { status: 200 }
+      )
+    );
+
+    const { getJobRecommendations } = await import('@/lib/api');
+    const result = await getJobRecommendations('resume-1');
+
+    expect('error' in result).toBe(false);
+    if ('error' in result) return;
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].job_id).toBe('job-1');
+    expect(result.meta.total).toBe(1);
+    expect(result.meta.semantic_weight).toBe(0.65);
+  });
+
+  it('fetches LLM events from the backend configuration endpoint', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: [
+            {
+              _id: 'event-1',
+              feature: 'tailor',
+              generation_mode: 'llm',
+              provider: 'openai',
+              model: 'gpt-4o',
+              reason: null,
+              request_id: 'req_1',
+              createdAt: '2026-05-26T00:00:00.000Z',
+            },
+          ],
+          count: 1,
+        }),
+        { status: 200 }
+      )
+    );
+
+    const { fetchLlmEvents } = await import('@/lib/api/config');
+    const result = await fetchLlmEvents({ limit: 10, feature: 'tailor' });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/config/llm-events?feature=tailor&limit=10');
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]._id).toBe('event-1');
+    expect(result.count).toBe(1);
+  });
 });
+

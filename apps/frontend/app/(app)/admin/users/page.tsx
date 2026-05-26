@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { PageHeader, ErrorBanner, SkeletonRow } from '@/components/ui';
-import { getList, putOne } from '@/lib/api';
+import { useEffect, useMemo, useState } from 'react';
+import { PageHeader, ErrorBanner, SkeletonRow, ConfirmDialog } from '@/components/ui';
+import { fetchUsers, updateUserDisabled } from '@/lib/api';
 import { usePageHeader } from '@/lib/i18n/use-page-header';
 import { useTranslations } from '@/lib/i18n/translations';
 import type { User } from '@/types';
@@ -12,21 +12,24 @@ export default function AdminUsersPage() {
   const { t } = useTranslations();
   const [users, setUsers] = useState<User[]>([]);
   const [role, setRole] = useState('');
+  const [search, setSearch] = useState('');
+  const [targetUser, setTargetUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    getList<User>('users', { limit: 50, role }).then((res) => {
+    fetchUsers({ limit: 50, role: role as User['role'] | '' }).then((res) => {
       if (!active) return;
-      if (res.error) {
-        setError(res.error);
-        setUsers([]);
-      } else {
-        setError(null);
-        setUsers(res.data ?? []);
-      }
+      setError(null);
+      setUsers(res.data ?? []);
+      setLoading(false);
+    }).catch((requestError) => {
+      if (!active) return;
+      setError(requestError instanceof Error ? requestError.message : t('errors.updateUser'));
+      setUsers([]);
       setLoading(false);
     });
     return () => {
@@ -34,24 +37,38 @@ export default function AdminUsersPage() {
     };
   }, [role]);
 
+  const filteredUsers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return users;
+    return users.filter((user) =>
+      `${user.email} ${user.fullName}`.toLowerCase().includes(query)
+    );
+  }, [search, users]);
+
   async function toggleDisabled(user: User) {
-    const res = await putOne<User, { disabled: boolean }>('users', user._id, {
-      disabled: !user.disabled,
-    });
-
-    if (res.error || !res.data) {
-      setError(res.error || t('errors.updateUser'));
-      return;
+    setBusy(true);
+    try {
+      const updated = await updateUserDisabled(user._id, !user.disabled);
+      setError(null);
+      setUsers((current) => current.map((item) => (item._id === user._id ? updated : item)));
+      setTargetUser(null);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : t('errors.updateUser'));
+    } finally {
+      setBusy(false);
     }
-
-    setError(null);
-    setUsers((current) => current.map((item) => (item._id === user._id ? res.data! : item)));
   }
 
   return (
     <div className="space-y-6">
       <PageHeader title={header.title} subtitle={header.subtitle} />
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        <input
+          className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
+          placeholder={t('common.search')}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
         <select
           className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
           value={role}
@@ -75,7 +92,7 @@ export default function AdminUsersPage() {
             <span>{t('admin.users.columns.actions')}</span>
           </div>
           <div className="mt-3 space-y-2 text-sm">
-            {users.map((user) => (
+            {filteredUsers.map((user) => (
               <div key={user._id} className="grid grid-cols-5 items-center">
                 <span>{user.email}</span>
                 <span>{user.fullName}</span>
@@ -86,7 +103,9 @@ export default function AdminUsersPage() {
                 <span>
                   <button
                     className="rounded-lg border border-[var(--border)] px-2 py-1 text-xs"
-                    onClick={() => toggleDisabled(user)}
+                    onClick={() => setTargetUser(user)}
+                    disabled={busy}
+                    type="button"
                   >
                     {user.disabled ? t('admin.users.enable') : t('admin.users.disable')}
                   </button>
@@ -96,6 +115,23 @@ export default function AdminUsersPage() {
           </div>
         </div>
       ) : null}
+      <ConfirmDialog
+        open={Boolean(targetUser)}
+        title={
+          targetUser?.disabled
+            ? t('dialogs.userStatus.enableTitle')
+            : t('dialogs.userStatus.disableTitle')
+        }
+        description={t('dialogs.userStatus.description', {
+          email: targetUser?.email ?? '',
+        })}
+        confirmLabel={t('common.confirm')}
+        cancelLabel={t('common.cancel')}
+        confirmVariant={targetUser?.disabled ? 'primary' : 'danger'}
+        disabled={busy}
+        onConfirm={() => (targetUser ? void toggleDisabled(targetUser) : undefined)}
+        onCancel={() => setTargetUser(null)}
+      />
     </div>
   );
 }

@@ -200,6 +200,10 @@ export async function fetchRankedApplications(params: {
   page?: number;
   limit?: number;
   status?: ApplicationStatus | '';
+  aiStatus?: ApplicationAiStatus | '';
+  search?: string;
+  minScore?: number | string;
+  maxScore?: number | string;
   changedBy?: string;
   changedAfter?: string;
   changedBefore?: string;
@@ -208,6 +212,14 @@ export async function fetchRankedApplications(params: {
   if (params.page) query.set('page', String(params.page));
   if (params.limit) query.set('limit', String(params.limit));
   if (params.status) query.set('status', params.status);
+  if (params.aiStatus) query.set('ai_status', params.aiStatus);
+  if (params.search?.trim()) query.set('search', params.search.trim());
+  if (params.minScore !== undefined && params.minScore !== '') {
+    query.set('min_score', String(params.minScore));
+  }
+  if (params.maxScore !== undefined && params.maxScore !== '') {
+    query.set('max_score', String(params.maxScore));
+  }
   if (params.changedBy && params.changedBy.trim()) {
     query.set('changed_by', params.changedBy.trim());
   }
@@ -224,11 +236,19 @@ export async function fetchMyApplicationHistory(params?: {
   page?: number;
   limit?: number;
   status?: ApplicationStatus | '';
+  aiStatus?: ApplicationAiStatus | '';
+  search?: string;
+  submittedAfter?: string;
+  submittedBefore?: string;
 }): Promise<CandidateHistoryResponse> {
   const query = new URLSearchParams();
   if (params?.page) query.set('page', String(params.page));
   if (params?.limit) query.set('limit', String(params.limit));
   if (params?.status) query.set('status', params.status);
+  if (params?.aiStatus) query.set('ai_status', params.aiStatus);
+  if (params?.search?.trim()) query.set('search', params.search.trim());
+  if (params?.submittedAfter) query.set('submitted_after', params.submittedAfter);
+  if (params?.submittedBefore) query.set('submitted_before', params.submittedBefore);
   const suffix = query.toString() ? `?${query.toString()}` : '';
   const res = await apiFetch(`/applications/history${suffix}`);
   await assertOk(res, 'Failed to load application history');
@@ -240,11 +260,19 @@ export async function fetchCandidateApplicationHistory(params: {
   page?: number;
   limit?: number;
   status?: ApplicationStatus | '';
+  aiStatus?: ApplicationAiStatus | '';
+  search?: string;
+  submittedAfter?: string;
+  submittedBefore?: string;
 }): Promise<CandidateHistoryResponse> {
   const query = new URLSearchParams({ candidate_id: params.candidateId });
   if (params.page) query.set('page', String(params.page));
   if (params.limit) query.set('limit', String(params.limit));
   if (params.status) query.set('status', params.status);
+  if (params.aiStatus) query.set('ai_status', params.aiStatus);
+  if (params.search?.trim()) query.set('search', params.search.trim());
+  if (params.submittedAfter) query.set('submitted_after', params.submittedAfter);
+  if (params.submittedBefore) query.set('submitted_before', params.submittedBefore);
 
   const res = await apiFetch(`/applications/history?${query.toString()}`);
   await assertOk(res, 'Failed to load application history');

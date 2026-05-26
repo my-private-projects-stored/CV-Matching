@@ -1,6 +1,8 @@
 import {
   deleteJobVector,
   deleteResumeVector,
+  getJobVectorPoint,
+  getResumeVectorPoint,
   searchJobVectorsByResumeVector,
   searchResumeVectorsByJobVector,
   upsertJobVector,
@@ -12,6 +14,8 @@ export {
   upsertResumeVector,
   deleteJobVector,
   deleteResumeVector,
+  getJobVectorPoint,
+  getResumeVectorPoint,
   searchResumeVectorsByJobVector,
   searchJobVectorsByResumeVector,
 };

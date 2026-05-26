@@ -10,9 +10,15 @@ import { locales, defaultLocale, localeNames, type Locale } from '@/i18n/config'
 import { normalizeStoredLocale } from '@/lib/i18n/route-title';
 import { syncLocaleCookie } from '@/lib/i18n/locale-cookie';
 import { logError } from '@/lib/utils/logger';
+import { useAuth } from '@/lib/context/auth-context';
 
 const CONTENT_STORAGE_KEY = 'resume_matcher_content_language';
 const UI_STORAGE_KEY = 'resume_matcher_ui_language';
+
+function normalizeContentLocale(value: string | null | undefined, fallback: SupportedLanguage): SupportedLanguage {
+  if (value === 'en' || value === 'vi' || value === 'auto') return value as SupportedLanguage;
+  return fallback;
+}
 
 interface LanguageContextValue {
   contentLanguage: SupportedLanguage;
@@ -30,23 +36,28 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [contentLanguage, setContentLanguageState] = useState<SupportedLanguage>(defaultLocale);
   const [uiLanguage, setUiLanguageState] = useState<Locale>(defaultLocale);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const loadLanguages = async () => {
       try {
-        const cachedUiLang = normalizeStoredLocale(localStorage.getItem(UI_STORAGE_KEY), defaultLocale);
+        const storedUi = localStorage.getItem(UI_STORAGE_KEY);
+        const storedContent = localStorage.getItem(CONTENT_STORAGE_KEY);
+        
+        const cachedUiLang = normalizeStoredLocale(storedUi, defaultLocale);
+        const cachedContentLang = normalizeContentLocale(storedContent, defaultLocale);
+        
         setUiLanguageState(cachedUiLang);
+        setContentLanguageState(cachedContentLang);
         syncLocaleCookie(cachedUiLang);
 
-        const cachedContentLang = normalizeStoredLocale(
-          localStorage.getItem(CONTENT_STORAGE_KEY),
-          defaultLocale
-        );
-        setContentLanguageState(cachedContentLang);
-
         const config = await fetchLanguageConfig();
-        const configUi = normalizeStoredLocale(config.ui_language, cachedUiLang);
-        const configContent = normalizeStoredLocale(config.content_language, cachedContentLang);
+        
+        // If the user has a stored preference in localStorage, prioritize it.
+        // Otherwise, fall back to the system-wide configuration.
+        const configUi = storedUi !== null ? cachedUiLang : normalizeStoredLocale(config.ui_language, cachedUiLang);
+        const configContent = storedContent !== null ? cachedContentLang : normalizeContentLocale(config.content_language, cachedContentLang);
+        
         setUiLanguageState(configUi);
         setContentLanguageState(configContent);
         localStorage.setItem(UI_STORAGE_KEY, configUi);
@@ -64,19 +75,23 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const setContentLanguage = useCallback(
     async (lang: SupportedLanguage) => {
-      const normalized = normalizeStoredLocale(lang, defaultLocale);
+      const normalized = normalizeContentLocale(lang, defaultLocale);
       const previousLang = contentLanguage;
       try {
         setContentLanguageState(normalized);
         localStorage.setItem(CONTENT_STORAGE_KEY, normalized);
-        await updateLanguageConfig({ content_language: normalized, ui_language: uiLanguage });
+        
+        // Only update database system config if the user is an admin
+        if (user?.role === 'admin') {
+          await updateLanguageConfig({ content_language: normalized, ui_language: uiLanguage });
+        }
       } catch (error) {
         logError('language-context', 'Failed to update content language', error);
         setContentLanguageState(previousLang);
         localStorage.setItem(CONTENT_STORAGE_KEY, previousLang);
       }
     },
-    [contentLanguage, uiLanguage]
+    [contentLanguage, uiLanguage, user]
   );
 
   const setUiLanguage = useCallback((lang: Locale) => {
@@ -86,10 +101,14 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(UI_STORAGE_KEY, normalized);
     localStorage.setItem(CONTENT_STORAGE_KEY, normalized);
     syncLocaleCookie(normalized);
-    updateLanguageConfig({ ui_language: normalized, content_language: normalized }).catch((error) => {
-      logError('language-context', 'Failed to sync language config', error);
-    });
-  }, []);
+    
+    // Only update database system config if the user is an admin
+    if (user?.role === 'admin') {
+      updateLanguageConfig({ ui_language: normalized, content_language: normalized }).catch((error) => {
+        logError('language-context', 'Failed to sync language config', error);
+      });
+    }
+  }, [user]);
 
   return (
     <LanguageContext.Provider

@@ -5,7 +5,7 @@ function getEmbeddingServiceUrl() {
     : "http://localhost:8010";
 }
 
-export async function generateEmbedding(text) {
+export async function generateEmbedding(text, { signal } = {}) {
   const safeText = String(text || "").trim();
   if (!safeText) {
     throw new Error("Text is required to generate embedding");
@@ -13,6 +13,7 @@ export async function generateEmbedding(text) {
 
   const response = await fetch(`${getEmbeddingServiceUrl()}/embed`, {
     method: "POST",
+    signal,
     headers: {
       "Content-Type": "application/json",
     },
@@ -32,7 +33,7 @@ export async function generateEmbedding(text) {
   return data.vector;
 }
 
-export async function generateEmbeddings(texts = []) {
+export async function generateEmbeddings(texts = [], { signal } = {}) {
   const normalized = texts.map((item) => String(item || "").trim()).filter(Boolean);
   if (normalized.length === 0) {
     return [];
@@ -40,6 +41,7 @@ export async function generateEmbeddings(texts = []) {
 
   const response = await fetch(`${getEmbeddingServiceUrl()}/embed/batch`, {
     method: "POST",
+    signal,
     headers: {
       "Content-Type": "application/json",
     },

@@ -5,7 +5,9 @@ import { useTranslations } from '@/lib/i18n/translations';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { PageHeader, ErrorBanner, SkeletonCard } from '@/components/ui';
+import { GenerationModeBadge } from '@/components/ui/GenerationModeBadge';
 import { getOne } from '@/lib/api';
+import { fetchFeatureConfig, type FeatureConfig } from '@/lib/api/config';
 import {
   generateCoverLetter,
   generateOutreachMessage,
@@ -14,6 +16,7 @@ import {
   downloadCoverLetterPdf,
   fetchJobDescription,
 } from '@/lib/api/resume';
+import type { GenerationMode } from '@/lib/types/generation';
 import type { Resume } from '@/types';
 
 type Tab = 'cover-letter' | 'outreach';
@@ -27,8 +30,11 @@ export default function CoverLetterPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('cover-letter');
   const [jobContext, setJobContext] = useState('');
+  const [featureConfig, setFeatureConfig] = useState<FeatureConfig | null>(null);
   const [coverLetter, setCoverLetter] = useState('');
   const [outreachMessage, setOutreachMessage] = useState('');
+  const [coverLetterMode, setCoverLetterMode] = useState<GenerationMode | null>(null);
+  const [outreachMode, setOutreachMode] = useState<GenerationMode | null>(null);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -54,6 +60,11 @@ export default function CoverLetterPage() {
         if (active && jd.content) setJobContext(jd.content);
       })
       .catch(() => undefined);
+    fetchFeatureConfig()
+      .then((features) => {
+        if (active) setFeatureConfig(features);
+      })
+      .catch(() => undefined);
     return () => {
       active = false;
     };
@@ -65,12 +76,14 @@ export default function CoverLetterPage() {
     setMessage(null);
     try {
       if (tab === 'cover-letter') {
-        const content = await generateCoverLetter(resumeId);
-        setCoverLetter(content);
+        const result = await generateCoverLetter(resumeId);
+        setCoverLetter(result.content);
+        setCoverLetterMode(result.generation_mode ?? null);
         setMessage(t('builder.generatedCoverLetter'));
       } else {
-        const content = await generateOutreachMessage(resumeId);
-        setOutreachMessage(content);
+        const result = await generateOutreachMessage(resumeId);
+        setOutreachMessage(result.content);
+        setOutreachMode(result.generation_mode ?? null);
         setMessage(t('builder.generatedOutreach'));
       }
     } catch (err) {
@@ -120,6 +133,10 @@ export default function CoverLetterPage() {
   const currentContent = tab === 'cover-letter' ? coverLetter : outreachMessage;
   const setCurrentContent = tab === 'cover-letter' ? setCoverLetter : setOutreachMessage;
   const isCoverLetter = tab === 'cover-letter';
+  const currentMode = isCoverLetter ? coverLetterMode : outreachMode;
+  const generationEnabled = isCoverLetter
+    ? featureConfig?.enable_cover_letter !== false
+    : featureConfig?.enable_outreach_message !== false;
 
   return (
     <div className="space-y-6">
@@ -190,8 +207,9 @@ export default function CoverLetterPage() {
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-4">
             <div className="rounded-2xl border border-[var(--border)] bg-white p-5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-3)]">
+              <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-3)]">
                 {isCoverLetter ? t('builder.coverLetterLabel') : t('builder.outreachLabel')}
+                <GenerationModeBadge mode={currentMode} />
               </label>
               <textarea
                 className="mt-3 min-h-[480px] w-full rounded-lg border border-[var(--border)] p-4 text-sm leading-7 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
@@ -245,7 +263,7 @@ export default function CoverLetterPage() {
               <button
                 className="mt-3 w-full rounded-lg bg-[var(--blue-700)] py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:opacity-90"
                 onClick={handleGenerate}
-                disabled={generating}
+                disabled={generating || !generationEnabled}
                 type="button"
               >
                 {generating
@@ -254,6 +272,13 @@ export default function CoverLetterPage() {
                     ? t('builder.generateCoverLetter')
                     : t('builder.generateOutreach')}
               </button>
+              {!generationEnabled ? (
+                <p className="mt-2 text-xs text-[var(--text-3)]">
+                  {isCoverLetter
+                    ? t('builder.coverLetterDisabled')
+                    : t('builder.outreachDisabled')}
+                </p>
+              ) : null}
             </div>
 
             <div className="rounded-2xl border border-[var(--border)] bg-white p-5">

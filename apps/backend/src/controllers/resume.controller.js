@@ -32,7 +32,7 @@ import { assertAiGenerationAllowed, getLanguageConfig } from "../services/config
 import Application from "../models/Application.js";
 import Job from "../models/Job.js";
 
-const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi"]);
+const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi", "auto"]);
 
 function resolveOutputLanguage(value, fallback = "en") {
   const normalized = String(value || "").trim().toLowerCase();
@@ -410,6 +410,12 @@ export async function confirmImproveResumeHandler(req, res, next) {
     const jobId = String(req.body?.job_id || "").trim();
     const improvedData = req.body?.improved_data;
     const improvements = Array.isArray(req.body?.improvements) ? req.body.improvements : [];
+    const generationMode =
+      req.body?.generation_mode === "llm" ? "llm" : "template_fallback";
+    const llmMetadata =
+      req.body?.llm_metadata && typeof req.body.llm_metadata === "object"
+        ? req.body.llm_metadata
+        : null;
 
     if (!resumeId || !jobId || !improvedData || typeof improvedData !== "object") {
       return res.status(400).json({ message: "resume_id, job_id and improved_data are required" });
@@ -438,6 +444,8 @@ export async function confirmImproveResumeHandler(req, res, next) {
       improvedData,
       improvements,
       outputLanguage,
+      generationMode,
+      llmMetadata,
     });
 
     if (!result) {
@@ -707,13 +715,15 @@ export async function generateCoverLetterHandler(req, res, next) {
         return res.status(404).json({ message: "Resume or job not found" });
       }
     }
-    const content = await generateCoverLetterContent(req.params.id, outputLanguage);
-    if (!content) {
+    const result = await generateCoverLetterContent(req.params.id, outputLanguage);
+    if (!result) {
       return res.status(404).json({ message: "Resume not found" });
     }
 
     return res.status(200).json({
-      content,
+      content: result.content,
+      generation_mode: result.generation_mode,
+      llm_metadata: result.llm_metadata,
       message: "Cover letter generated successfully",
     });
   } catch (error) {
@@ -836,13 +846,15 @@ export async function generateOutreachHandler(req, res, next) {
         return res.status(404).json({ message: "Resume or job not found" });
       }
     }
-    const content = await generateOutreachContent(req.params.id, outputLanguage);
-    if (!content) {
+    const result = await generateOutreachContent(req.params.id, outputLanguage);
+    if (!result) {
       return res.status(404).json({ message: "Resume not found" });
     }
 
     return res.status(200).json({
-      content,
+      content: result.content,
+      generation_mode: result.generation_mode,
+      llm_metadata: result.llm_metadata,
       message: "Outreach message generated successfully",
     });
   } catch (error) {

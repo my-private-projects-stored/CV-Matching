@@ -2,6 +2,7 @@ import { ImprovedResult } from '@/components/common/resume_previewer_context';
 import type { ResumeData } from '@/components/dashboard/resume-component';
 import { type TemplateSettings } from '@/lib/types/template-settings';
 import type { SupportedLanguage } from '@/lib/api/config';
+import type { GenerationTextResult, GenerationMode, LlmMetadata } from '@/lib/types/generation';
 import { type Locale } from '@/i18n/config';
 import { logError } from '@/lib/utils/logger';
 import { API_BASE, apiPost, apiPatch, apiPut, apiDelete, apiFetch } from './client';
@@ -89,7 +90,7 @@ export interface ResumeUploadResponse {
   is_master: boolean;
 }
 
-interface ImproveResumeConfirmRequest {
+export interface ImproveResumeConfirmRequest {
   resume_id: string;
   job_id: string;
   improved_data: ResumeData;
@@ -97,6 +98,8 @@ interface ImproveResumeConfirmRequest {
     suggestion: string;
     lineNumber?: number | null;
   }>;
+  generation_mode?: GenerationMode | null;
+  llm_metadata?: LlmMetadata | null;
 }
 
 function normalizeResumeId(resumeId: string): string {
@@ -404,7 +407,7 @@ export async function downloadCoverLetterPdf(
 export async function generateCoverLetter(
   resumeId: string,
   outputLanguage?: SupportedLanguage
-): Promise<string> {
+): Promise<GenerationTextResult> {
   const payload = outputLanguage ? { output_language: outputLanguage } : {};
   const res = await apiPost(
     `/resumes/${encodeURIComponent(resumeId)}/generate-cover-letter`,
@@ -412,19 +415,27 @@ export async function generateCoverLetter(
   );
   await assertOk(res, 'Failed to generate cover letter');
   const data = await res.json();
-  return data.content;
+  return {
+    content: data.content ?? '',
+    generation_mode: data.generation_mode ?? null,
+    llm_metadata: data.llm_metadata ?? null,
+  };
 }
 
 /** Generates an outreach message on-demand for a tailored resume */
 export async function generateOutreachMessage(
   resumeId: string,
   outputLanguage?: SupportedLanguage
-): Promise<string> {
+): Promise<GenerationTextResult> {
   const payload = outputLanguage ? { output_language: outputLanguage } : {};
   const res = await apiPost(`/resumes/${encodeURIComponent(resumeId)}/generate-outreach`, payload);
   await assertOk(res, 'Failed to generate outreach message');
   const data = await res.json();
-  return data.content;
+  return {
+    content: data.content ?? '',
+    generation_mode: data.generation_mode ?? null,
+    llm_metadata: data.llm_metadata ?? null,
+  };
 }
 
 /** Retries AI processing for a failed resume */

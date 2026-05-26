@@ -13,6 +13,9 @@ function assertVector(vector) {
   if (!Array.isArray(vector) || vector.length === 0) {
     throw new Error("Vector is required and must be a non-empty array");
   }
+  if (vector.length !== QDRANT_VECTOR_SIZE) {
+    throw new Error(`Vector dimension must be ${QDRANT_VECTOR_SIZE}`);
+  }
 }
 
 export async function ensureCollectionExists(collectionName) {
@@ -82,6 +85,10 @@ export async function upsertResumeVector({ qdrantId, vector, payload = {} }) {
 }
 
 export async function deleteJobVector(qdrantId) {
+  if (!qdrantId) {
+    return;
+  }
+
   const client = getQdrantClient();
   try {
     await client.delete(QDRANT_COLLECTIONS.JOBS, {
@@ -96,6 +103,10 @@ export async function deleteJobVector(qdrantId) {
 }
 
 export async function deleteResumeVector(qdrantId) {
+  if (!qdrantId) {
+    return;
+  }
+
   const client = getQdrantClient();
   try {
     await client.delete(QDRANT_COLLECTIONS.RESUMES, {
@@ -107,6 +118,36 @@ export async function deleteResumeVector(qdrantId) {
       console.warn("[qdrant] deleteResumeVector error, continuing", error?.message || error);
     }
   }
+}
+
+async function getVectorPoint(collectionName, qdrantId, { withVector = true } = {}) {
+  if (!qdrantId) {
+    return null;
+  }
+
+  const client = getQdrantClient();
+  try {
+    const points = await client.retrieve(collectionName, {
+      ids: [qdrantId],
+      with_payload: true,
+      with_vector: withVector,
+    });
+
+    return Array.isArray(points) && points.length > 0 ? points[0] : null;
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function getJobVectorPoint(qdrantId, options = {}) {
+  return getVectorPoint(QDRANT_COLLECTIONS.JOBS, qdrantId, options);
+}
+
+export async function getResumeVectorPoint(qdrantId, options = {}) {
+  return getVectorPoint(QDRANT_COLLECTIONS.RESUMES, qdrantId, options);
 }
 
 export async function searchResumeVectorsByJobVector({ vector, limit = 10, scoreThreshold = 0 }) {

@@ -192,3 +192,11 @@ resumes_vectors: { point_id=qdrantId, vector[384], payload: { mongoId, candidate
 | View personal AI feedback | ✅ | ❌ | ❌ |
 | Download original resume file | ❌ | ✅ | ✅ |
 | Write systemconfigs | ❌ | ❌ | ✅ |
+---
+
+## Phase 2 Test Notes
+
+- Backend unit tests must run without Docker: `npm run test:unit` from `apps/backend`.
+- Qdrant-backed integration tests are opt-in: set `RUN_INTEGRATION_TESTS=1` and provide running `mongo`, `redis`, and `qdrant` services before running backend integration scripts.
+- The dedicated production-path scoring test is `npm run test:integration:qdrant-scoring`; it must not inject a mocked `scoringStep`.
+- Frontend verification for recommendation response unwrapping is covered by `npm test -- --run` from `apps/frontend`.

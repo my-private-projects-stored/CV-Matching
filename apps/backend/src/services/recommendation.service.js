@@ -1,46 +1,24 @@
 import Job from "../models/Job.js";
 import Resume from "../models/Resume.js";
 import User from "../models/User.js";
+import { HYBRID_SEMANTIC_WEIGHT } from "../constants/scoring.js";
 import { generateEmbedding } from "./embedding.service.js";
+import {
+  computeKeywordAnalysis,
+  extractJobKeywords,
+  extractResumeKeywords,
+} from "./keyword-analysis.service.js";
 import {
   searchJobVectorsByResumeVector,
   searchResumeVectorsByJobVector,
 } from "./vector-index.service.js";
 
-function normalizeKeyword(value) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function extractResumeKeywords(resumeDoc) {
-  const parsedSkills = Array.isArray(resumeDoc?.parsedData?.skills)
-    ? resumeDoc.parsedData.skills
-    : [];
-  return parsedSkills.map(normalizeKeyword).filter(Boolean);
-}
-
-function extractJobKeywords(jobDoc) {
-  if (Array.isArray(jobDoc?.keywords) && jobDoc.keywords.length > 0) {
-    return jobDoc.keywords.map(normalizeKeyword).filter(Boolean);
-  }
-  // Fallback: tokenize from description/requirements
-  const text = [jobDoc?.title, jobDoc?.description, jobDoc?.requirements]
-    .filter(Boolean)
-    .join(" ");
-  const tokens = text.toLowerCase().match(/[a-z0-9+#.]{3,}/g) || [];
-  const stopwords = new Set(["and", "the", "for", "are", "with", "you", "will", "this", "that"]);
-  return [...new Set(tokens.filter((t) => !stopwords.has(t)))].slice(0, 40);
-}
-
-function computeKeywordScore(sourceKeywords = [], targetKeywords = []) {
-  if (sourceKeywords.length === 0) return 0;
-  const targetSet = new Set(targetKeywords.map(normalizeKeyword));
-  const matched = sourceKeywords.filter((k) => targetSet.has(normalizeKeyword(k)));
-  return matched.length / sourceKeywords.length;
-}
-
-function computeHybridScore(semanticScore, keywordScore, semanticWeight = 0.7) {
+function computeHybridScore(semanticScore, keywordScore, semanticWeight = HYBRID_SEMANTIC_WEIGHT) {
   const bounded = (v) => Math.max(0, Math.min(1, Number(v) || 0));
-  const sw = Math.max(0, Math.min(1, Number(semanticWeight) || 0.7));
+  const parsedWeight = Number(semanticWeight);
+  const sw = Number.isFinite(parsedWeight)
+    ? Math.max(0, Math.min(1, parsedWeight))
+    : HYBRID_SEMANTIC_WEIGHT;
   return sw * bounded(semanticScore) + (1 - sw) * bounded(keywordScore);
 }
 
@@ -53,6 +31,9 @@ function extractResumeEmbeddingText(resumeDoc) {
     parsedData.personalInfo?.fullName,
     parsedData.personalInfo?.title,
     Array.isArray(parsedData.skills) ? parsedData.skills.join(", ") : "",
+    Array.isArray(parsedData.additional?.technicalSkills)
+      ? parsedData.additional.technicalSkills.join(", ")
+      : "",
     Array.isArray(parsedData.workExperience)
       ? parsedData.workExperience.map((e) => `${e.title || ""} at ${e.company || ""}`).join(". ")
       : "",
@@ -93,7 +74,7 @@ export async function getJobRecommendationsForResume(resumeId, options = {}) {
 
   const limit = normalizeLimit(options.limit, 10);
   const scoreThreshold = Math.max(0, Math.min(1, Number(options.scoreThreshold || 0)));
-  const semanticWeight = Math.max(0, Math.min(1, Number(options.semanticWeight ?? 0.7)));
+  const semanticWeight = Math.max(0, Math.min(1, Number(options.semanticWeight ?? HYBRID_SEMANTIC_WEIGHT)));
 
   // 1. Generate embedding from CV text
   let resumeVector;
@@ -122,7 +103,7 @@ export async function getJobRecommendationsForResume(resumeId, options = {}) {
   if (!Array.isArray(qdrantHits) || qdrantHits.length === 0) {
     return {
       data: [],
-      meta: { resume_id: String(resume._id), total: 0 },
+      meta: { resume_id: String(resume._id), total: 0, semantic_weight: semanticWeight },
     };
   }
 
@@ -153,11 +134,9 @@ export async function getJobRecommendationsForResume(resumeId, options = {}) {
     if (!job) continue;
 
     const jobKeywords = extractJobKeywords(job);
-    const keywordScore = computeKeywordScore(jobKeywords, resumeKeywords);
+    const keywordAnalysis = computeKeywordAnalysis(jobKeywords, resumeKeywords);
+    const keywordScore = keywordAnalysis.keywordScore;
     const hybridScore = computeHybridScore(meta.semanticScore, keywordScore, semanticWeight);
-    const matchedKeywords = jobKeywords.filter((k) =>
-      resumeKeywords.map(normalizeKeyword).includes(normalizeKeyword(k))
-    );
 
     results.push({
       job_id: String(job._id),
@@ -172,7 +151,7 @@ export async function getJobRecommendationsForResume(resumeId, options = {}) {
         keyword_score: Math.round(keywordScore * 1000) / 1000,
         hybrid_score: Math.round(hybridScore * 1000) / 1000,
       },
-      matched_keywords: matchedKeywords.slice(0, 10),
+      matched_keywords: keywordAnalysis.matchedKeywords.slice(0, 10),
       application_deadline: job.applicationDeadline || null,
       created_at: job.createdAt ? new Date(job.createdAt).toISOString() : null,
     });
@@ -186,7 +165,7 @@ export async function getJobRecommendationsForResume(resumeId, options = {}) {
     data: paginated,
     meta: {
       resume_id: String(resume._id),
-      total: paginated.length,
+      total: results.length,
       semantic_weight: semanticWeight,
     },
   };
@@ -211,7 +190,7 @@ export async function getResumeRecommendationsForJob(jobId, options = {}) {
 
   const limit = normalizeLimit(options.limit, 10);
   const scoreThreshold = Math.max(0, Math.min(1, Number(options.scoreThreshold || 0)));
-  const semanticWeight = Math.max(0, Math.min(1, Number(options.semanticWeight ?? 0.7)));
+  const semanticWeight = Math.max(0, Math.min(1, Number(options.semanticWeight ?? HYBRID_SEMANTIC_WEIGHT)));
 
   // 1. Generate embedding from JD text
   let jobVector;
@@ -240,7 +219,12 @@ export async function getResumeRecommendationsForJob(jobId, options = {}) {
   if (!Array.isArray(qdrantHits) || qdrantHits.length === 0) {
     return {
       data: [],
-      meta: { job_id: String(job._id), job_title: job.title || "", total: 0 },
+      meta: {
+        job_id: String(job._id),
+        job_title: job.title || "",
+        total: 0,
+        semantic_weight: semanticWeight,
+      },
     };
   }
 
@@ -265,7 +249,7 @@ export async function getResumeRecommendationsForJob(jobId, options = {}) {
   if (candidateIds.length > 0) {
     try {
       const users = await User.find({ _id: { $in: candidateIds } })
-        .select("_id name email")
+        .select("_id fullName email")
         .lean();
       userById = new Map(users.map((u) => [String(u._id), u]));
     } catch (_) {
@@ -284,32 +268,36 @@ export async function getResumeRecommendationsForJob(jobId, options = {}) {
     if (!resume) continue;
 
     const resumeKeywords = extractResumeKeywords(resume);
-    const keywordScore = computeKeywordScore(jobKeywords, resumeKeywords);
+    const keywordAnalysis = computeKeywordAnalysis(jobKeywords, resumeKeywords);
+    const keywordScore = keywordAnalysis.keywordScore;
     const hybridScore = computeHybridScore(meta.semanticScore, keywordScore, semanticWeight);
-    const matchedKeywords = jobKeywords.filter((k) =>
-      resumeKeywords.map(normalizeKeyword).includes(normalizeKeyword(k))
-    );
 
     const candidateId = String(resume.candidateId || "");
     const user = userById.get(candidateId) || null;
     const parsedData = resume.parsedData || {};
+    const topSkills = [
+      ...(Array.isArray(parsedData.skills) ? parsedData.skills : []),
+      ...(Array.isArray(parsedData.additional?.technicalSkills)
+        ? parsedData.additional.technicalSkills
+        : []),
+    ];
 
     results.push({
       resume_id: String(resume._id),
       candidate_id: candidateId || null,
-      candidate_name: user?.name || parsedData?.personalInfo?.fullName || null,
+      candidate_name: user?.fullName || parsedData?.personalInfo?.fullName || null,
       candidate_email: user?.email || parsedData?.personalInfo?.email || null,
       resume_title: resume.title || resume.filename || null,
       is_master: Boolean(resume.isMaster),
       processing_status: resume.isAnalyzed ? "analyzed" : "pending",
       current_role: parsedData?.personalInfo?.title || null,
-      top_skills: Array.isArray(parsedData.skills) ? parsedData.skills.slice(0, 8) : [],
+      top_skills: [...new Set(topSkills)].slice(0, 8),
       scores: {
         semantic_score: Math.round(meta.semanticScore * 1000) / 1000,
         keyword_score: Math.round(keywordScore * 1000) / 1000,
         hybrid_score: Math.round(hybridScore * 1000) / 1000,
       },
-      matched_keywords: matchedKeywords.slice(0, 10),
+      matched_keywords: keywordAnalysis.matchedKeywords.slice(0, 10),
       created_at: resume.createdAt ? new Date(resume.createdAt).toISOString() : null,
       updated_at: resume.updatedAt ? new Date(resume.updatedAt).toISOString() : null,
     });
@@ -324,7 +312,7 @@ export async function getResumeRecommendationsForJob(jobId, options = {}) {
     meta: {
       job_id: String(job._id),
       job_title: job.title || "",
-      total: paginated.length,
+      total: results.length,
       semantic_weight: semanticWeight,
     },
   };

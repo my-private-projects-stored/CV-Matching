@@ -176,8 +176,13 @@ test(
       assert.equal(typeof preview.json?.data?.resume_preview?.personalInfo, "object");
       assert.equal(typeof preview.json?.data?.diff_summary?.total_changes, "number");
       assert.equal(Array.isArray(preview.json?.data?.detailed_changes), true);
-      assert.match(String(preview.json?.data?.resume_preview?.summary || ""), /Tap trung/i);
-      assert.match(String(preview.json?.data?.improvements?.[0]?.suggestion || ""), /Nhan manh/i);
+      assert.ok(["llm", "template_fallback"].includes(preview.json?.data?.generation_mode));
+      assert.equal(typeof preview.json?.data?.resume_preview?.summary, "string");
+      assert.equal(Array.isArray(preview.json?.data?.improvements), true);
+      if (preview.json?.data?.generation_mode === "template_fallback") {
+        assert.match(String(preview.json?.data?.resume_preview?.summary || ""), /Tap trung/i);
+        assert.match(String(preview.json?.data?.improvements?.[0]?.suggestion || ""), /Nhan manh/i);
+      }
 
       const confirm = await requestJson(baseUrl, "POST", "/resumes/improve/confirm", {
         resume_id: String(masterResume._id),

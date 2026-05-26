@@ -6,6 +6,7 @@ import {
   getApiKeyStatus,
   getLanguageConfig,
   getLlmConfig,
+  getLlmEvents,
   getPrivacyConfig,
   getPromptConfig,
   getSystemStatus,
@@ -186,6 +187,16 @@ export async function getSystemStatusHandler(_req, res, next) {
   try {
     const status = await getSystemStatus();
     return res.status(200).json(status);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function getLlmEventsHandler(req, res, next) {
+  try {
+    const { feature, generation_mode, limit } = req.query;
+    const events = await getLlmEvents({ feature, generation_mode, limit });
+    return res.status(200).json({ data: events, count: events.length });
   } catch (error) {
     return next(error);
   }

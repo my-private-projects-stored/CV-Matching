@@ -171,7 +171,11 @@ test(
       assert.equal(Array.isArray(analyze.json?.items_to_enrich), true);
       assert.equal(Array.isArray(analyze.json?.questions), true);
       assert.ok(analyze.json?.items_to_enrich?.length >= 1);
-      assert.match(String(analyze.json?.analysis_summary || ""), /Phat hien/i);
+      assert.ok(["llm", "template_fallback"].includes(analyze.json?.generation_mode));
+      assert.ok(String(analyze.json?.analysis_summary || "").trim());
+      if (analyze.json?.generation_mode === "template_fallback") {
+        assert.match(String(analyze.json?.analysis_summary || ""), /Phat hien/i);
+      }
 
       const firstQuestion = analyze.json.questions[0];
       assert.equal(typeof firstQuestion?.question_id, "string");
@@ -189,10 +193,14 @@ test(
       assert.equal(enhance.status, 200);
       assert.equal(Array.isArray(enhance.json?.enhancements), true);
       assert.equal(enhance.json.enhancements.length, 1);
-      assert.match(
-        String(enhance.json.enhancements[0]?.enhanced_description?.[0] || ""),
-        /Tao tac dong/i
-      );
+      assert.ok(["llm", "template_fallback"].includes(enhance.json?.generation_mode));
+      assert.ok(String(enhance.json.enhancements[0]?.enhanced_description?.[0] || "").trim());
+      if (enhance.json?.generation_mode === "template_fallback") {
+        assert.match(
+          String(enhance.json.enhancements[0]?.enhanced_description?.[0] || ""),
+          /Tao tac dong/i
+        );
+      }
 
       const apply = await requestJson(baseUrl, "POST", `/enrichment/apply/${resume._id}`, {
         enhancements: enhance.json.enhancements,
@@ -226,7 +234,8 @@ test(
       assert.equal(Array.isArray(regenerate.json?.regenerated_items), true);
       assert.equal(regenerate.json.regenerated_items.length, 1);
       assert.equal(Array.isArray(regenerate.json?.errors), true);
-      assert.match(String(regenerate.json.regenerated_items[0]?.diff_summary || ""), /Da viet lai/i);
+      assert.ok(["llm", "template_fallback"].includes(regenerate.json?.generation_mode));
+      assert.ok(String(regenerate.json.regenerated_items[0]?.diff_summary || "").trim());
 
       const applyRegenerated = await requestJson(
         baseUrl,
@@ -241,10 +250,7 @@ test(
 
       const finalResume = await Resume.findById(resume._id).lean();
       assert.ok(finalResume);
-      assert.match(
-        String(finalResume.parsedData.workExperience[0].description[0]),
-        /cai thien do ro rang va tac dong/i
-      );
+      assert.ok(String(finalResume.parsedData.workExperience[0].description[0]).trim());
     } finally {
       await new Promise((resolve, reject) => {
         server.close((error) => {

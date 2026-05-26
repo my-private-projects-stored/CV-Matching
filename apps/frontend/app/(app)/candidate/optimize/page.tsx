@@ -5,6 +5,7 @@ import { useTranslations } from '@/lib/i18n/translations';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader, ErrorBanner } from '@/components/ui';
+import { GenerationModeBadge } from '@/components/ui/GenerationModeBadge';
 import {
   matchResumeToJd,
   uploadJobDescriptions,
@@ -33,29 +34,42 @@ import type { ResumeData } from '@/components/dashboard/resume-component';
 type JdWizardStep = 'match' | 'preview' | 'confirm';
 
 function extractSuggestions(payload: ImprovedResult): string[] {
+  const p = payload as unknown as Record<string, unknown>;
   const improvements =
-    payload.improvements ??
+    (p.improvements as Array<{ suggestion: string }> | undefined) ??
     (payload.data && typeof payload.data === 'object' && 'improvements' in payload.data
-      ? payload.data.improvements
+      ? (payload.data.improvements as Array<{ suggestion: string }>)
       : undefined) ??
     [];
-  return improvements.map((item) => item.suggestion || '').filter(Boolean);
+  return improvements.map((item) => (item as { suggestion?: string }).suggestion || '').filter(Boolean);
+}
+
+function extractGenerationMode(payload: ImprovedResult | null): import('@/lib/types/generation').GenerationMode | null {
+  if (!payload) return null;
+  const p = payload as unknown as Record<string, unknown>;
+  if (p.generation_mode === 'llm' || p.generation_mode === 'template_fallback') return p.generation_mode;
+  const data = payload.data && typeof payload.data === 'object' ? payload.data : {};
+  const mode = 'generation_mode' in data ? (data as { generation_mode?: string }).generation_mode : null;
+  if (mode === 'llm' || mode === 'template_fallback') return mode;
+  return null;
 }
 
 function extractImprovedData(payload: ImprovedResult): ResumeData | undefined {
-  if (payload.improved_data) return payload.improved_data;
+  const p = payload as unknown as Record<string, unknown>;
+  if (p.improved_data) return p.improved_data as ResumeData;
   const data = payload.data;
   if (!data || typeof data !== 'object') return undefined;
-  if ('improved_data' in data && data.improved_data) return data.improved_data as ResumeData;
-  if ('resume' in data && data.resume) return data.resume as ResumeData;
-  return data as ResumeData;
+  if ('improved_data' in data && (data as Record<string, unknown>).improved_data) return (data as Record<string, unknown>).improved_data as ResumeData;
+  if ('resume' in data && (data as Record<string, unknown>).resume) return (data as Record<string, unknown>).resume as ResumeData;
+  return data as unknown as ResumeData;
 }
 
 function extractImprovements(payload: ImprovedResult) {
-  if (payload.improvements) return payload.improvements;
+  const p = payload as unknown as Record<string, unknown>;
+  if (p.improvements) return p.improvements as Array<{ suggestion: string }>;
   const data = payload.data;
   if (data && typeof data === 'object' && 'improvements' in data) {
-    return data.improvements ?? [];
+    return ((data as unknown as Record<string, unknown>).improvements ?? []) as Array<{ suggestion: string }>;
   }
   return [];
 }
@@ -230,11 +244,16 @@ export default function CandidateOptimizePage() {
     setLoading(true);
     setError(null);
     try {
+      const previewData = previewResult.data && typeof previewResult.data === 'object' ? previewResult.data : {};
       await confirmImproveResume({
         resume_id: resumeId,
         job_id: jobId,
         improved_data,
         improvements: extractImprovements(previewResult),
+        generation_mode: ((previewResult as unknown as Record<string, unknown>).generation_mode
+          ?? ('generation_mode' in previewData ? (previewData as unknown as Record<string, unknown>).generation_mode : null)) as import('@/lib/types/generation').GenerationMode | null | undefined,
+        llm_metadata: ((previewResult as unknown as Record<string, unknown>).llm_metadata
+          ?? ('llm_metadata' in previewData ? (previewData as unknown as Record<string, unknown>).llm_metadata : null)) as import('@/lib/types/generation').LlmMetadata | null | undefined,
       });
       setSuccess(t('optimize.successTailored'));
       await loadResumes();
@@ -422,11 +441,10 @@ export default function CandidateOptimizePage() {
               {jdSteps.map((step, index) => (
                 <span
                   key={step.key}
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${
-                    jdStep === step.key
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${jdStep === step.key
                       ? 'bg-[var(--blue-700)] text-white'
                       : 'bg-[var(--blue-50)] text-[var(--blue-700)]'
-                  }`}
+                    }`}
                 >
                   {index + 1}. {step.label}
                 </span>
@@ -536,7 +554,10 @@ export default function CandidateOptimizePage() {
       </div>
       {suggestions.length > 0 && tab === 'jd' ? (
         <div className="rounded-2xl border border-[var(--border)] bg-white p-4">
-          <h3 className="text-sm font-semibold">{t('optimize.aiSuggestions')}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold">{t('optimize.aiSuggestions')}</h3>
+            <GenerationModeBadge mode={extractGenerationMode(previewResult)} />
+          </div>
           <ul className="mt-3 space-y-2 text-sm text-[var(--text-2)]">
             {suggestions.map((item) => (
               <li key={item}>{item}</li>

@@ -42,6 +42,10 @@ function parseDateFilter(value, mode = "start") {
   return parsed;
 }
 
+function escapeRegExp(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function buildCandidateSuggestions(missingKeywords = []) {
   if (!Array.isArray(missingKeywords) || missingKeywords.length === 0) {
     return ["Your profile already matches core requirements for this job."];
@@ -340,6 +344,15 @@ export async function createApplication(payload = {}) {
     });
 
     try {
+      if (!job.isAnalyzed || !resume.isAnalyzed) {
+        console.warn("[application.service] scoring enqueued before vectors are ready", {
+          application_id: String(created._id),
+          job_id: String(job._id),
+          resume_id: String(resume._id),
+          job_is_analyzed: Boolean(job.isAnalyzed),
+          resume_is_analyzed: Boolean(resume.isAnalyzed),
+        });
+      }
       await enqueueApplicationScoring(created._id);
     } catch (_error) {
       // Keep application creation successful even if queue is temporarily unavailable.
@@ -502,6 +515,58 @@ export async function listCandidateApplicationHistory(candidateId, query = {}) {
   const status = normalizeText(query.status).toLowerCase();
   if (status && APPLICATION_STATUSES.has(status)) {
     filter.status = status;
+  }
+
+  const aiStatus = normalizeText(query.ai_status || query.aiStatus).toLowerCase();
+  if (aiStatus && AI_STATUS_ORDER.includes(aiStatus)) {
+    filter.aiStatus = aiStatus;
+  }
+
+  const submittedAfter = parseDateFilter(
+    query.submitted_after || query.submittedAfter || query.created_after || query.createdAfter,
+    "start"
+  );
+  if (submittedAfter?.error) {
+    return { error: submittedAfter.error, code: 400 };
+  }
+  const submittedBefore = parseDateFilter(
+    query.submitted_before || query.submittedBefore || query.created_before || query.createdBefore,
+    "end"
+  );
+  if (submittedBefore?.error) {
+    return { error: submittedBefore.error, code: 400 };
+  }
+  if (submittedAfter || submittedBefore) {
+    filter.createdAt = {};
+    if (submittedAfter) filter.createdAt.$gte = submittedAfter;
+    if (submittedBefore) filter.createdAt.$lte = submittedBefore;
+  }
+
+  const search = normalizeText(query.search);
+  if (search) {
+    const pattern = new RegExp(escapeRegExp(search), "i");
+    const [matchingJobs, matchingResumes] = await Promise.all([
+      Job.find({
+        $or: [
+          { title: pattern },
+          { location: pattern },
+          { category: pattern },
+        ],
+      })
+        .select("_id")
+        .lean(),
+      Resume.find({
+        _id: { $in: resumeIds },
+        title: pattern,
+      })
+        .select("_id")
+        .lean(),
+    ]);
+
+    filter.$or = [
+      { jobId: { $in: matchingJobs.map((item) => item._id) } },
+      { resumeId: { $in: matchingResumes.map((item) => item._id) } },
+    ];
   }
 
   const [items, total] = await Promise.all([

@@ -80,6 +80,7 @@ services:
       PARSING_SERVICE_URL: http://worker-parsing:8020
       SCORING_QUEUE_NAME: application_scoring_queue
       WORKER_INTERNAL_TOKEN: ${WORKER_INTERNAL_TOKEN:-dev-worker-token}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       PORT: "3001"
     ports:
       - "3001:3001"
@@ -130,6 +131,7 @@ services:
     volumes:
       - ./apps/frontend:/workspace
       - frontend_node_modules:/workspace/node_modules
+      - /workspace/.next
     environment:
       NODE_ENV: development
       NEXT_PUBLIC_API_BASE_URL: http://localhost:3001

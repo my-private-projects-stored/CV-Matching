@@ -1,5 +1,7 @@
 import Application from "../models/Application.js";
-import { buildHybridScoreForPair } from "./semantic-search.service.js";
+import { HYBRID_SEMANTIC_WEIGHT } from "../constants/scoring.js";
+import { ensureVectorsReadyForScoring } from "./application-vector-readiness.service.js";
+import { buildHybridScoreForPair, computeSemanticScoreForPair } from "./semantic-search.service.js";
 
 export const AI_STATUS = {
   PENDING: "pending",
@@ -29,7 +31,7 @@ export async function runApplicationAiPipeline(
   {
     parseStep = async () => undefined,
     scoringStep,
-    semanticWeight = 0.7,
+    semanticWeight = HYBRID_SEMANTIC_WEIGHT,
   } = {}
 ) {
   const app = await Application.findById(applicationId);
@@ -45,10 +47,18 @@ export async function runApplicationAiPipeline(
     const resolvedScoringStep =
       scoringStep ||
       (async () => {
+        await ensureVectorsReadyForScoring({
+          jobId: app.jobId,
+          resumeId: app.resumeId,
+        });
+        const semanticScore = await computeSemanticScoreForPair({
+          jobId: app.jobId,
+          resumeId: app.resumeId,
+        });
         return buildHybridScoreForPair({
           jobId: app.jobId,
           resumeId: app.resumeId,
-          semanticScore: 0,
+          semanticScore,
           semanticWeight,
         });
       });
@@ -71,7 +81,11 @@ export async function runApplicationAiPipeline(
       },
     });
   } catch (error) {
-    await updateApplicationAiStatus(applicationId, AI_STATUS.FAILED);
+    const retryable = Boolean(error?.retryable || error?.statusCode === 503);
+    await updateApplicationAiStatus(
+      applicationId,
+      retryable ? AI_STATUS.PENDING : AI_STATUS.FAILED
+    );
     throw error;
   }
 }

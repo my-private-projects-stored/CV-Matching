@@ -7,15 +7,14 @@ import { SkeletonCard, ErrorBanner } from '@/components/ui';
 import { useTranslations } from '@/lib/i18n/translations';
 import { fetchJobById, type JobItem } from '@/lib/api/jobs';
 import { createApplication, fetchMyApplicationHistory } from '@/lib/api/applications';
-import { getList } from '@/lib/api';
-import type { Resume } from '@/types';
+import { fetchResumeList, type ResumeListItem } from '@/lib/api/resume';
 
 export default function CandidateJobDetailPage() {
   const { t, locale } = useTranslations();
   const params = useParams();
   const jobId = params?.id as string;
   const [job, setJob] = useState<JobItem | null>(null);
-  const [resumes, setResumes] = useState<Resume[]>([]);
+  const [resumes, setResumes] = useState<ResumeListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showApplyModal, setShowApplyModal] = useState(false);
@@ -33,17 +32,16 @@ export default function CandidateJobDetailPage() {
     let active = true;
     Promise.all([
       fetchJobById(jobId),
-      getList<Resume>('resumes', { limit: 20 }),
+      fetchResumeList(true),
       fetchMyApplicationHistory({ limit: 100 }).then((payload) => payload.data?.applications ?? []),
     ])
-      .then(([jobData, resumesRes, applications]) => {
+      .then(([jobData, resumeItems, applications]) => {
         if (!active) return;
         setJob(jobData);
         setAlreadyApplied(applications.some((item) => item.job?.id === jobId));
-        const loaded = resumesRes.data ?? [];
-        setResumes(loaded);
-        const master = loaded.find((r) => r.isMaster);
-        setSelectedResumeId(master?._id || loaded[0]?._id || '');
+        setResumes(resumeItems);
+        const master = resumeItems.find((r) => r.is_master);
+        setSelectedResumeId(master?.resume_id || resumeItems[0]?.resume_id || '');
         setLoading(false);
       })
       .catch((err: Error) => {
@@ -56,8 +54,10 @@ export default function CandidateJobDetailPage() {
     };
   }, [jobId, t]);
 
+  const canApply = Boolean(job?.status === 'active' && !alreadyApplied);
+
   async function handleApply() {
-    if (!selectedResumeId || !jobId) return;
+    if (!selectedResumeId || !jobId || !canApply) return;
     setApplyLoading(true);
     setApplyError(null);
     try {
@@ -106,10 +106,14 @@ export default function CandidateJobDetailPage() {
                     setApplyError(null);
                     setApplySuccess(false);
                   }}
-                  disabled={alreadyApplied}
+                  disabled={!canApply}
                   type="button"
                 >
-                  {alreadyApplied ? t('jobs.alreadyApplied') : t('jobs.applyNow')}
+                  {alreadyApplied
+                    ? t('jobs.alreadyApplied')
+                    : job.status === 'active'
+                      ? t('jobs.applyNow')
+                      : t('jobs.closed')}
                 </button>
               </div>
             </div>
@@ -189,10 +193,14 @@ export default function CandidateJobDetailPage() {
                 setApplyError(null);
                 setApplySuccess(false);
               }}
-              disabled={alreadyApplied}
+              disabled={!canApply}
               type="button"
             >
-              {alreadyApplied ? t('jobs.alreadyApplied') : t('jobs.applyNow')}
+              {alreadyApplied
+                ? t('jobs.alreadyApplied')
+                : job.status === 'active'
+                  ? t('jobs.applyNow')
+                  : t('jobs.closed')}
             </button>
           </aside>
         </div>
@@ -218,9 +226,9 @@ export default function CandidateJobDetailPage() {
                 onChange={(e) => setSelectedResumeId(e.target.value)}
               >
                 {resumes.map((r) => (
-                  <option key={r._id} value={r._id}>
+                  <option key={r.resume_id} value={r.resume_id}>
                     {r.title || t('resumes.defaultTitle')}
-                    {r.isMaster ? t('forms.masterSuffix') : ''}
+                    {r.is_master ? t('forms.masterSuffix') : ''}
                   </option>
                 ))}
               </select>
@@ -242,7 +250,13 @@ export default function CandidateJobDetailPage() {
               <button
                 className="rounded-lg bg-[var(--blue-700)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                 onClick={handleApply}
-                disabled={applyLoading || !selectedResumeId || resumes.length === 0 || applySuccess}
+                disabled={
+                  applyLoading ||
+                  !selectedResumeId ||
+                  resumes.length === 0 ||
+                  applySuccess ||
+                  !canApply
+                }
                 type="button"
               >
                 {applyLoading ? t('jobs.submitting') : t('jobs.submitApplication')}

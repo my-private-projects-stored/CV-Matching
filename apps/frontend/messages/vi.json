@@ -23,7 +23,14 @@
     "error": "Đã xảy ra lỗi",
     "activePositions": "{count} vị trí đang tuyển",
     "review": "Xem xét",
-    "uiLanguage": "Ngôn ngữ giao diện"
+    "uiLanguage": "Ngôn ngữ giao diện",
+    "success": "Thành công",
+    "saving": "Đang lưu...",
+    "generating": "Đang tạo...",
+    "optional": "Tùy chọn",
+    "popupBlocked": "Trình duyệt đã chặn cửa sổ bật lên. Vui lòng nhấp vào đây để mở: {url}",
+    "unknown": "Lỗi không xác định",
+    "ok": "Đồng ý"
   },
   "app": {
     "name": "CV Matching",
@@ -37,6 +44,8 @@
     "workspace": "không gian làm việc"
   },
   "nav": {
+    "backToDashboard": "Quay lại Tổng quan",
+    "builder": "Trình tạo CV",
     "groups": {
       "workspace": "Không gian làm việc",
       "account": "Tài khoản",
@@ -116,6 +125,8 @@
     "privacy": "Bảo mật",
     "orContinue": "hoặc tiếp tục với",
     "google": "Tiếp tục với Google",
+    "googleNotConfigured": "Đăng nhập Google chưa được cấu hình",
+    "roleDeterminedByAccount": "Vai trò của bạn được xác định theo tài khoản sau khi đăng nhập.",
     "signInError": "Không thể đăng nhập",
     "termsAgree": "Tôi đồng ý với điều khoản và chính sách bảo mật",
     "registerTitle": "Tạo tài khoản của bạn",
@@ -169,6 +180,12 @@
     "scoring": "Đang chấm điểm",
     "completed": "Hoàn tất",
     "failed": "Thất bại"
+  },
+  "generationMode": {
+    "aiGenerated": "Do AI tạo",
+    "templateFallback": "Mẫu dự phòng",
+    "aiTitle": "Được tạo bởi AI (LLM)",
+    "fallbackTitle": "Được tạo bằng mẫu dự phòng"
   },
   "pages": {
     "candidateDashboard": {
@@ -286,7 +303,34 @@
       "education": "Học vấn",
       "projects": "Dự án",
       "skills": "Kỹ năng & Giải thưởng",
-      "additional": "Bổ sung"
+      "additional": "Bổ sung",
+      "skillsOnly": "Kỹ năng",
+      "languages": "Ngôn ngữ",
+      "certifications": "Chứng chỉ",
+      "awards": "Giải thưởng",
+      "links": "Liên kết"
+    },
+    "additionalLabels": {
+      "technicalSkills": "Kỹ năng chuyên môn",
+      "languages": "Ngôn ngữ",
+      "certifications": "Chứng chỉ & Đào tạo",
+      "awards": "Giải thưởng & Thành tích"
+    },
+    "additional": {
+      "technicalSkills": "Kỹ năng chuyên môn"
+    },
+    "defaults": {
+      "name": "Họ và tên"
+    },
+    "personalInfo": {
+      "name": "Họ và tên",
+      "title": "Tiêu đề chuyên môn",
+      "email": "Email",
+      "phone": "Số điện thoại",
+      "location": "Địa điểm",
+      "website": "Trang web",
+      "linkedin": "LinkedIn",
+      "github": "GitHub"
     }
   },
   "resumes": {
@@ -378,7 +422,334 @@
     "tipOutreach4": "Cá nhân hoá dòng tiêu đề khi gửi",
     "generatedCoverLetter": "Đã tạo thư xin việc!",
     "generatedOutreach": "Đã tạo email tiếp cận!",
-    "savedSuccess": "Đã lưu thành công!"
+    "savedSuccess": "Đã lưu thành công!",
+    "coverLetterDisabled": "Tạo thư xin việc đang bị tắt trong cấu hình quản trị.",
+    "outreachDisabled": "Tạo email tiếp cận đang bị tắt trong cấu hình quản trị.",
+    "editMode": "Chế độ chỉnh sửa",
+    "createAndPreview": "Tạo và Xem trước",
+    "unsavedDraft": "Bản thảo chưa lưu",
+    "addSection": "Thêm mục",
+    "leftPanel": {
+      "editorPanel": "Bảng chỉnh sửa",
+      "coverLetterEditor": "Trình soạn Thư xin việc",
+      "outreachEditor": "Trình soạn Email tiếp cận",
+      "jdMatchAnalysis": "Phân tích độ khớp JD"
+    },
+    "previewTabs": {
+      "resume": "CV",
+      "coverLetter": "Thư xin việc",
+      "outreach": "Email tiếp cận",
+      "jdMatch": "Khớp JD"
+    },
+    "alerts": {
+      "reloadFailed": "Tải lại dữ liệu thất bại",
+      "saveNotAvailable": "Lưu CV không khả dụng",
+      "saveFailed": "Lưu CV thất bại",
+      "downloadNotAvailable": "Tải xuống không khả dụng",
+      "downloadSuccess": "Bắt đầu tải xuống PDF",
+      "downloadFailed": "Tải xuống thất bại",
+      "coverLetterSaveSuccess": "Lưu thư xin việc thành công!",
+      "coverLetterSaveFailed": "Lưu thư xin việc thất bại",
+      "coverLetterDownloadRequiresResume": "Thư xin việc yêu cầu thông tin cá nhân từ CV",
+      "coverLetterMissing": "Thư xin việc trống, hãy tạo trước",
+      "coverLetterDownloadFailed": "Tải xuống thư xin việc thất bại: {error}",
+      "outreachSaveSuccess": "Lưu email tiếp cận thành công!",
+      "outreachSaveFailed": "Lưu email tiếp cận thất bại",
+      "coverLetterGenerateFailed": "Tạo thư xin việc thất bại: {error}",
+      "outreachGenerateFailed": "Tạo email tiếp cận thất bại: {error}"
+    },
+    "contentStats": {
+      "wordsChars": "{wordCount} từ · {charCount} ký tự"
+    },
+    "personalInfo": "Thông tin cá nhân",
+    "personalInfoForm": {
+      "placeholders": {
+        "name": "Tên của bạn",
+        "title": "Tiêu đề chuyên môn",
+        "email": "Email của bạn",
+        "phone": "Số điện thoại",
+        "location": "Địa điểm (vd. Hà Nội, Việt Nam)",
+        "website": "Trang web cá nhân",
+        "linkedin": "Link LinkedIn",
+        "github": "Link GitHub"
+      }
+    },
+    "placeholders": {
+      "summary": "Viết một tóm tắt ngắn gọn giới thiệu về kỹ năng và kinh nghiệm của bạn..."
+    },
+    "formatting": {
+      "templates": {
+        "swissSingle": {
+          "name": "Swiss Single — Một cột",
+          "description": "Phong cách Swiss gọn gàng, bố cục một cột cổ điển"
+        },
+        "swissTwoColumn": {
+          "name": "Swiss Two Column — Hai cột",
+          "description": "Bố cục hai cột tận dụng tối đa không gian trang"
+        },
+        "modern": {
+          "name": "Hiện đại — Một cột",
+          "description": "Thiết kế hiện đại, tinh tế"
+        },
+        "modernTwoColumn": {
+          "name": "Hiện đại — Hai cột",
+          "description": "Thiết kế hiện đại với hai cột linh hoạt"
+        }
+      },
+      "fontNames": {
+        "sans": "Không chân (Sans-serif)",
+        "serif": "Có chân (Serif)",
+        "mono": "Đơn cách (Monospace)"
+      },
+      "panelTitle": "Định dạng CV",
+      "template": "Mẫu giao diện",
+      "accentColor": "Màu nhấn",
+      "accentColors": {
+        "blue": "Xanh dương",
+        "emerald": "Xanh lục bảo",
+        "rose": "Hồng cánh sen",
+        "indigo": "Xanh chàm",
+        "violet": "Tím",
+        "amber": "Hổ phách",
+        "slate": "Xám đá"
+      },
+      "pageSize": "Khổ trang",
+      "margins": "Lề trang (px)",
+      "margin": {
+        "top": "Trên",
+        "bottom": "Dưới",
+        "left": "Trái",
+        "right": "Phải"
+      },
+      "spacing": "Khoảng cách (rem)",
+      "spacingSection": "Giữa các mục lớn",
+      "spacingItems": "Giữa các mục nhỏ",
+      "spacingLines": "Giữa các dòng",
+      "fontSize": "Cỡ chữ (px)",
+      "baseFontSize": "Chữ nội dung",
+      "headerScale": "Tỉ lệ tiêu đề",
+      "headerFontFamily": "Font tiêu đề",
+      "bodyFontFamily": "Font nội dung",
+      "options": "Tuỳ chọn hiển thị",
+      "compactMode": "Chế độ siêu gọn",
+      "contactIcons": "Hiển thị biểu tượng liên hệ",
+      "effectiveOutput": "Thông số thực tế đầu ra",
+      "effectiveMargins": "Lề thực tế: Tr:{top} D:{bottom} T:{left} P:{right}",
+      "effectiveSectionGap": "Khoảng cách mục thực tế",
+      "effectiveItemGap": "Khoảng cách mục nhỏ thực tế",
+      "effectiveLineHeight": "Giãn dòng thực tế",
+      "effectiveBaseFont": "Cỡ chữ nội dung thực tế",
+      "effectiveHeaderScale": "Tỉ lệ tiêu đề thực tế",
+      "effectiveHeaderFont": "Font tiêu đề thực tế",
+      "effectiveBodyFont": "Font nội dung thực tế",
+      "compactHint": "* Chế độ siêu gọn giảm khoảng cách và cỡ chữ đi 15%.",
+      "resetDefaults": "Đặt lại mặc định"
+    },
+    "pageSize": {
+      "usLetter": "Letter (US)"
+    },
+    "sectionHeader": {
+      "renameSection": "Đổi tên mục",
+      "customTag": "Mục tự tạo",
+      "hiddenFromPdfTag": "Ẩn khỏi PDF",
+      "hideSection": "Ẩn mục này",
+      "showSection": "Hiện mục này",
+      "moveUp": "Di chuyển lên",
+      "moveDown": "Di chuyển xuống",
+      "deleteSection": "Xoá mục này",
+      "deleteTitle": "Xác nhận xoá mục",
+      "deleteDescription": "Bạn có chắc chắn muốn xoá mục \"{name}\"? Hành động này không thể hoàn tác."
+    },
+    "customSections": {
+      "contentLabel": "Nội dung",
+      "contentPlaceholder": "Nhập nội dung cho mục {name}...",
+      "entryLabel": "Mục con",
+      "addEntryLabel": "Thêm mục con",
+      "itemsLabel": "Các mục danh sách",
+      "itemsPlaceholder": "Nhập các mục danh sách, cách nhau bằng dòng mới...",
+      "unknownSectionType": "Loại mục không xác định: {type}",
+      "defaultTextPlaceholder": "Nhập nội dung văn bản...",
+      "sectionTypes": {
+        "textBlockLabel": "Văn bản tự do",
+        "textBlockDescription": "Một mục chứa đoạn văn bản tự do lớn",
+        "itemListLabel": "Danh sách các phần (Kinh nghiệm/Dự án/Học vấn)",
+        "itemListDescription": "Danh sách các phần con có ngày tháng, chức danh, nơi làm việc và mô tả chi tiết",
+        "stringListLabel": "Danh sách gạch đầu dòng đơn giản",
+        "stringListDescription": "Danh sách gạch đầu dòng các kỹ năng hoặc từ khóa đơn giản"
+      },
+      "dialogTitle": "Thêm mục tuỳ chỉnh mới",
+      "dialogDescription": "Chọn tên mục và định dạng nội dung hiển thị trong CV của bạn.",
+      "sectionNameLabel": "Tên mục",
+      "sectionNamePlaceholder": "vd. Giải thưởng & Thành tích",
+      "sectionTypeLabel": "Loại định dạng nội dung",
+      "addCustomSectionButton": "Tạo mục tuỳ chỉnh"
+    },
+    "regenerate": {
+      "buttonLabel": "Tối ưu bằng AI",
+      "errors": {
+        "networkError": "Lỗi mạng hoặc kết nối server, vui lòng thử lại.",
+        "resumeChanged": "Nội dung CV gốc đã thay đổi, vui lòng tải lại và tối ưu lại từ đầu.",
+        "generationFailed": "Tạo nội dung mới thất bại.",
+        "applyFailed": "Áp dụng nội dung mới vào CV thất bại.",
+        "noChangesToApply": "Không có thay đổi nào để áp dụng."
+      },
+      "selectDialog": {
+        "skills": "Tất cả kỹ năng",
+        "title": "Chọn phần cần tối ưu bằng AI",
+        "subtitle": "AI sẽ viết lại các gạch đầu dòng của các phần được chọn để tối ưu hóa từ khóa và chỉ số.",
+        "noItemsAvailable": "Không có phần nào khả dụng để tối ưu (yêu cầu Kinh nghiệm, Dự án hoặc Kỹ năng).",
+        "experience": "Kinh nghiệm làm việc",
+        "projects": "Dự án cá nhân",
+        "continueButton": "Tiếp tục",
+        "itemCount": {
+          "one": "1 gạch đầu dòng",
+          "other": "{count} gạch đầu dòng"
+        }
+      },
+      "instructionDialog": {
+        "title": "Hướng dẫn AI tối ưu",
+        "subtitle": "Gửi yêu cầu chi tiết cho AI cách viết lại các phần đã chọn.",
+        "selectedItems": "Đã chọn: {count} phần",
+        "hint": "Hướng dẫn bổ sung cho AI (không bắt buộc):",
+        "placeholder": "vd. Viết các mô tả ngắn gọn, làm nổi bật kết quả kinh doanh bằng con số thực tế...",
+        "backButton": "Quay lại",
+        "generateButton": "Tối ưu ngay"
+      },
+      "diffPreview": {
+        "title": "So sánh kết quả tối ưu bằng AI",
+        "subtitle": "Xem trước các thay đổi được đề xuất bởi AI trước khi áp dụng vào CV của bạn.",
+        "changesCount": "Tìm thấy {count} thay đổi đề xuất",
+        "partialFailures": "Có {count} phần gặp lỗi khi tối ưu",
+        "collapseItem": "Thu gọn {item}",
+        "expandItem": "Mở rộng {item}",
+        "originalLabel": "Nội dung gốc",
+        "noContent": "(Trống)",
+        "newLabel": "Nội dung đề xuất bởi AI",
+        "rejectButton": "Huỷ bỏ & Tạo lại",
+        "applying": "Đang áp dụng...",
+        "acceptButton": "Áp dụng vào CV",
+        "loading": "Đang tối ưu..."
+      }
+    },
+    "generatePrompt": {
+      "notAvailableTitle": "{title} chưa sẵn sàng",
+      "notAvailableDescription": "Vui lòng hoàn thành thông tin cá nhân và tóm tắt trong CV để mở khóa tính năng này.",
+      "goToDashboard": "Quay lại Tổng quan",
+      "generateTitle": "Tự động soạn thảo {title} bằng AI",
+      "outreachDescription": "AI sẽ phân tích CV của bạn và tạo một email/tin nhắn tiếp cận (outreach) chuyên nghiệp gửi cho nhà tuyển dụng.",
+      "coverLetterDescription": "AI sẽ tự động viết một thư xin việc (cover letter) chuyên nghiệp, làm nổi bật các điểm mạnh phù hợp nhất của bạn.",
+      "generateButton": "Tạo bằng AI",
+      "outreachFooter": "* Bản nháp Email tiếp cận có thể được cá nhân hóa thêm trước khi sao chép gửi.",
+      "coverLetterFooter": "* Thư xin việc có thể được lưu trữ và tải xuống dưới dạng PDF."
+    },
+    "jdMatch": {
+      "aboutTitle": "Về tính năng Khớp JD",
+      "aboutDescription": "Tính năng này so sánh CV của bạn với mô tả công việc (JD) để tìm kiếm các kỹ năng phù hợp và các từ khóa còn thiếu.",
+      "highlightedKeywordsTitle": "Đánh dấu từ khóa khớp",
+      "highlightedKeywordsDescriptionTemplate": "Các từ khóa khớp xuất hiện trong CV của bạn sẽ được tô sáng bằng __COLOR__ để dễ dàng nhận biết.",
+      "highlightColor": "màu vàng",
+      "tipsTitle": "Lời khuyên cải thiện điểm số",
+      "tips": {
+        "items": {
+          "addMissingKeywords": "Bổ sung các từ khóa còn thiếu được liệt kê trong tab so sánh vào phần kỹ năng hoặc mô tả của CV.",
+          "focusTechnicalSkills": "Tập trung làm nổi bật các kỹ năng kỹ thuật cốt lõi được yêu cầu nhiều nhất.",
+          "matchActionVerbs": "Sử dụng các động từ hành động tương tự như trong mô tả công việc."
+        }
+      },
+      "jobDescriptionTitle": "Mô tả công việc (JD)",
+      "stats": {
+        "keywordsExtracted": "Đã trích xuất {count} từ khóa từ JD",
+        "matchesFound": "Tìm thấy {count} từ khóa trùng khớp trong CV",
+        "matchRateLabel": "Tỉ lệ trùng khớp tổng quan"
+      },
+      "yourResume": "Bản CV của bạn",
+      "matchingKeywordsHighlighted": "(Các từ khóa khớp được tô sáng)",
+      "atSeparator": " tại ",
+      "roleSeparator": " với vai trò "
+    },
+    "footer": {
+      "moduleLabel": "Mô-đun CV AI",
+      "singleColumn": "Mẫu một cột",
+      "twoColumn": "Mẫu hai cột"
+    },
+    "forms": {
+      "projects": {
+        "addProject": "Thêm dự án mới",
+        "addFirstProject": "+ Thêm dự án đầu tiên",
+        "fields": {
+          "projectName": "Tên dự án",
+          "role": "Vai trò trong dự án",
+          "website": "Trang web dự án"
+        },
+        "placeholders": {
+          "projectName": "vd. Hệ thống thương mại điện tử",
+          "role": "vd. Trưởng nhóm lập trình",
+          "years": "vd. 2023 - Hiện tại",
+          "github": "vd. github.com/username/project",
+          "website": "vd. project-demo.com",
+          "description": "Nhập điểm mô tả chính của dự án..."
+        }
+      },
+      "experience": {
+        "addJob": "Thêm công việc mới",
+        "addFirstJob": "+ Thêm công việc đầu tiên",
+        "fields": {
+          "jobTitle": "Chức danh / Vị trí làm việc",
+          "company": "Công ty / Tổ chức"
+        },
+        "placeholders": {
+          "jobTitle": "vd. Kỹ sư phần mềm Senior",
+          "company": "vd. Công ty Công nghệ ABC",
+          "location": "vd. Hà Nội, Việt Nam",
+          "years": "vd. 05/2022 - Hiện tại",
+          "description": "Nhập điểm kinh nghiệm chính của bạn..."
+        }
+      },
+      "education": {
+        "addSchool": "Thêm học vấn mới",
+        "addFirstSchool": "+ Thêm học vấn đầu tiên",
+        "fields": {
+          "institution": "Trường học / Cơ sở đào tạo",
+          "degree": "Bằng cấp / Ngành học",
+          "descriptionOptional": "Mô tả bổ sung (tuỳ chọn)"
+        },
+        "placeholders": {
+          "institution": "vd. Đại học Bách Khoa",
+          "degree": "vd. Cử nhân Công nghệ thông tin",
+          "years": "vd. 2018 - 2022",
+          "description": "vd. GPA: 3.6/4.0, Hoạt động câu lạc bộ, Giải thưởng..."
+        }
+      },
+      "additionalForm": {
+        "instructions": "Nhập các mục kỹ năng, ngôn ngữ, chứng chỉ của bạn (mỗi mục một dòng).",
+        "placeholders": {
+          "technicalSkills": "vd. JavaScript\nReact\nNode.js\nSQL",
+          "languages": "vd. Tiếng Anh (Lưu loát)\nTiếng Nhật (N3)",
+          "certifications": "vd. AWS Certified Solutions Architect\nScrum Master",
+          "awards": "vd. Giải nhất Hackathon 2023\nNhân viên xuất sắc năm 2024"
+        }
+      }
+    },
+    "genericItemForm": {
+      "itemLabel": "Mục",
+      "addItemLabel": "Thêm {label}",
+      "noEntries": "Chưa có thông tin {label}. Vui lòng nhấp vào nút bên dưới để thêm.",
+      "actions": {
+        "addPoint": "Thêm gạch đầu dòng"
+      },
+      "fields": {
+        "years": "Thời gian",
+        "location": "Địa điểm",
+        "descriptionPoints": "Các gạch đầu dòng mô tả"
+      },
+      "placeholders": {
+        "title": "Tiêu đề mục",
+        "organization": "Tổ chức / Đơn vị",
+        "location": "Địa điểm",
+        "years": "Khoảng thời gian",
+        "description": "Chi tiết mô tả..."
+      }
+    }
   },
   "optimize": {
     "jdMatchTab": "Khớp JD",
@@ -485,7 +856,8 @@
       "system": "Hệ thống",
       "api": "API",
       "ready": "Sẵn sàng",
-      "llm": "LLM"
+      "llm": "LLM",
+      "stale": "cũ"
     },
     "tabs": {
       "llm": "Nhà cung cấp LLM",
@@ -493,7 +865,8 @@
       "features": "Tính năng",
       "apiKeys": "API Keys",
       "language": "Ngôn ngữ",
-      "privacy": "Quyền riêng tư"
+      "privacy": "Quyền riêng tư",
+      "llmEvents": "Nhật ký LLM"
     },
     "config": {
       "model": "Model",
@@ -506,7 +879,8 @@
       },
       "language": {
         "uiLocale": "Giao diện {locale}",
-        "contentLocale": "Nội dung {locale}"
+        "contentLocale": "Nội dung {locale}",
+        "autoDetect": "Tự động nhận diện (Auto-detect)"
       },
       "apiKeys": {
         "configured": "Đã cấu hình: {key}",
@@ -543,6 +917,27 @@
         "saveDescription": "Lưu thay đổi cấu hình?",
         "confirmAction": "Xác nhận thao tác"
       },
+      "prompts": {
+        "defaultTailorStyle": "Kiểu prompt tối ưu CV mặc định",
+        "truthfulnessRules": "Quy tắc trung thực (mỗi dòng một quy tắc)",
+        "truthfulnessHelp": "Các quy tắc này được tự động thêm vào prompt sinh nội dung để đảm bảo đầu ra đúng sự thật.",
+        "truthfulnessPlaceholder": "vd. Không tự tạo kinh nghiệm hoặc kỹ năng không có trong CV.",
+        "templates": "Mẫu prompt",
+        "templatesHelp": "Tùy chỉnh prompt gửi tới LLM cho từng tính năng.",
+        "tailor": "Prompt tối ưu CV",
+        "tailorNudge": "Điều chỉnh nhẹ",
+        "tailorKeywords": "Từ khóa (tối ưu ATS)",
+        "tailorFull": "Viết lại toàn diện",
+        "coverOutreach": "Prompt thư xin việc & outreach",
+        "coverLetter": "Mẫu thư xin việc",
+        "outreach": "Mẫu LinkedIn outreach",
+        "interview": "Prompt câu hỏi phỏng vấn",
+        "interviewDirectives": "Schema và chỉ dẫn câu hỏi phỏng vấn",
+        "enrichment": "Prompt làm giàu CV",
+        "enrichmentAnalyze": "Phân tích khoảng trống CV",
+        "enrichmentEnhance": "Làm giàu từ câu trả lời",
+        "enrichmentRegenerate": "Tạo lại theo hướng dẫn"
+      },
       "llmProviders": {
         "ollama": "Ollama (Cục bộ)",
         "openai": "OpenAI",
@@ -550,6 +945,34 @@
         "gemini": "Google Gemini",
         "openrouter": "OpenRouter",
         "deepseek": "DeepSeek"
+      },
+      "llmEvents": {
+        "title": "Nhật ký sinh LLM",
+        "refresh": "Làm mới",
+        "loading": "Đang tải các sự kiện LLM...",
+        "empty": "Chưa có sự kiện sinh nào được ghi nhận.",
+        "filters": {
+          "feature": "Lọc theo tính năng",
+          "allModes": "Tất cả chế độ",
+          "limit": "Giới hạn sự kiện"
+        },
+        "columns": {
+          "timestamp": "Thời gian",
+          "feature": "Tính năng",
+          "mode": "Chế độ",
+          "providerModel": "Nhà cung cấp / Mô hình",
+          "statusReason": "Trạng thái / Lý do",
+          "requestId": "Mã yêu cầu"
+        },
+        "modes": {
+          "llm": "AI (LLM)",
+          "fallback": "Dự phòng Template"
+        },
+        "status": {
+          "success": "Thành công",
+          "failed": "Thất bại: {reason}",
+          "unknown": "không rõ"
+        }
       }
     },
     "apiKeyProviders": {
@@ -636,6 +1059,7 @@
       "candidatesLink": "Ứng viên",
       "findCvs": "Tìm CV ✨",
       "closePosting": "Đóng tin",
+      "reopen": "Mở lại",
       "saveDraft": "Lưu nháp",
       "publishJob": "Đăng tin",
       "publishing": "Đang đăng...",
@@ -667,7 +1091,9 @@
       "markHired": "Đánh dấu đã tuyển",
       "reject": "Từ chối",
       "applyBulkAction": "Áp dụng hàng loạt",
+      "bulkUpdated": "Đã cập nhật {count} hồ sơ",
       "updating": "Đang cập nhật...",
+      "selectVisible": "Chọn ứng viên đang hiển thị",
       "selectCandidate": "Chọn {name}",
       "interviewQuestionsAria": "Câu hỏi phỏng vấn cho {name}",
       "interviewQuestionsTitle": "Câu hỏi phỏng vấn",
@@ -701,7 +1127,8 @@
       "passiveCandidatesHint": "Bao gồm ứng viên tiềm năng chưa ứng tuyển",
       "anonymousCandidate": "Ứng viên ẩn danh",
       "viewCv": "Xem CV",
-      "questions": "Câu hỏi"
+      "questions": "Câu hỏi",
+      "reviewApplicants": "Xem ứng viên đã ứng tuyển"
     },
     "interview": {
       "backToCandidates": "Quay lại ứng viên",
@@ -833,11 +1260,13 @@
     "loadCompanyProfile": "Không tải được hồ sơ công ty",
     "saveCompany": "Không lưu công ty được",
     "loadConfig": "Không tải được cấu hình",
+    "loadLlmEvents": "Không tải được nhật ký LLM",
     "saveConfig": "Không lưu được cấu hình",
     "adminActionFailed": "Thao tác thất bại",
     "updateUser": "Không cập nhật được người dùng",
     "vectorOperationFailed": "Thao tác thất bại",
-    "vectorMustBeArray": "Vector phải là mảng JSON các số"
+    "vectorMustBeArray": "Vector phải là mảng JSON các số",
+    "invalidJsonArray": "Cần nhập một mảng JSON."
   },
   "forms": {
     "title": "Tiêu đề",
@@ -857,6 +1286,11 @@
     "headline": "Tiêu đề nghề nghiệp",
     "portfolioUrl": "URL portfolio",
     "summary": "Tóm tắt",
+    "skills": "Kỹ năng",
+    "portfolioLinks": "Liên kết portfolio",
+    "experienceJson": "JSON kinh nghiệm",
+    "educationJson": "JSON học vấn",
+    "portfolioJson": "JSON portfolio",
     "currentPassword": "Mật khẩu hiện tại",
     "newPasswordMin": "Mật khẩu mới (tối thiểu 8 ký tự)",
     "confirmNewPassword": "Xác nhận mật khẩu mới",
@@ -912,6 +1346,8 @@
   "applications": {
     "allStatuses": "Tất cả trạng thái",
     "allAiStatuses": "Tất cả trạng thái AI",
+    "submittedAfter": "Nộp sau ngày",
+    "submittedBefore": "Nộp trước ngày",
     "viewFeedback": "Xem phản hồi",
     "appliedOn": "Ứng tuyển {date}",
     "backToApplications": "Quay lại hồ sơ ứng tuyển",
@@ -959,6 +1395,69 @@
     "closeJobPosting": {
       "title": "Đóng tin tuyển dụng",
       "description": "Tin này sẽ bị gỡ khỏi danh sách đang tuyển."
+    },
+    "reopenJobPosting": {
+      "title": "Mở lại tin tuyển dụng",
+      "description": "Mở lại \"{title}\" để nhận hồ sơ mới?"
+    },
+    "deleteJobPosting": {
+      "title": "Xóa tin tuyển dụng",
+      "description": "Xóa \"{title}\"? Thao tác này không thể hoàn tác."
+    },
+    "bulkUpdate": {
+      "title": "Cập nhật ứng viên đã chọn?",
+      "description": "Chuyển {count} ứng viên đã chọn sang {status}."
+    },
+    "userStatus": {
+      "enableTitle": "Bật người dùng",
+      "disableTitle": "Tắt người dùng",
+      "description": "Áp dụng thay đổi trạng thái tài khoản cho {email}?"
     }
+  },
+  "preview": {
+    "margins": "Lề trang",
+    "calculating": "Đang tính toán phân trang...",
+    "pageCountSingular": "1 TRANG",
+    "pageCountPlural": "{count} TRANG",
+    "pageBreak": "Ngắt trang tại đây"
+  },
+  "coverLetter": {
+    "title": "Thư xin việc",
+    "editor": {
+      "placeholder": "Nhập nội dung thư xin việc của bạn...",
+      "tip": "* AI có thể tạo thư xin việc từ thông tin CV của bạn nếu bạn dán mô tả công việc (JD)."
+    },
+    "preview": {
+      "defaultName": "Tên ứng viên",
+      "emptyTitle": "Chưa có thư xin việc",
+      "emptyDescription": "Chọn tab để AI tự động tạo thư xin việc, hoặc tự soạn thảo."
+    },
+    "regenerate": "Tạo lại bằng AI"
+  },
+  "outreach": {
+    "title": "Email tiếp cận",
+    "editor": {
+      "placeholder": "Nhập nội dung email tiếp cận của bạn...",
+      "tip": "* Bản nháp Email tiếp cận phù hợp để gửi tin nhắn LinkedIn hoặc email trực tiếp cho tuyển dụng."
+    },
+    "preview": {
+      "channels": {
+        "linkedin": "Kênh LinkedIn",
+        "email": "Kênh Email"
+      },
+      "howToUseTitle": "Cách sử dụng hiệu quả",
+      "steps": {
+        "step1": "Cá nhân hóa lời chào gửi trực tiếp đến nhà tuyển dụng.",
+        "step2": "Đính kèm bản CV PDF của bạn.",
+        "step3": "Đề xuất lịch gặp ngắn qua điện thoại/Zoom.",
+        "step4": "Theo dõi sau 3-5 ngày nếu chưa phản hồi."
+      },
+      "emptyTitle": "Chưa có email tiếp cận",
+      "emptyDescription": "Chọn tab để AI tự động soạn email tiếp cận phù hợp."
+    },
+    "copied": "Đã sao chép!",
+    "copyToClipboard": "Sao chép",
+    "copy": "Sao chép vào Clipboard",
+    "regenerate": "Tạo lại bằng AI"
   }
 }

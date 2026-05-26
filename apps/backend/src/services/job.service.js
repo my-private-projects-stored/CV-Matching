@@ -4,6 +4,7 @@ import Company from "../models/Company.js";
 import { ensureQdrantId } from "../utils/qdrant-id.js";
 import { generateEmbedding } from "./embedding.service.js";
 import { deleteJobVector, upsertJobVector } from "./vector-index.service.js";
+import { extractJobKeywords } from "./keyword-analysis.service.js";
 
 function normalizeText(value) {
   return String(value || "").trim();
@@ -192,6 +193,13 @@ function extractJobEmbeddingText(job) {
   return [job.title, job.description, job.requirements, job.benefits].filter(Boolean).join("\n");
 }
 
+async function markJobVectorStale(job, reason, error) {
+  console.warn(`[job-index] ${reason}`, error?.message || error);
+  job.isAnalyzed = false;
+  await job.save();
+  await deleteJobVector(job.qdrantId);
+}
+
 async function getApplicationCountsByJobIds(jobIds = []) {
   if (!Array.isArray(jobIds) || jobIds.length === 0) {
     return new Map();
@@ -232,6 +240,9 @@ export async function createJob(payload) {
     jobData.cleanText = [jobData.title, jobData.description, jobData.requirements, jobData.benefits]
       .filter(Boolean)
       .join("\n");
+  }
+  if (!Array.isArray(jobData.keywords) || jobData.keywords.length === 0) {
+    jobData.keywords = extractJobKeywords(jobData);
   }
   const job = new Job(jobData);
   ensureQdrantId(job);
@@ -278,12 +289,29 @@ export async function updateJobById(jobId, payload, options = {}) {
     throw createForbiddenError();
   }
 
+  const embeddingContentChanged = shouldRegenerateJobEmbedding(jobData);
   if (!hasOwn(jobData, "cleanText") && shouldRegenerateJobEmbedding(jobData)) {
     const title = hasOwn(jobData, "title") ? jobData.title : job.title;
     const description = hasOwn(jobData, "description") ? jobData.description : job.description;
     const requirements = hasOwn(jobData, "requirements") ? jobData.requirements : job.requirements;
     const benefits = hasOwn(jobData, "benefits") ? jobData.benefits : job.benefits;
     jobData.cleanText = [title, description, requirements, benefits].filter(Boolean).join("\n");
+  }
+
+  if (hasOwn(jobData, "keywords") || shouldRegenerateJobEmbedding(jobData)) {
+    const keywordSource = {
+      title: hasOwn(jobData, "title") ? jobData.title : job.title,
+      description: hasOwn(jobData, "description") ? jobData.description : job.description,
+      requirements: hasOwn(jobData, "requirements") ? jobData.requirements : job.requirements,
+      benefits: hasOwn(jobData, "benefits") ? jobData.benefits : job.benefits,
+      cleanText: hasOwn(jobData, "cleanText") ? jobData.cleanText : job.cleanText,
+      keywords: Array.isArray(jobData.keywords) && jobData.keywords.length > 0 ? jobData.keywords : [],
+    };
+    jobData.keywords = extractJobKeywords(keywordSource);
+  }
+
+  if (embeddingContentChanged) {
+    jobData.isAnalyzed = false;
   }
 
   const changeDetails = collectImportantChangeDetails(job, jobData);
@@ -305,7 +333,8 @@ export async function updateJobById(jobId, payload, options = {}) {
 
   ensureQdrantId(job);
   const saved = await job.save();
-  const mustRegenerate = shouldRegenerateJobEmbedding(jobData);
+  const mustRegenerate =
+    embeddingContentChanged || (saved.status === "active" && !saved.isAnalyzed);
 
   if (saved.status !== "active") {
     await deleteJobVector(saved.qdrantId);
@@ -315,23 +344,44 @@ export async function updateJobById(jobId, payload, options = {}) {
   }
 
   let vector = embeddingVector;
+  if (mustRegenerate) {
+    await deleteJobVector(saved.qdrantId);
+  }
+
   if ((!Array.isArray(vector) || vector.length === 0) && mustRegenerate) {
-    vector = await generateEmbedding(extractJobEmbeddingText(saved));
+    try {
+      vector = await generateEmbedding(extractJobEmbeddingText(saved));
+    } catch (error) {
+      vector = null;
+      await markJobVectorStale(
+        saved,
+        "embedding generation failed on update, stale vector removed",
+        error
+      );
+    }
   }
 
   if (Array.isArray(vector) && vector.length > 0) {
-    await upsertJobVector({
-      qdrantId: saved.qdrantId,
-      vector,
-      payload: {
-        mongoId: String(saved._id),
-        category: saved.category,
-        status: saved.status,
-      },
-    });
+    try {
+      await upsertJobVector({
+        qdrantId: saved.qdrantId,
+        vector,
+        payload: {
+          mongoId: String(saved._id),
+          category: saved.category,
+          status: saved.status,
+        },
+      });
 
-    saved.isAnalyzed = true;
-    await saved.save();
+      saved.isAnalyzed = true;
+      await saved.save();
+    } catch (error) {
+      await markJobVectorStale(
+        saved,
+        "vector upsert failed on update, stale vector removed",
+        error
+      );
+    }
   }
 
   return saved;

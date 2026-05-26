@@ -21,7 +21,11 @@ function parseVectorInput(value: string, invalidMessage: string): number[] {
   if (!Array.isArray(parsed)) {
     throw new Error(invalidMessage);
   }
-  return parsed.map((item) => Number(item));
+  const numbers = parsed.map((item) => Number(item));
+  if (numbers.some((item) => !Number.isFinite(item))) {
+    throw new Error(invalidMessage);
+  }
+  return numbers;
 }
 
 export default function AdminVectorsPage() {
@@ -178,7 +182,10 @@ export default function AdminVectorsPage() {
             disabled={busy || !jobId.trim() || !resumeId.trim()}
             onClick={() =>
               runAction(async () => {
-                const result = await scorePair({ job_id: jobId.trim(), resume_id: resumeId.trim() });
+                const result = await scorePair({
+                  job_id: jobId.trim(),
+                  resume_id: resumeId.trim(),
+                });
                 setPairScore(result);
                 setMessage(t('admin.vectors.messages.hybridScoreComputed'));
               })
@@ -212,12 +219,17 @@ export default function AdminVectorsPage() {
             {searchResults.map((match) => (
               <div
                 key={match.id}
-                className="flex items-center justify-between rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
+                className="grid gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm md:grid-cols-[1fr_auto]"
               >
                 <span className="font-mono text-xs">{match.id}</span>
                 <span className="font-semibold text-[var(--blue-700)]">
                   {(match.score * 100).toFixed(1)}%
                 </span>
+                {match.payload ? (
+                  <pre className="col-span-full mt-2 max-h-24 overflow-auto rounded bg-slate-50 p-2 text-[11px] text-[var(--text-2)]">
+                    {JSON.stringify(match.payload, null, 2)}
+                  </pre>
+                ) : null}
               </div>
             ))}
           </div>

@@ -1,4 +1,4 @@
-import { apiDelete, apiFetch, apiPatch } from './client';
+import { apiDelete, apiFetch, apiPatch, apiPost } from './client';
 import { buildApiClientError } from './error';
 
 async function assertOk(res: Response, fallbackMessagePrefix: string): Promise<void> {
@@ -76,6 +76,13 @@ export interface UpdateJobPayload {
   status?: JobStatus;
 }
 
+export type CreateJobPayload = UpdateJobPayload & {
+  title: string;
+  description: string;
+  requirements: string;
+  category: JobCategory;
+};
+
 function toSearchParams(query: JobListQuery): string {
   const params = new URLSearchParams();
 
@@ -103,6 +110,22 @@ export async function fetchJobs(query: JobListQuery = {}): Promise<JobListRespon
 export async function fetchJobById(jobId: string): Promise<JobItem> {
   const res = await apiFetch(`/jobs/${encodeURIComponent(jobId)}`);
   await assertOk(res, 'Failed to load job detail');
+
+  return res.json();
+}
+
+export async function createJob(payload: CreateJobPayload): Promise<JobItem> {
+  const res = await apiPost('/jobs', payload);
+  await assertOk(res, 'Failed to create job');
+
+  return res.json();
+}
+
+export async function uploadJobDescriptionsForJob(
+  jobDescriptions: string[]
+): Promise<{ message: string; job_id: string[] }> {
+  const res = await apiPost('/jobs/upload', { job_descriptions: jobDescriptions });
+  await assertOk(res, 'Failed to upload job descriptions');
 
   return res.json();
 }

@@ -6,6 +6,8 @@ export function ConfirmDialog({
   description,
   confirmLabel,
   cancelLabel,
+  confirmVariant = 'primary',
+  disabled = false,
   onConfirm,
   onCancel,
 }: {
@@ -14,6 +16,8 @@ export function ConfirmDialog({
   description?: string;
   confirmLabel: string;
   cancelLabel: string;
+  confirmVariant?: 'primary' | 'danger';
+  disabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -26,15 +30,20 @@ export function ConfirmDialog({
         <div className="mt-6 flex justify-end gap-2">
           <button
             type="button"
-            className={cn('rounded-lg border border-[var(--border)] px-4 py-2 text-sm')}
+            className={cn('rounded-lg border border-[var(--border)] px-4 py-2 text-sm disabled:opacity-60')}
             onClick={onCancel}
+            disabled={disabled}
           >
             {cancelLabel}
           </button>
           <button
             type="button"
-            className="rounded-lg bg-[var(--blue-700)] px-4 py-2 text-sm font-semibold text-white"
+            className={cn(
+              'rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-60',
+              confirmVariant === 'danger' ? 'bg-[var(--danger)]' : 'bg-[var(--blue-700)]'
+            )}
             onClick={onConfirm}
+            disabled={disabled}
           >
             {confirmLabel}
           </button>

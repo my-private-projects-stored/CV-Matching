@@ -201,8 +201,8 @@ test(
         candidateA.token
       );
       assert.equal(coverLetter.status, 200);
-      assert.match(String(coverLetter.json?.content || ""), /Dear Hiring Team/i);
-      assert.match(String(coverLetter.json?.content || ""), /node\.js/i);
+      assert.ok(String(coverLetter.json?.content || "").trim().length > 20);
+      assert.ok(["llm", "template_fallback"].includes(coverLetter.json?.generation_mode));
 
       const outreach = await requestJson(
         baseUrl,
@@ -212,8 +212,8 @@ test(
         candidateA.token
       );
       assert.equal(outreach.status, 200);
-      assert.match(String(outreach.json?.content || ""), /Hi, I am/i);
-      assert.match(String(outreach.json?.content || ""), /Backend Engineer/i);
+      assert.ok(String(outreach.json?.content || "").trim().length > 20);
+      assert.ok(["llm", "template_fallback"].includes(outreach.json?.generation_mode));
 
       const fetched = await requestJson(
         baseUrl,
@@ -223,8 +223,8 @@ test(
         candidateA.token
       );
       assert.equal(fetched.status, 200);
-      assert.match(String(fetched.json?.data?.cover_letter || ""), /Dear Hiring Team/i);
-      assert.match(String(fetched.json?.data?.outreach_message || ""), /Hi, I am/i);
+      assert.equal(fetched.json?.data?.cover_letter, coverLetter.json?.content);
+      assert.equal(fetched.json?.data?.outreach_message, outreach.json?.content);
 
       const candidateBUpdateCover = await requestJson(
         baseUrl,

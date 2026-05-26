@@ -1,4 +1,6 @@
 import { generateInterviewQuestions } from "../services/interview.service.js";
+import { assertAiGenerationAllowed } from "../services/config.service.js";
+import Application from "../models/Application.js";
 import Job from "../models/Job.js";
 import Resume from "../models/Resume.js";
 
@@ -14,6 +16,36 @@ function requestId() {
   return `req_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+async function recruiterCanAccessResume(userId, resumeId, jobId) {
+  if (!userId || !resumeId) return false;
+
+  if (jobId) {
+    const job = await Job.findById(jobId).select("recruiterId").lean();
+    if (!job) {
+      const error = new Error("Job not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (String(job.recruiterId || "") !== userId) {
+      return false;
+    }
+
+    const linkedApplication = await Application.exists({ resumeId, jobId });
+    return Boolean(linkedApplication);
+  }
+
+  const applications = await Application.find({ resumeId }).select("jobId").lean();
+  if (!applications.length) return false;
+
+  const jobIds = applications.map((item) => item.jobId).filter(Boolean);
+  const ownedJobs = await Job.countDocuments({
+    _id: { $in: jobIds },
+    recruiterId: userId,
+  });
+  return ownedJobs > 0;
+}
+
 // ---------------------------------------------------------------------------
 // Feature C: Recruiter — POST /api/interviews/questions
 // Body: { resume_id, job_id?, language? }
@@ -21,6 +53,8 @@ function requestId() {
 
 export async function generateInterviewQuestionsHandler(req, res, next) {
   try {
+    await assertAiGenerationAllowed("interview_questions");
+
     const role = getAuthRole(req);
     const userId = getAuthUserId(req);
 
@@ -38,15 +72,13 @@ export async function generateInterviewQuestionsHandler(req, res, next) {
       return res.status(404).json({ message: "Resume not found" });
     }
 
-    // If job_id is provided, verify recruiter owns the job
-    if (rawJobId && role === "recruiter") {
-      const job = await Job.findById(rawJobId).select("recruiterId").lean();
-      if (!job) {
-        return res.status(404).json({ message: "Job not found" });
-      }
-      if (String(job.recruiterId || "") !== userId) {
+    if (role === "recruiter") {
+      const allowed = await recruiterCanAccessResume(userId, rawResumeId, rawJobId || null);
+      if (!allowed) {
         return res.status(403).json({
-          message: "You do not have permission to access this job",
+          message: rawJobId
+            ? "You can only generate interview questions for applications to your jobs"
+            : "You can only generate interview questions for resumes submitted to your jobs",
         });
       }
     }
