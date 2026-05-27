@@ -182,7 +182,22 @@ export async function renderResumePdf({ title, builderData }) {
   const margins = asObject(settings.margins);
   let browser;
   try {
-    browser = await chromium.launch({ headless: true });
+    const launchOptions = {
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+    };
+
+    if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) {
+      launchOptions.executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+    } else {
+      // Fallback detection
+      const fs = await import("fs");
+      if (fs.existsSync("/usr/bin/chromium-browser")) {
+        launchOptions.executablePath = "/usr/bin/chromium-browser";
+      }
+    }
+
+    browser = await chromium.launch(launchOptions);
     const page = await browser.newPage();
     await page.setContent(buildHtml({ title, builderData }), { waitUntil: "networkidle" });
     return await page.pdf({

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import {
@@ -97,7 +97,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     },
     default: {
       icon: (
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)]">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:var(--border)] bg-slate-50">
           <span className="text-[var(--primary)] text-2xl font-bold">?</span>
         </div>
       ),
@@ -126,7 +126,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             </div>
           </div>
         )}
-        <DialogFooter className="flex-row justify-end gap-3 border-t border-[color:var(--border)] bg-[var(--surface-muted)] p-4">
+        <DialogFooter className="flex-row justify-end gap-3 border-t border-[color:var(--border)] bg-slate-50 p-4">
           {showCancelButton && (
             <Button variant="outline" onClick={handleCancel}>
               {finalCancelLabel}

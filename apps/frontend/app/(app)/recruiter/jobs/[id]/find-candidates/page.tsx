@@ -4,14 +4,7 @@ import { useTranslations } from '@/lib/i18n/translations';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import {
-  ChevronDown,
-  Search,
-  UserCircle,
-  Mail,
-  FileText,
-  ArrowLeft,
-} from 'lucide-react';
+import { ChevronDown, Search, UserCircle, Mail, FileText, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeader, ScoreBar, ErrorBanner, EmptyState } from '@/components/ui';
 import {

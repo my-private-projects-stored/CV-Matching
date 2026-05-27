@@ -110,11 +110,7 @@ export function NotificationItem({
 
   if (href) {
     return (
-      <Link
-        className={className}
-        href={href}
-        onClick={() => onRead?.(notification)}
-      >
+      <Link className={className} href={href} onClick={() => onRead?.(notification)}>
         {content}
       </Link>
     );

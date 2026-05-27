@@ -41,15 +41,21 @@ function extractSuggestions(payload: ImprovedResult): string[] {
       ? (payload.data.improvements as Array<{ suggestion: string }>)
       : undefined) ??
     [];
-  return improvements.map((item) => (item as { suggestion?: string }).suggestion || '').filter(Boolean);
+  return improvements
+    .map((item) => (item as { suggestion?: string }).suggestion || '')
+    .filter(Boolean);
 }
 
-function extractGenerationMode(payload: ImprovedResult | null): import('@/lib/types/generation').GenerationMode | null {
+function extractGenerationMode(
+  payload: ImprovedResult | null
+): import('@/lib/types/generation').GenerationMode | null {
   if (!payload) return null;
   const p = payload as unknown as Record<string, unknown>;
-  if (p.generation_mode === 'llm' || p.generation_mode === 'template_fallback') return p.generation_mode;
+  if (p.generation_mode === 'llm' || p.generation_mode === 'template_fallback')
+    return p.generation_mode;
   const data = payload.data && typeof payload.data === 'object' ? payload.data : {};
-  const mode = 'generation_mode' in data ? (data as { generation_mode?: string }).generation_mode : null;
+  const mode =
+    'generation_mode' in data ? (data as { generation_mode?: string }).generation_mode : null;
   if (mode === 'llm' || mode === 'template_fallback') return mode;
   return null;
 }
@@ -59,8 +65,10 @@ function extractImprovedData(payload: ImprovedResult): ResumeData | undefined {
   if (p.improved_data) return p.improved_data as ResumeData;
   const data = payload.data;
   if (!data || typeof data !== 'object') return undefined;
-  if ('improved_data' in data && (data as Record<string, unknown>).improved_data) return (data as Record<string, unknown>).improved_data as ResumeData;
-  if ('resume' in data && (data as Record<string, unknown>).resume) return (data as Record<string, unknown>).resume as ResumeData;
+  if ('improved_data' in data && (data as Record<string, unknown>).improved_data)
+    return (data as Record<string, unknown>).improved_data as ResumeData;
+  if ('resume' in data && (data as Record<string, unknown>).resume)
+    return (data as Record<string, unknown>).resume as ResumeData;
   return data as unknown as ResumeData;
 }
 
@@ -69,7 +77,9 @@ function extractImprovements(payload: ImprovedResult) {
   if (p.improvements) return p.improvements as Array<{ suggestion: string }>;
   const data = payload.data;
   if (data && typeof data === 'object' && 'improvements' in data) {
-    return ((data as unknown as Record<string, unknown>).improvements ?? []) as Array<{ suggestion: string }>;
+    return ((data as unknown as Record<string, unknown>).improvements ?? []) as Array<{
+      suggestion: string;
+    }>;
   }
   return [];
 }
@@ -220,9 +230,7 @@ export default function CandidateOptimizePage() {
       setPreviewResult(preview);
       const nextSuggestions = extractSuggestions(preview);
       setSuggestions(
-        nextSuggestions.length
-          ? nextSuggestions
-          : [t('optimize.previewFallbackSuggestion')]
+        nextSuggestions.length ? nextSuggestions : [t('optimize.previewFallbackSuggestion')]
       );
       setJdStep('confirm');
     } catch (requestError) {
@@ -244,21 +252,32 @@ export default function CandidateOptimizePage() {
     setLoading(true);
     setError(null);
     try {
-      const previewData = previewResult.data && typeof previewResult.data === 'object' ? previewResult.data : {};
-      await confirmImproveResume({
+      const previewData =
+        previewResult.data && typeof previewResult.data === 'object' ? previewResult.data : {};
+      const result = await confirmImproveResume({
         resume_id: resumeId,
         job_id: jobId,
         improved_data,
         improvements: extractImprovements(previewResult),
-        generation_mode: ((previewResult as unknown as Record<string, unknown>).generation_mode
-          ?? ('generation_mode' in previewData ? (previewData as unknown as Record<string, unknown>).generation_mode : null)) as import('@/lib/types/generation').GenerationMode | null | undefined,
-        llm_metadata: ((previewResult as unknown as Record<string, unknown>).llm_metadata
-          ?? ('llm_metadata' in previewData ? (previewData as unknown as Record<string, unknown>).llm_metadata : null)) as import('@/lib/types/generation').LlmMetadata | null | undefined,
+        generation_mode: ((previewResult as unknown as Record<string, unknown>).generation_mode ??
+          ('generation_mode' in previewData
+            ? (previewData as unknown as Record<string, unknown>).generation_mode
+            : null)) as import('@/lib/types/generation').GenerationMode | null | undefined,
+        llm_metadata: ((previewResult as unknown as Record<string, unknown>).llm_metadata ??
+          ('llm_metadata' in previewData
+            ? (previewData as unknown as Record<string, unknown>).llm_metadata
+            : null)) as import('@/lib/types/generation').LlmMetadata | null | undefined,
       });
       setSuccess(t('optimize.successTailored'));
+      const newResumeId = result.data?.resume_id;
       await loadResumes();
+      if (newResumeId) {
+        setResumeId(newResumeId);
+      }
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : t('errors.applyTailoredFailed'));
+      setError(
+        requestError instanceof Error ? requestError.message : t('errors.applyTailoredFailed')
+      );
     } finally {
       setLoading(false);
     }
@@ -297,6 +316,9 @@ export default function CandidateOptimizePage() {
     try {
       const payload = await analyzeResume(resumeId);
       setQuestions(payload.questions ?? []);
+      if (payload.analysis_summary) {
+        setSuccess(payload.analysis_summary);
+      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : t('errors.analyzeFailed'));
     } finally {
@@ -374,7 +396,9 @@ export default function CandidateOptimizePage() {
       setRegeneratedItems([]);
       setRegenerateInstruction('');
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : t('errors.applyRegeneratedFailed'));
+      setError(
+        requestError instanceof Error ? requestError.message : t('errors.applyRegeneratedFailed')
+      );
     } finally {
       setEnrichmentLoading(false);
     }
@@ -398,14 +422,26 @@ export default function CandidateOptimizePage() {
       <div className="flex gap-2">
         <button
           className={`rounded-lg px-3 py-2 text-sm ${tab === 'jd' ? 'bg-[var(--blue-700)] text-white' : 'border border-[var(--border)] bg-white'}`}
-          onClick={() => setTab('jd')}
+          onClick={() => {
+            setTab('jd');
+            setError(null);
+            setSuccess(null);
+          }}
           type="button"
         >
           {t('optimize.jdMatchTab')}
         </button>
         <button
           className={`rounded-lg px-3 py-2 text-sm ${tab === 'enrichment' ? 'bg-[var(--blue-700)] text-white' : 'border border-[var(--border)] bg-white'}`}
-          onClick={() => setTab('enrichment')}
+          onClick={() => {
+            setTab('enrichment');
+            setError(null);
+            setSuccess(null);
+            setQuestions([]);
+            setAnswers({});
+            setEnhancements([]);
+            setRegeneratedItems([]);
+          }}
           type="button"
         >
           {t('optimize.enrichmentTab')}
@@ -418,6 +454,12 @@ export default function CandidateOptimizePage() {
           onChange={(event) => {
             setResumeId(event.target.value);
             resetJdFlow();
+            setQuestions([]);
+            setAnswers({});
+            setEnhancements([]);
+            setRegeneratedItems([]);
+            setError(null);
+            setSuccess(null);
           }}
         >
           {resumes.map((resume) => (
@@ -428,9 +470,7 @@ export default function CandidateOptimizePage() {
           ))}
         </select>
         {selectedResume?.parent_id ? (
-          <p className="mb-3 text-xs text-[var(--text-3)]">
-            {t('optimize.linkedJdHint')}
-          </p>
+          <p className="mb-3 text-xs text-[var(--text-3)]">{t('optimize.linkedJdHint')}</p>
         ) : null}
         <p className="mb-3 text-xs text-[var(--text-3)]">
           {t('optimize.aiLanguage', { language: outputLanguage.toUpperCase() })}
@@ -441,10 +481,11 @@ export default function CandidateOptimizePage() {
               {jdSteps.map((step, index) => (
                 <span
                   key={step.key}
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${jdStep === step.key
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    jdStep === step.key
                       ? 'bg-[var(--blue-700)] text-white'
                       : 'bg-[var(--blue-50)] text-[var(--blue-700)]'
-                    }`}
+                  }`}
                 >
                   {index + 1}. {step.label}
                 </span>

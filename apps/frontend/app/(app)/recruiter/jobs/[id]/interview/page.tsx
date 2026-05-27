@@ -23,17 +23,23 @@ import {
 import Link from 'next/link';
 import { ErrorBanner, PageHeader } from '@/components/ui';
 import { GenerationModeBadge } from '@/components/ui/GenerationModeBadge';
-import { generateInterviewQuestions, type InterviewQuestionsResult, type QuestionGroup } from '@/lib/api';
+import {
+  generateInterviewQuestions,
+  fetchResume,
+  fetchRankedApplications,
+  type InterviewQuestionsResult,
+  type QuestionGroup,
+} from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 // ── Group config ──────────────────────────────────────────────────────────────
 
 const GROUP_CONFIG: Record<string, { color: string; icon: React.ElementType }> = {
-  technical:  { color: 'var(--blue-700)',  icon: Code2 },
-  experience: { color: '#7c3aed',          icon: Briefcase },
-  project:    { color: 'var(--info)',      icon: FolderOpen },
-  behavioral: { color: 'var(--warning)',   icon: Brain },
-  closing:    { color: '#64748b',          icon: CheckCircle },
+  technical: { color: 'var(--blue-700)', icon: Code2 },
+  experience: { color: '#7c3aed', icon: Briefcase },
+  project: { color: 'var(--info)', icon: FolderOpen },
+  behavioral: { color: 'var(--warning)', icon: Brain },
+  closing: { color: '#64748b', icon: CheckCircle },
 };
 
 // ── Language toggle ───────────────────────────────────────────────────────────
@@ -130,7 +136,10 @@ function QuestionGroupAccordion({
   const Icon = cfg.icon;
 
   return (
-    <div className="overflow-hidden rounded-xl border" style={{ borderLeftWidth: 3, borderLeftColor: cfg.color }}>
+    <div
+      className="overflow-hidden rounded-xl border"
+      style={{ borderLeftWidth: 3, borderLeftColor: cfg.color }}
+    >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -167,8 +176,14 @@ function QuestionGroupAccordion({
 
 // ── Copy All ──────────────────────────────────────────────────────────────────
 
-function copyAllQuestions(result: InterviewQuestionsResult, t: (key: string, params?: Record<string, string | number>) => string) {
-  const lines: string[] = [t('recruiter.interview.copyAllHeader', { name: result.candidate_name }), ''];
+function copyAllQuestions(
+  result: InterviewQuestionsResult,
+  t: (key: string, params?: Record<string, string | number>) => string
+) {
+  const lines: string[] = [
+    t('recruiter.interview.copyAllHeader', { name: result.candidate_name }),
+    '',
+  ];
   for (const group of result.question_groups) {
     lines.push(`## ${group.label}`);
     group.questions.forEach((q, i) => {
@@ -190,26 +205,106 @@ export default function InterviewQuestionsPage() {
   const resumeId = searchParams.get('resume_id') ?? '';
 
   const [language, setLanguage] = useState<'en' | 'vi'>('en');
-  const [result, setResult] = useState<InterviewQuestionsResult | null>(null);
+  const [cache, setCache] = useState<Record<'en' | 'vi', InterviewQuestionsResult | null>>({
+    en: null,
+    vi: null,
+  });
+  const [started, setStarted] = useState<Record<'en' | 'vi', boolean>>({
+    en: false,
+    vi: false,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const generate = useCallback(async () => {
-    if (!resumeId) return;
-    setLoading(true);
-    setError(null);
-    const res = await generateInterviewQuestions(resumeId, jobId || undefined, language);
-    if ('error' in res) {
-      setError(res.error);
-      setResult(null);
-    } else {
-      setResult(res.data);
-    }
-    setLoading(false);
-  }, [resumeId, jobId, language]);
+  // Pre-fetched candidate details state
+  const [preFetchedName, setPreFetchedName] = useState<string | null>(null);
+  const [preFetchedTitle, setPreFetchedTitle] = useState<string | null>(null);
 
-  useEffect(() => { generate(); }, [generate]);
+  const result = cache[language];
+  const applicationId = searchParams.get('application_id') ?? '';
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadPreFetchedDetails() {
+      if (applicationId && jobId) {
+        try {
+          const rankedPayload = await fetchRankedApplications({ jobId, limit: 100 });
+          if (!active) return;
+          const candidate = rankedPayload.data.candidates.find(
+            (item) => item.application_id === applicationId
+          );
+          if (candidate) {
+            setPreFetchedName(candidate.candidate.full_name);
+            setPreFetchedTitle(candidate.resume.title || null);
+            return;
+          }
+        } catch (err) {
+          console.error('Failed to pre-fetch details from ranked applications:', err);
+        }
+      }
+
+      if (resumeId) {
+        try {
+          const resumeData = await fetchResume(resumeId);
+          if (!active) return;
+          const personalInfo = resumeData.processed_resume?.personalInfo;
+          if (personalInfo?.name) {
+            setPreFetchedName(personalInfo.name);
+          }
+          if (personalInfo?.title || resumeData.title) {
+            setPreFetchedTitle(personalInfo?.title || resumeData.title || null);
+          }
+        } catch (err) {
+          console.error('Failed to pre-fetch details from resume:', err);
+        }
+      }
+    }
+
+    void loadPreFetchedDetails();
+
+    return () => {
+      active = false;
+    };
+  }, [applicationId, jobId, resumeId]);
+
+  const fetchQuestions = useCallback(
+    async (lang: 'en' | 'vi') => {
+      if (!resumeId) return;
+      setLoading(true);
+      setError(null);
+      const res = await generateInterviewQuestions(resumeId, jobId || undefined, lang);
+      if ('error' in res) {
+        setError(res.error);
+      } else {
+        setCache((prev) => ({
+          ...prev,
+          [lang]: res.data,
+        }));
+      }
+      setLoading(false);
+    },
+    [resumeId, jobId]
+  );
+
+  useEffect(() => {
+    if (started[language] && !cache[language]) {
+      void fetchQuestions(language);
+    }
+  }, [language, cache, started, fetchQuestions]);
+
+  const handleGenerate = useCallback(() => {
+    setStarted((prev) => ({
+      ...prev,
+      [language]: true,
+    }));
+    void fetchQuestions(language);
+  }, [language, fetchQuestions]);
+
+  const handleRegenerate = useCallback(() => {
+    void fetchQuestions(language);
+  }, [language, fetchQuestions]);
 
   function handleCopyAll() {
     if (!result) return;
@@ -236,17 +331,27 @@ export default function InterviewQuestionsPage() {
           </p>
           <div className="mt-3 flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--blue-700)] text-sm font-bold">
-              {result
-                ? result.candidate_name
-                    .split(' ')
-                    .slice(0, 2)
-                    .map((w) => w[0]?.toUpperCase())
-                    .join('')
-                : <User className="size-5" />}
+              {result ? (
+                result.candidate_name
+                  .split(' ')
+                  .slice(0, 2)
+                  .map((w) => w[0]?.toUpperCase())
+                  .join('')
+              ) : preFetchedName ? (
+                preFetchedName
+                  .split(' ')
+                  .slice(0, 2)
+                  .map((w) => w[0]?.toUpperCase())
+                  .join('')
+              ) : (
+                <User className="size-5" />
+              )}
             </div>
             <div>
-              <p className="font-semibold">{result?.candidate_name ?? '—'}</p>
-              <p className="text-xs text-white/60">{result?.candidate_title ?? ''}</p>
+              <p className="font-semibold">{result?.candidate_name ?? preFetchedName ?? '—'}</p>
+              <p className="text-xs text-white/60">
+                {result?.candidate_title ?? preFetchedTitle ?? ''}
+              </p>
             </div>
           </div>
         </div>
@@ -286,15 +391,17 @@ export default function InterviewQuestionsPage() {
           </div>
         )}
 
-        <button
-          type="button"
-          disabled={loading}
-          onClick={generate}
-          className="mt-auto flex items-center justify-center gap-2 rounded-lg border border-white/20 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
-        >
-          <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
-          {t('recruiter.interview.regenerate')}
-        </button>
+        {result && (
+          <button
+            type="button"
+            disabled={loading}
+            onClick={handleRegenerate}
+            className="mt-auto flex items-center justify-center gap-2 rounded-lg border border-white/20 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
+          >
+            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+            {t('recruiter.interview.regenerate')}
+          </button>
+        )}
       </aside>
 
       {/* ── RIGHT PANEL ── */}
@@ -321,7 +428,7 @@ export default function InterviewQuestionsPage() {
             }
           />
 
-          <ErrorBanner message={error ?? ''} />
+          <ErrorBanner message={error ?? ''} onRetry={handleGenerate} />
 
           {loading && (
             <div className="flex flex-col items-center justify-center gap-3 py-20 text-[var(--text-2)]">
@@ -338,12 +445,35 @@ export default function InterviewQuestionsPage() {
             </div>
           )}
 
-          {!loading && !result && !error && (
-            <div className="py-20 text-center text-[var(--text-3)]">
-              <MessageSquare className="mx-auto mb-3 size-10 opacity-40" />
-              <p className="text-sm">{t('recruiter.interview.noResumeId')}</p>
-            </div>
-          )}
+          {!loading &&
+            !result &&
+            !error &&
+            (resumeId ? (
+              <div className="flex flex-col items-center justify-center gap-4 py-20 text-center max-w-md mx-auto">
+                <div className="rounded-full bg-[var(--blue-50)] p-4 text-[var(--blue-700)]">
+                  <Brain className="size-10" />
+                </div>
+                <h3 className="font-display text-xl font-semibold text-[var(--text-1)]">
+                  {t('recruiter.interview.generate')}
+                </h3>
+                <p className="text-sm text-[var(--text-3)] leading-relaxed">
+                  {t('recruiter.interview.generateSubtitle')}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  className="mt-2 inline-flex items-center gap-2 rounded-lg bg-[var(--blue-700)] px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--blue-800)] transition"
+                >
+                  <RefreshCw className="size-4" />
+                  {t('recruiter.interview.generate')}
+                </button>
+              </div>
+            ) : (
+              <div className="py-20 text-center text-[var(--text-3)]">
+                <MessageSquare className="mx-auto mb-3 size-10 opacity-40" />
+                <p className="text-sm">{t('recruiter.interview.noResumeId')}</p>
+              </div>
+            ))}
         </div>
 
         {/* Bottom action bar */}

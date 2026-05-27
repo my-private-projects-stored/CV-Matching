@@ -34,7 +34,11 @@ export function middleware(request: NextRequest) {
     if (token) {
       const role = decodeRole(token);
       const dest =
-        role === 'admin' ? '/admin/config' : role === 'recruiter' ? '/recruiter/dashboard' : '/candidate/dashboard';
+        role === 'admin'
+          ? '/admin/config'
+          : role === 'recruiter'
+            ? '/recruiter/dashboard'
+            : '/candidate/dashboard';
       return NextResponse.redirect(new URL(dest, request.url));
     }
     return NextResponse.next();

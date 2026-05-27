@@ -7,8 +7,9 @@ import { detectLanguageOfResume } from "../utils/language-detector.js";
 import { generateEmbedding } from "./embedding.service.js";
 import { completeJson, completeText, getLlmFailureReason, logLlmFallback } from "./llm.service.js";
 import { renderResumePdf } from "./pdf-renderer.service.js";
-import { parseUploadedResume } from "./resume-parsing.service.js";
+import { extractRawTextFromFile, parseStructuredDataFromText } from "./resume-parsing.service.js";
 import { deleteResumeVector, upsertResumeVector } from "./vector-index.service.js";
+import { KEYWORD_STOPWORDS } from "./keyword-analysis.service.js";
 
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 const DEFAULT_CANDIDATE_ID = "000000000000000000000001";
@@ -18,32 +19,7 @@ const ALLOWED_UPLOAD_TYPES = new Set([
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "text/plain",
 ]);
-const JOB_KEYWORD_STOPWORDS = new Set([
-  "a",
-  "an",
-  "and",
-  "are",
-  "as",
-  "at",
-  "be",
-  "by",
-  "for",
-  "from",
-  "in",
-  "is",
-  "it",
-  "of",
-  "on",
-  "or",
-  "that",
-  "the",
-  "this",
-  "to",
-  "with",
-  "you",
-  "your",
-  "will",
-]);
+const JOB_KEYWORD_STOPWORDS = KEYWORD_STOPWORDS;
 const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi", "auto"]);
 const DEFAULT_BUILDER_FORMAT_SETTINGS = {
   pageSize: "A4",
@@ -674,14 +650,21 @@ export async function createResumeFromUpload(file, candidateId = DEFAULT_CANDIDA
     throw error;
   }
 
-  let parsingResult = null;
+  // Step 1: Extract raw text (fast — calls parsing service for text extraction only)
+  let rawText = "";
   try {
-    parsingResult = await parseUploadedResume(file);
+    rawText = await extractRawTextFromFile(file);
   } catch (_error) {
-    parsingResult = null;
+    // Fallback: try to read buffer as plain text (e.g. .txt files)
+    rawText = toUploadText(file.buffer);
   }
 
-  const rawText = String(parsingResult?.rawText || toUploadText(file.buffer)).trim();
+  rawText = String(rawText || "").trim();
+  if (!rawText) {
+    // Final fallback: try reading buffer directly
+    rawText = toUploadText(file.buffer).trim();
+  }
+
   if (!rawText) {
     const error = new Error("Unable to extract textual content from file");
     error.statusCode = 422;
@@ -689,15 +672,15 @@ export async function createResumeFromUpload(file, candidateId = DEFAULT_CANDIDA
     throw error;
   }
 
-  const parsedData = isStructuredData(parsingResult?.parsedData) ? parsingResult.parsedData : null;
-
+  // Step 2: Save the resume immediately with raw text, processingStatus='processing'
+  // We don't wait for LLM parsing — that happens in the background.
   const hasMaster = await Resume.exists({ isMaster: true });
   const created = await createResume({
     candidateId,
     fileUrl: `upload://${Date.now()}-${file.originalname || "resume"}`,
     rawText,
-    parsedData,
-    builderData: normalizeBuilderData({}, parsedData || {}),
+    parsedData: null,
+    builderData: normalizeBuilderData({}, {}),
     filename: file.originalname || null,
     sourceFile: {
       filename: file.originalname || null,
@@ -710,16 +693,45 @@ export async function createResumeFromUpload(file, candidateId = DEFAULT_CANDIDA
     processingStatus: "processing",
   });
 
-  created.processingStatus = created.isAnalyzed ? "ready" : "failed";
-  await created.save();
+  const resumeId = String(created._id);
+
+  // Step 3: Run LLM structured-data parsing in the background (don't await)
+  // This updates parsedData, builderData, embedding, and processingStatus asynchronously.
+  setImmediate(async () => {
+    try {
+      const parsedData = await parseStructuredDataFromText(rawText);
+      if (isStructuredData(parsedData)) {
+        await updateResumeById(resumeId, {
+          parsedData,
+          builderData: normalizeBuilderData({}, parsedData),
+          processingStatus: "ready",
+        });
+      } else {
+        // LLM failed but we still have raw text — mark as ready with empty parsed data
+        const resume = await Resume.findById(resumeId);
+        if (resume) {
+          resume.processingStatus = "ready";
+          await resume.save();
+        }
+      }
+    } catch (bgError) {
+      console.error("[upload] Background LLM parsing failed for resume", resumeId, bgError?.message);
+      try {
+        const resume = await Resume.findById(resumeId);
+        if (resume) {
+          resume.processingStatus = "failed";
+          await resume.save();
+        }
+      } catch (_saveError) {
+        // ignore
+      }
+    }
+  });
 
   return {
-    message:
-      created.processingStatus === "ready"
-        ? `File ${file.originalname || "resume"} uploaded successfully`
-        : `File ${file.originalname || "resume"} uploaded but parsing failed`,
-    resume_id: String(created._id),
-    processing_status: deriveProcessingStatus(created),
+    message: `File ${file.originalname || "resume"} uploaded successfully`,
+    resume_id: resumeId,
+    processing_status: "processing",
     is_master: Boolean(created.isMaster),
   };
 }
@@ -1611,6 +1623,15 @@ export async function deleteResumeById(resumeId) {
   if (!resume) return null;
 
   await deleteResumeVector(resume.qdrantId);
+  
+  // Clean up associated applications to avoid dangling references/orphans
+  try {
+    const ApplicationModel = resume.constructor.db.model("Application");
+    await ApplicationModel.deleteMany({ resumeId: resume._id });
+  } catch (err) {
+    console.error("Failed to clean up applications for deleted resume:", err);
+  }
+
   await resume.deleteOne();
   return resume;
 }

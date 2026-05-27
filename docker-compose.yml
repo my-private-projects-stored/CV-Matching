@@ -71,6 +71,7 @@ services:
     volumes:
       - ./apps/backend:/workspace
       - backend_node_modules:/workspace/node_modules
+      - ./workers:/workers
     environment:
       NODE_ENV: development
       MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongo:27017/?authSource=admin
@@ -82,6 +83,7 @@ services:
       WORKER_INTERNAL_TOKEN: ${WORKER_INTERNAL_TOKEN:-dev-worker-token}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       PORT: "3001"
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/chromium-browser
     ports:
       - "3001:3001"
     develop:

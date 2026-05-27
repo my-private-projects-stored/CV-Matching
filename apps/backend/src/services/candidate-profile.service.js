@@ -280,7 +280,7 @@ async function assertRecruiterCanReadCandidateProfile(candidateUserId, recruiter
 
   const recruiterJobs = await Job
     .find({ recruiterId: recruiterUserId })
-    .select("_id")
+    .select("_id status")
     .lean();
   const jobIds = recruiterJobs.map((item) => item._id);
   if (jobIds.length === 0) {
@@ -313,11 +313,14 @@ async function assertRecruiterCanReadCandidateProfile(candidateUserId, recruiter
     .lean();
 
   if (!application) {
-    throw createHttpError(
-      403,
-      "You do not have permission to view this candidate profile",
-      "candidate_profile_forbidden_recruiter"
-    );
+    const hasActiveJob = recruiterJobs.some((job) => job.status === "active");
+    if (!hasActiveJob) {
+      throw createHttpError(
+        403,
+        "You do not have permission to view this candidate profile",
+        "candidate_profile_forbidden_recruiter"
+      );
+    }
   }
 }
 

@@ -249,9 +249,7 @@ export default function CoverLetterPage() {
               <p className="text-sm font-semibold">{t('builder.generateWithAi')}</p>
               <p className="mt-1 text-xs text-[var(--text-2)]">
                 {t('builder.generateHint', {
-                  type: isCoverLetter
-                    ? t('builder.typeCoverLetter')
-                    : t('builder.typeOutreach'),
+                  type: isCoverLetter ? t('builder.typeCoverLetter') : t('builder.typeOutreach'),
                 })}
               </p>
               <textarea
@@ -274,9 +272,7 @@ export default function CoverLetterPage() {
               </button>
               {!generationEnabled ? (
                 <p className="mt-2 text-xs text-[var(--text-3)]">
-                  {isCoverLetter
-                    ? t('builder.coverLetterDisabled')
-                    : t('builder.outreachDisabled')}
+                  {isCoverLetter ? t('builder.coverLetterDisabled') : t('builder.outreachDisabled')}
                 </p>
               ) : null}
             </div>

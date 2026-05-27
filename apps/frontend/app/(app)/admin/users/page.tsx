@@ -21,17 +21,19 @@ export default function AdminUsersPage() {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    fetchUsers({ limit: 50, role: role as User['role'] | '' }).then((res) => {
-      if (!active) return;
-      setError(null);
-      setUsers(res.data ?? []);
-      setLoading(false);
-    }).catch((requestError) => {
-      if (!active) return;
-      setError(requestError instanceof Error ? requestError.message : t('errors.updateUser'));
-      setUsers([]);
-      setLoading(false);
-    });
+    fetchUsers({ limit: 50, role: role as User['role'] | '' })
+      .then((res) => {
+        if (!active) return;
+        setError(null);
+        setUsers(res.data ?? []);
+        setLoading(false);
+      })
+      .catch((requestError) => {
+        if (!active) return;
+        setError(requestError instanceof Error ? requestError.message : t('errors.updateUser'));
+        setUsers([]);
+        setLoading(false);
+      });
     return () => {
       active = false;
     };
@@ -40,9 +42,7 @@ export default function AdminUsersPage() {
   const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return users;
-    return users.filter((user) =>
-      `${user.email} ${user.fullName}`.toLowerCase().includes(query)
-    );
+    return users.filter((user) => `${user.email} ${user.fullName}`.toLowerCase().includes(query));
   }, [search, users]);
 
   async function toggleDisabled(user: User) {
@@ -98,7 +98,9 @@ export default function AdminUsersPage() {
                 <span>{user.fullName}</span>
                 <span>{user.role}</span>
                 <span>
-                  {user.disabled ? t('admin.users.status.disabled') : t('admin.users.status.active')}
+                  {user.disabled
+                    ? t('admin.users.status.disabled')
+                    : t('admin.users.status.active')}
                 </span>
                 <span>
                   <button

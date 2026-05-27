@@ -145,11 +145,18 @@ async function buildInterviewWithLlm({ resume, job, language, candidateName, can
     resolvedLang = detectLanguageOfResume(resume.parsedData);
   }
 
-  const prompt = renderTemplate(promptConfig.templates?.interview, {
+  let prompt = renderTemplate(promptConfig.templates?.interview, {
     output_language: outputLanguageName(resolvedLang),
     job_description: buildJobContext(job),
     resume_json: JSON.stringify(resume.parsedData || {}, null, 2),
   }) + truthfulnessBlock;
+
+  // Add explicit language enforcement directive for LLM stability (especially local models)
+  if (resolvedLang === "vi") {
+    prompt += "\n\nCRITICAL: All text content in the JSON output, including all \"label\", \"description\", and \"question\" fields, MUST be written in Vietnamese. Do NOT use English.";
+  } else if (resolvedLang === "en") {
+    prompt += "\n\nCRITICAL: All text content in the JSON output, including all \"label\", \"description\", and \"question\" fields, MUST be written in English. Do NOT use Vietnamese.";
+  }
 
   const result = await completeJson({
     feature: "interview_questions",
@@ -241,49 +248,49 @@ const TEMPLATES = {
   vi: {
     technical: {
       skill: (skill) =>
-        `Ban co the mo ta mot du an cu the ma ban da su dung ${skill} khong?`,
+        `Bạn có thể mô tả một dự án cụ thể mà bạn đã sử dụng ${skill} không?`,
       depth: (skill) =>
-        `Nhung thach thuc pho bien nhat khi lam viec voi ${skill} la gi, va ban da giai quyet nhu the nao?`,
+        `Những thách thức phổ biến nhất khi làm việc với ${skill} là gì, và bạn đã giải quyết như thế nào?`,
       comparison: (s1, s2) =>
-        `Ban so sanh ${s1} va ${s2} nhu the nao? Khi nao ban chon cai nay thay vi cai kia?`,
+        `Bạn so sánh ${s1} và ${s2} như thế nào? Khi nào bạn chọn cái này thay vì cái kia?`,
       generic:
-        "Hay mo ta mot van de ky thuat phuc tap ban da giai quyet gan day va cach ban xu ly no.",
+        "Hãy mô tả một vấn đề kỹ thuật phức tạp bạn đã giải quyết gần đây và cách bạn xử lý nó.",
     },
     experience: {
       impact: (title, company) =>
-        `Tai ${company}, voi vai tro ${title}, du an co tac dong lon nhat cua ban la gi va ban do luong thanh cong nhu the nao?`,
+        `Tại ${company}, với vai trò ${title}, dự án có tác động lớn nhất của bạn là gì và bạn đo lường thành công như thế nào?`,
       challenge: (title) =>
-        `Thach thuc lon nhat khi lam viec voi vi tri ${title} la gi va ban vuot qua no nhu the nao?`,
+        `Thách thức lớn nhất khi làm việc ở vị trí ${title} là gì và bạn vượt qua nó như thế nào?`,
       growth: (title) =>
-        `Trach nhiem cua ban thay doi nhu the nao trong qua trinh lam ${title}?`,
+        `Trách nhiệm của bạn thay đổi như thế nào trong quá trình làm ${title}?`,
     },
     behavioral: {
       conflict:
-        "Hay ke ve mot lan ban co bat dong voi dong nghiep. Ban xu ly tinh huong do nhu the nao?",
+        "Hãy kể về một lần bạn có bất đồng với đồng nghiệp. Bạn xử lý tình huống đó như thế nào?",
       deadline:
-        "Mo ta mot tinh huong ban phai hoan thanh cong viec trong thoi han rat gap. Ban da lam gi?",
+        "Mô tả một tình huống bạn phải hoàn thành công việc trong thời hạn rất gấp. Bạn đã làm gì?",
       initiative:
-        "Cho toi mot vi du khi ban chu dong thuc hien mot viec gi do ma khong ai yeu cau.",
+        "Cho tôi một ví dụ khi bạn chủ động thực hiện một việc gì đó mà không ai yêu cầu.",
       feedback:
-        "Ban phan ung nhu the nao khi nhan duoc phan hoi tieu cuc ve cong viec cua minh?",
+        "Bạn phản ứng như thế nào khi nhận được phản hồi tiêu cực về công việc của mình?",
       leadership:
-        "Hay ke ve lan ban dan dat nhom hoac huong dan mot dong nghiep tre.",
+        "Hãy kể về lần bạn dẫn dắt nhóm hoặc hướng dẫn một đồng nghiệp trẻ.",
     },
     project: {
       overview: (name) =>
-        `Ban co the tom tat tong quan ve du an ${name} va dong gop cu the cua ban khong?`,
+        `Bạn có thể tóm tắt tổng quan về dự án ${name} và đóng góp cụ thể của bạn không?`,
       technical: (name) =>
-        `Nhung quyet dinh ky thuat nao ban da dua ra trong du an ${name}, va ban co thay doi gi neu lam lai khong?`,
+        `Những quyết định kỹ thuật nào bạn đã đưa ra trong dự án ${name}, và bạn có thay đổi gì nếu làm lại không?`,
       impact: (name) =>
-        `Nhung ket qua do luong duoc nao tu du an ${name}?`,
+        `Những kết quả đo lường được nào từ dự án ${name}?`,
     },
     closing: {
       motivation:
-        "Dieu gi thu hut ban den voi vi tri nay, va no phu hop voi muc tieu nghe nghiep cua ban nhu the nao?",
+        "Điều gì thu hút bạn đến với vị trí này, và nó phù hợp với mục tiêu nghề nghiệp của bạn như thế nào?",
       strength:
-        "Ban coi diem manh nghe nghiep lon nhat cua ban lien quan den vi tri nay la gi?",
+        "Bạn coi điểm mạnh nghề nghiệp lớn nhất của bạn liên quan đến vị trí này là gì?",
       question:
-        "Ban co cau hoi nao ve vi tri hoay nhom lam viec khong?",
+        "Bạn có câu hỏi nào về vị trí hoặc nhóm làm việc không?",
     },
   },
 };

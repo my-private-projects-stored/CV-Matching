@@ -80,7 +80,11 @@ export default function RecruiterNotificationsPage() {
             onClick={() => void handleMarkAllRead()}
             type="button"
           >
-            {markingAll ? <Loader2 className="size-4 animate-spin" /> : <CheckCheck className="size-4" />}
+            {markingAll ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CheckCheck className="size-4" />
+            )}
             {t('common.markAllRead')}
           </button>
         }

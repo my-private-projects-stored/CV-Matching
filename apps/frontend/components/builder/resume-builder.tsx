@@ -82,6 +82,49 @@ const buildInitialData = (t: Translate): ResumeData => ({
   },
 });
 
+const sanitizeResumeData = (data: any): ResumeData => {
+  if (!data || typeof data !== 'object') return data;
+  const sanitized = { ...data };
+
+  const sanitizeArray = (arr: any[] | undefined) => {
+    if (!Array.isArray(arr)) return [];
+    
+    const seenIds = new Set<number>();
+    let nextId = 1;
+
+    return arr.map((item) => {
+      if (!item || typeof item !== 'object') return item;
+      
+      let id = Number(item.id);
+      if (isNaN(id) || id <= 0 || seenIds.has(id)) {
+        while (seenIds.has(nextId)) {
+          nextId++;
+        }
+        id = nextId;
+        nextId++;
+      }
+      seenIds.add(id);
+      return { ...item, id };
+    });
+  };
+
+  sanitized.workExperience = sanitizeArray(sanitized.workExperience);
+  sanitized.education = sanitizeArray(sanitized.education);
+  sanitized.personalProjects = sanitizeArray(sanitized.personalProjects);
+
+  if (sanitized.customSections && typeof sanitized.customSections === 'object') {
+    const nextCustomSections = { ...sanitized.customSections };
+    for (const key in nextCustomSections) {
+      if (Array.isArray(nextCustomSections[key])) {
+        nextCustomSections[key] = sanitizeArray(nextCustomSections[key]);
+      }
+    }
+    sanitized.customSections = nextCustomSections;
+  }
+
+  return sanitized as ResumeData;
+};
+
 const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string }) => {
   const { t } = useTranslations();
   const { uiLanguage, contentLanguage } = useLanguage();
@@ -115,6 +158,8 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [, setLoadingState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+  const [isBuilderProcessing, setIsBuilderProcessing] = useState(false);
+  const builderPollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const [templateSettings, setTemplateSettings] =
     useState<TemplateSettings>(DEFAULT_TEMPLATE_SETTINGS);
   const { improvedData } = useResumePreview();
@@ -158,6 +203,8 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
 
   // JD comparison state
   const [jobDescription, setJobDescription] = useState<string | null>(null);
+  const [customJD, setCustomJD] = useState('');
+  const effectiveJD = jobDescription || customJD || null;
 
   // AI Regenerate wizard
   const regenerateWizard = useRegenerateWizard({
@@ -174,8 +221,9 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
         // Update resume title for downloads
         setResumeTitle(data.title ?? null);
         if (data.processed_resume) {
-          setResumeData(data.processed_resume as ResumeData);
-          setLastSavedData(data.processed_resume as ResumeData);
+          const sanitized = sanitizeResumeData(data.processed_resume);
+          setResumeData(sanitized);
+          setLastSavedData(sanitized);
           setHasUnsavedChanges(false);
         }
       } catch (error) {
@@ -221,7 +269,11 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
       item_type: 'experience' as const,
       title: exp.title ?? '',
       subtitle: exp.company || undefined,
-      current_content: Array.isArray(exp.description) ? exp.description : [],
+      current_content: Array.isArray(exp.description)
+        ? exp.description
+        : exp.description
+          ? [String(exp.description)]
+          : [],
     }));
   }, [resumeData.workExperience]);
 
@@ -231,7 +283,11 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
       item_type: 'project' as const,
       title: proj.name ?? '',
       subtitle: proj.role || undefined,
-      current_content: Array.isArray(proj.description) ? proj.description : [],
+      current_content: Array.isArray(proj.description)
+        ? proj.description
+        : proj.description
+          ? [String(proj.description)]
+          : [],
     }));
   }, [resumeData.personalProjects]);
 
@@ -289,6 +345,17 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
+  // Stop any active builder polling
+  const stopBuilderPolling = useCallback(() => {
+    if (builderPollRef.current) {
+      clearInterval(builderPollRef.current);
+      builderPollRef.current = null;
+    }
+  }, []);
+
+  // Cleanup polling on unmount
+  useEffect(() => () => stopBuilderPolling(), [stopBuilderPolling]);
+
   useEffect(() => {
     const loadResumeData = async () => {
       setLoadingState('loading');
@@ -310,15 +377,61 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
           }
           // Prefer processed_resume if available
           if (data.processed_resume) {
-            setResumeData(data.processed_resume as ResumeData);
-            setLastSavedData(data.processed_resume as ResumeData);
+            const sanitized = sanitizeResumeData(data.processed_resume);
+            setResumeData(sanitized);
+            setLastSavedData(sanitized);
             setLoadingState('loaded');
+            setIsBuilderProcessing(false);
+            stopBuilderPolling();
             return;
+          }
+          // If resume is still being processed in background, show processing state
+          // and poll until it's ready
+          if (
+            data.raw_resume?.processing_status === 'processing' ||
+            data.raw_resume?.processing_status === 'pending'
+          ) {
+            setIsBuilderProcessing(true);
+            setLoadingState('loaded');
+            stopBuilderPolling();
+            builderPollRef.current = setInterval(async () => {
+              try {
+                const polled = await fetchResume(resumeId);
+                if (polled.processed_resume) {
+                  const sanitized = sanitizeResumeData(polled.processed_resume);
+                  setResumeData(sanitized);
+                  setLastSavedData(sanitized);
+                  setIsBuilderProcessing(false);
+                  stopBuilderPolling();
+                } else if (
+                  polled.raw_resume?.processing_status !== 'processing' &&
+                  polled.raw_resume?.processing_status !== 'pending'
+                ) {
+                  // Finished but no parsed data — stop polling
+                  setIsBuilderProcessing(false);
+                  stopBuilderPolling();
+                }
+              } catch {
+                // ignore poll errors
+              }
+            }, 3000);
+            return;
+          }
+          // Fallback: use builder_data sections if available
+          if (data.builder_data?.sections) {
+            const sections = data.builder_data.sections;
+            if (sections && typeof sections === 'object' && Object.keys(sections).length > 0) {
+              const sanitized = sanitizeResumeData(sections);
+              setResumeData(sanitized);
+              setLastSavedData(sanitized);
+              setLoadingState('loaded');
+              return;
+            }
           }
           // Fallback to parsing raw content
           if (data.raw_resume?.content) {
             try {
-              const parsed = JSON.parse(data.raw_resume.content);
+              const parsed = sanitizeResumeData(JSON.parse(data.raw_resume.content));
               setResumeData(parsed);
               setLastSavedData(parsed);
               setLoadingState('loaded');
@@ -334,8 +447,9 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
 
       // Priority 2: Improved Data from Context (Tailor Flow)
       if (improvedPreview) {
-        setResumeData(improvedPreview);
-        setLastSavedData(improvedPreview);
+        const sanitized = sanitizeResumeData(improvedPreview);
+        setResumeData(sanitized);
+        setLastSavedData(sanitized);
         // Also load cover letter and outreach if present
         if (improvedCoverLetter) {
           setCoverLetter(improvedCoverLetter);
@@ -353,7 +467,7 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
       const savedDraft = localStorage.getItem(STORAGE_KEY);
       if (savedDraft) {
         try {
-          const parsed = JSON.parse(savedDraft);
+          const parsed = sanitizeResumeData(JSON.parse(savedDraft));
           setResumeData(parsed);
           setLastSavedData(parsed);
           setHasUnsavedChanges(true); // Mark as unsaved since it's a draft
@@ -369,7 +483,7 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
     };
 
     loadResumeData();
-  }, [improvedPreview, improvedCoverLetter, improvedOutreach, resumeId]);
+  }, [improvedPreview, improvedCoverLetter, improvedOutreach, resumeId, stopBuilderPolling]);
 
   // Fetch job description when we have a tailored resume
   useEffect(() => {
@@ -420,7 +534,7 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
     try {
       setIsSaving(true);
       const updated = await updateResume(resumeId, resumeData);
-      const nextData = (updated.processed_resume || resumeData) as ResumeData;
+      const nextData = sanitizeResumeData(updated.processed_resume || resumeData);
       setResumeData(nextData);
       setLastSavedData(nextData);
       setHasUnsavedChanges(false);
@@ -434,9 +548,10 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
   };
 
   const handleReset = () => {
-    setResumeData(lastSavedData);
+    const sanitized = sanitizeResumeData(lastSavedData);
+    setResumeData(sanitized);
     setHasUnsavedChanges(false);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(lastSavedData));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
   };
 
   const handleDownload = async () => {
@@ -618,7 +733,7 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
         <div className="border-b border-black p-6 md:p-8 bg-[#F0F0E8] no-print">
           {/* Top Row: Back button and Actions */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-            <div>
+            <div className="flex flex-col gap-1">
               <Button
                 variant="link"
                 onClick={() => {
@@ -691,62 +806,66 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
               )}
 
               {/* Cover letter tab actions */}
-              {activeTab === 'cover-letter' && coverLetter && (
+              {activeTab === 'cover-letter' && (
                 <>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleGenerateCoverLetter}
-                    disabled={isGeneratingCoverLetter}
+                    disabled={isGeneratingCoverLetter || !resumeId}
                   >
                     {isGeneratingCoverLetter ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <Sparkles className="w-4 h-4" />
                     )}
-                    {t('coverLetter.regenerate')}
+                    {coverLetter ? t('coverLetter.regenerate') : t('coverLetter.generate')}
                   </Button>
-                  <Button
-                    variant="success"
-                    size="sm"
-                    onClick={handleDownloadCoverLetter}
-                    disabled={!resumeId || isDownloading}
-                  >
-                    <Download className="w-4 h-4" />
-                    {isDownloading ? t('common.generating') : t('common.download')}
-                  </Button>
+                  {coverLetter && (
+                    <Button
+                      variant="success"
+                      size="sm"
+                      onClick={handleDownloadCoverLetter}
+                      disabled={!resumeId || isDownloading}
+                    >
+                      <Download className="w-4 h-4" />
+                      {isDownloading ? t('common.generating') : t('common.download')}
+                    </Button>
+                  )}
                 </>
               )}
 
               {/* Outreach tab actions */}
-              {activeTab === 'outreach' && outreachMessage && (
+              {activeTab === 'outreach' && (
                 <>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleGenerateOutreach}
-                    disabled={isGeneratingOutreach}
+                    disabled={isGeneratingOutreach || !resumeId}
                   >
                     {isGeneratingOutreach ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <Sparkles className="w-4 h-4" />
                     )}
-                    {t('outreach.regenerate')}
+                    {outreachMessage ? t('outreach.regenerate') : t('outreach.generate')}
                   </Button>
-                  <Button variant="success" size="sm" onClick={handleCopyOutreach}>
-                    {isCopied ? (
-                      <>
-                        <Check className="w-4 h-4" />
-                        {t('outreach.copied')}
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        {t('outreach.copyToClipboard')}
-                      </>
-                    )}
-                  </Button>
+                  {outreachMessage && (
+                    <Button variant="success" size="sm" onClick={handleCopyOutreach}>
+                      {isCopied ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          {t('outreach.copied')}
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          {t('outreach.copyToClipboard')}
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -771,6 +890,30 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
               {/* Resume Editor */}
               {activeTab === 'resume' && (
                 <>
+                  {isBuilderProcessing && (
+                    <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                      <svg
+                        className="h-4 w-4 shrink-0 animate-spin"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        />
+                      </svg>
+                      <span>{t('builder.alerts.analyzingCv')}</span>
+                    </div>
+                  )}
                   <FormattingControls settings={templateSettings} onChange={handleSettingsChange} />
                   <ResumeForm resumeData={resumeData} onUpdate={handleUpdate} />
                 </>
@@ -815,14 +958,35 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
               {/* JD Match Info Panel */}
               {activeTab === 'jd-match' && (
                 <div className="space-y-4">
-                  <div className="border-2 border-black bg-white p-4">
-                    <h3 className="font-mono text-sm font-bold uppercase mb-2">
-                      {t('builder.jdMatch.aboutTitle')}
-                    </h3>
-                    <p className="text-sm text-gray-600 leading-relaxed">
-                      {t('builder.jdMatch.aboutDescription')}
-                    </p>
-                  </div>
+                  {/* JD Paste input — shown when no JD is auto-loaded (non-tailored resume) */}
+                  {!jobDescription && (
+                    <div className="border-2 border-black bg-white p-4">
+                      <h3 className="font-mono text-sm font-bold uppercase mb-2">
+                        {t('builder.jdMatch.pasteJDTitle')}
+                      </h3>
+                      <p className="font-mono text-xs text-gray-500 mb-3 leading-relaxed">
+                        {t('builder.jdMatch.pasteJDHint')}
+                      </p>
+                      <textarea
+                        className="w-full h-44 border border-gray-300 p-3 text-sm font-mono resize-y focus:outline-none focus:border-black bg-white"
+                        placeholder={t('builder.jdMatch.pasteJDPlaceholder')}
+                        value={customJD}
+                        onChange={(e) => setCustomJD(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  {/* About box — only when JD is auto-loaded */}
+                  {jobDescription && (
+                    <div className="border-2 border-black bg-white p-4">
+                      <h3 className="font-mono text-sm font-bold uppercase mb-2">
+                        {t('builder.jdMatch.aboutTitle')}
+                      </h3>
+                      <p className="text-sm text-gray-600 leading-relaxed">
+                        {t('builder.jdMatch.aboutDescription')}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="border-2 border-black bg-[#F0F0E8] p-4">
                     <h3 className="font-mono text-sm font-bold uppercase mb-2">
@@ -873,17 +1037,14 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
                   {
                     id: 'cover-letter',
                     label: t('builder.previewTabs.coverLetter'),
-                    disabled: !coverLetter,
                   },
                   {
                     id: 'outreach',
                     label: t('builder.previewTabs.outreach'),
-                    disabled: !outreachMessage,
                   },
                   {
                     id: 'jd-match',
                     label: t('builder.previewTabs.jdMatch'),
-                    disabled: !jobDescription,
                   },
                 ]}
                 activeTab={activeTab}
@@ -936,8 +1097,20 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
                 ))}
 
               {/* JD Match Comparison */}
-              {activeTab === 'jd-match' && jobDescription && (
-                <JDComparisonView jobDescription={jobDescription} resumeData={resumeData} />
+              {activeTab === 'jd-match' && effectiveJD && (
+                <JDComparisonView jobDescription={effectiveJD} resumeData={resumeData} />
+              )}
+              {activeTab === 'jd-match' && !effectiveJD && (
+                <div className="flex flex-col items-center justify-center h-full p-8 text-center gap-4">
+                  <div className="w-16 h-16 border-2 border-gray-300 bg-gray-100 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <p className="font-mono text-xs text-gray-500 uppercase tracking-wider max-w-xs">
+                    {t('builder.jdMatch.noJDPlaceholder')}
+                  </p>
+                </div>
               )}
             </div>
           </div>
@@ -960,7 +1133,7 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
               <div className="w-2 h-2 bg-green-700"></div>
               <span className="uppercase">
                 {templateSettings.template === 'swiss-single' ||
-                  templateSettings.template === 'modern'
+                templateSettings.template === 'modern'
                   ? t('builder.footer.singleColumn')
                   : t('builder.footer.twoColumn')}
               </span>

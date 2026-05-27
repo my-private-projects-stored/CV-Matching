@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { useTranslations } from '@/lib/i18n/translations';
 
 const statusMap: Record<ApplicationStatus, { className: string }> = {
-  new: { className: 'bg-blue-50 text-[var(--blue-700)]' },
+  new: { className: 'bg-[var(--blue-100)] text-[var(--blue-700)]' },
   screening: { className: 'bg-amber-50 text-[var(--warning)]' },
   interview: { className: 'bg-cyan-50 text-[var(--info)]' },
   offer: { className: 'bg-[var(--gold-dim)] text-[var(--gold)]' },

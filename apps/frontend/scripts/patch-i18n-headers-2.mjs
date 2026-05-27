@@ -25,7 +25,9 @@ function addHeaderHook(src, key) {
   const fn = fnMatch[1];
   const fnStart = src.indexOf(`export default function ${fn}`);
   const brace = src.indexOf('{', fnStart);
-  return src.slice(0, brace + 1) + `\n  const header = usePageHeader('${key}');` + src.slice(brace + 1);
+  return (
+    src.slice(0, brace + 1) + `\n  const header = usePageHeader('${key}');` + src.slice(brace + 1)
+  );
 }
 
 for (const [rel, key] of simple) {
@@ -85,7 +87,7 @@ for (const [rel, key] of simple) {
   }
   src = src.replace(
     /<PageHeader\n\s+title="Cover Letter & Outreach"\n\s+subtitle=\{resume\?\.title \? `For: \$\{resume\.title\}` : 'AI-powered application documents'\}\n\s+\/>/,
-    '<PageHeader\n        title={header.title}\n        subtitle={resume?.title ? t(\'pages.candidateCoverLetter.subtitleFor\', { title: resume.title }) : header.subtitle}\n      />'
+    "<PageHeader\n        title={header.title}\n        subtitle={resume?.title ? t('pages.candidateCoverLetter.subtitleFor', { title: resume.title }) : header.subtitle}\n      />"
   );
   fs.writeFileSync(file, src);
   console.log('done', rel);
@@ -125,7 +127,7 @@ for (const [rel, key] of simple) {
   }
   src = src.replace(
     /title="Find Matching Candidates"\n\s+subtitle=\{\n\s+jobTitle\n\s+\? `Semantic matches for \$\{jobTitle\}`\n\s+: 'Discover passive matches from your talent pool\.'\n\s+\}/,
-    'title={header.title}\n        subtitle={jobTitle ? t(\'pages.recruiterFindCandidates.subtitleForJob\', { title: jobTitle }) : header.subtitle}'
+    "title={header.title}\n        subtitle={jobTitle ? t('pages.recruiterFindCandidates.subtitleForJob', { title: jobTitle }) : header.subtitle}"
   );
   fs.writeFileSync(file, src);
   console.log('done', rel);
@@ -140,7 +142,7 @@ for (const [rel, key] of simple) {
   src = addHeaderHook(src, 'recruiterInterview');
   src = src.replace(
     /title="Interview Questions"\n\s+subtitle=\{\n\s+result\n\s+\? `Generated for \$\{result\.job_title \|\| 'this job'\}`\n\s+: 'AI-generated bilingual question sets\.'\n\s+\}/,
-    'title={header.title}\n            subtitle={result ? `${header.subtitle} — ${result.job_title || \'this job\'}` : header.subtitle}'
+    "title={header.title}\n            subtitle={result ? `${header.subtitle} — ${result.job_title || 'this job'}` : header.subtitle}"
   );
   fs.writeFileSync(file, src);
   console.log('done', rel);

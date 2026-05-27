@@ -146,7 +146,11 @@ export function NotificationPanel({
           onClick={() => void handleMarkAllRead()}
           type="button"
         >
-          {markingAll ? <Loader2 className="size-3 animate-spin" /> : <CheckCheck className="size-3" />}
+          {markingAll ? (
+            <Loader2 className="size-3 animate-spin" />
+          ) : (
+            <CheckCheck className="size-3" />
+          )}
           {t('common.markAllRead')}
         </button>
       </div>
@@ -162,7 +166,9 @@ export function NotificationPanel({
           <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-[var(--danger)]">{error}</p>
         ) : null}
         {!loading && !error && items.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[var(--text-3)]">{t('notifications.empty')}</p>
+          <p className="py-8 text-center text-sm text-[var(--text-3)]">
+            {t('notifications.empty')}
+          </p>
         ) : null}
         {!loading
           ? items.map((notification) => (

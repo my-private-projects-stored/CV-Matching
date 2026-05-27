@@ -15,7 +15,10 @@ import { useAuth } from '@/lib/context/auth-context';
 const CONTENT_STORAGE_KEY = 'resume_matcher_content_language';
 const UI_STORAGE_KEY = 'resume_matcher_ui_language';
 
-function normalizeContentLocale(value: string | null | undefined, fallback: SupportedLanguage): SupportedLanguage {
+function normalizeContentLocale(
+  value: string | null | undefined,
+  fallback: SupportedLanguage
+): SupportedLanguage {
   if (value === 'en' || value === 'vi' || value === 'auto') return value as SupportedLanguage;
   return fallback;
 }
@@ -43,21 +46,27 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       try {
         const storedUi = localStorage.getItem(UI_STORAGE_KEY);
         const storedContent = localStorage.getItem(CONTENT_STORAGE_KEY);
-        
+
         const cachedUiLang = normalizeStoredLocale(storedUi, defaultLocale);
         const cachedContentLang = normalizeContentLocale(storedContent, defaultLocale);
-        
+
         setUiLanguageState(cachedUiLang);
         setContentLanguageState(cachedContentLang);
         syncLocaleCookie(cachedUiLang);
 
         const config = await fetchLanguageConfig();
-        
+
         // If the user has a stored preference in localStorage, prioritize it.
         // Otherwise, fall back to the system-wide configuration.
-        const configUi = storedUi !== null ? cachedUiLang : normalizeStoredLocale(config.ui_language, cachedUiLang);
-        const configContent = storedContent !== null ? cachedContentLang : normalizeContentLocale(config.content_language, cachedContentLang);
-        
+        const configUi =
+          storedUi !== null
+            ? cachedUiLang
+            : normalizeStoredLocale(config.ui_language, cachedUiLang);
+        const configContent =
+          storedContent !== null
+            ? cachedContentLang
+            : normalizeContentLocale(config.content_language, cachedContentLang);
+
         setUiLanguageState(configUi);
         setContentLanguageState(configContent);
         localStorage.setItem(UI_STORAGE_KEY, configUi);
@@ -80,7 +89,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       try {
         setContentLanguageState(normalized);
         localStorage.setItem(CONTENT_STORAGE_KEY, normalized);
-        
+
         // Only update database system config if the user is an admin
         if (user?.role === 'admin') {
           await updateLanguageConfig({ content_language: normalized, ui_language: uiLanguage });
@@ -94,21 +103,26 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     [contentLanguage, uiLanguage, user]
   );
 
-  const setUiLanguage = useCallback((lang: Locale) => {
-    const normalized = normalizeStoredLocale(lang, defaultLocale);
-    setUiLanguageState(normalized);
-    setContentLanguageState(normalized);
-    localStorage.setItem(UI_STORAGE_KEY, normalized);
-    localStorage.setItem(CONTENT_STORAGE_KEY, normalized);
-    syncLocaleCookie(normalized);
-    
-    // Only update database system config if the user is an admin
-    if (user?.role === 'admin') {
-      updateLanguageConfig({ ui_language: normalized, content_language: normalized }).catch((error) => {
-        logError('language-context', 'Failed to sync language config', error);
-      });
-    }
-  }, [user]);
+  const setUiLanguage = useCallback(
+    (lang: Locale) => {
+      const normalized = normalizeStoredLocale(lang, defaultLocale);
+      setUiLanguageState(normalized);
+      setContentLanguageState(normalized);
+      localStorage.setItem(UI_STORAGE_KEY, normalized);
+      localStorage.setItem(CONTENT_STORAGE_KEY, normalized);
+      syncLocaleCookie(normalized);
+
+      // Only update database system config if the user is an admin
+      if (user?.role === 'admin') {
+        updateLanguageConfig({ ui_language: normalized, content_language: normalized }).catch(
+          (error) => {
+            logError('language-context', 'Failed to sync language config', error);
+          }
+        );
+      }
+    },
+    [user]
+  );
 
   return (
     <LanguageContext.Provider

@@ -7,6 +7,8 @@ import mongoose from "mongoose";
 
 import app from "../../src/app.js";
 import User from "../../src/models/User.js";
+import Job from "../../src/models/Job.js";
+import Resume from "../../src/models/Resume.js";
 
 const RUN_INTEGRATION = process.env.RUN_INTEGRATION_TESTS === "1";
 
@@ -48,7 +50,7 @@ test(
   async () => {
     const mongoUri = getTestMongoUri();
     await mongoose.connect(mongoUri);
-    await User.deleteMany({});
+    await Promise.all([User.deleteMany({}), Job.deleteMany({}), Resume.deleteMany({})]);
 
     const server = app.listen(0);
     const address = server.address();
@@ -77,6 +79,23 @@ test(
       assert.equal(recruiterSignup.status, 201);
       const recruiterToken = recruiterSignup.json?.access_token;
       assert.ok(recruiterToken);
+
+      await Resume.create({
+        candidateId,
+        fileUrl: "upload://r1",
+        rawText: "candidate main text",
+        processingStatus: "ready",
+      });
+
+      await Job.create({
+        recruiterId: recruiterSignup.json.user.id,
+        title: "Test Job",
+        description: "Desc",
+        requirements: "At least 2 years of experience with React and Node.js",
+        cleanText: "Desc",
+        category: "IT",
+        status: "active",
+      });
 
       const getCandidateProfile = await requestJson(
         baseUrl,

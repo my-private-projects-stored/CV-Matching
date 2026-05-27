@@ -7,10 +7,7 @@ async function assertOk(res: Response, fallbackMessagePrefix: string): Promise<v
   throw buildApiClientError(res.status, body, fallbackMessagePrefix);
 }
 
-export type NotificationType =
-  | 'application_status_changed'
-  | 'ai_scoring_completed'
-  | 'job_closed';
+export type NotificationType = 'application_status_changed' | 'ai_scoring_completed' | 'job_closed';
 
 export interface NotificationItem {
   id: string;

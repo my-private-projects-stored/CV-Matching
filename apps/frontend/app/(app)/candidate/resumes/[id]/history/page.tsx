@@ -6,11 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { PageHeader, ConfirmDialog, ErrorBanner, SkeletonRow } from '@/components/ui';
-import {
-  fetchResumeHistory,
-  restoreResumeVersion,
-  type ResumeListItem,
-} from '@/lib/api';
+import { fetchResumeHistory, restoreResumeVersion, type ResumeListItem } from '@/lib/api';
 
 function formatDate(value: string) {
   try {
@@ -84,8 +80,7 @@ export default function ResumeHistoryPage() {
           {versions.map((version, index) => {
             const isCurrent = version.resume_id === currentResumeId;
             const versionTitle =
-              version.title ||
-              t('resumes.versionLabel', { number: versions.length - index });
+              version.title || t('resumes.versionLabel', { number: versions.length - index });
             return (
               <li key={version.resume_id} className="relative">
                 <span

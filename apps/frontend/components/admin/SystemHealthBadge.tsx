@@ -54,15 +54,7 @@ export function SystemHealthBadge({ className }: { className?: string }) {
   );
 }
 
-function HealthDot({
-  label,
-  ok,
-  loading,
-}: {
-  label: string;
-  ok: boolean;
-  loading: boolean;
-}) {
+function HealthDot({ label, ok, loading }: { label: string; ok: boolean; loading: boolean }) {
   return (
     <span className="inline-flex items-center gap-1 text-[var(--text-3)]">
       <span

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import { createPortal } from 'react-dom';
@@ -133,7 +133,7 @@ const DialogContent: React.FC<DialogContentProps> = ({ children, className }) =>
         <div
           className={cn(
             'relative w-full max-w-lg',
-            'rounded-2xl border border-[color:var(--border)] bg-[var(--surface-muted)] shadow-[0_24px_40px_rgba(15,27,45,0.18)]',
+            'rounded-2xl border border-[color:var(--border)] bg-white shadow-[0_24px_40px_rgba(15,27,45,0.18)]',
             'animate-in fade-in-0 zoom-in-95 duration-200',
             className
           )}

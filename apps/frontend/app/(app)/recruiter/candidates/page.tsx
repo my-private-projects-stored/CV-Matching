@@ -53,10 +53,7 @@ export default function RecruiterAllCandidatesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={header.title}
-        subtitle={header.subtitle}
-      />
+      <PageHeader title={header.title} subtitle={header.subtitle} />
 
       <div className="grid gap-4 md:grid-cols-2">
         <StatCard

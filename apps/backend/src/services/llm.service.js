@@ -360,12 +360,17 @@ async function requestCompletionWithRetry(options) {
   throw lastError;
 }
 
-function buildMessages(prompt, systemPrompt) {
+function buildMessages(prompt, systemPrompt, provider) {
   const messages = [];
-  if (systemPrompt) {
-    messages.push({ role: "system", content: systemPrompt });
+  if (provider === "ollama") {
+    const combined = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
+    messages.push({ role: "user", content: combined });
+  } else {
+    if (systemPrompt) {
+      messages.push({ role: "system", content: systemPrompt });
+    }
+    messages.push({ role: "user", content: prompt });
   }
-  messages.push({ role: "user", content: prompt });
   return messages;
 }
 
@@ -391,7 +396,7 @@ export async function completeText({
 
   const result = await requestCompletionWithRetry({
     config: resolvedConfig,
-    messages: buildMessages(contentPrompt, systemPrompt),
+    messages: buildMessages(contentPrompt, systemPrompt, resolvedConfig.provider),
     systemPrompt,
     maxTokens,
     temperature,
@@ -414,6 +419,7 @@ export async function completeText({
     prompt_tokens: result.metadata.prompt_tokens,
     completion_tokens: result.metadata.completion_tokens,
   });
+  console.info("LLM Raw Response Content:", JSON.stringify(result.content));
 
   // Persist success event asynchronously (non-blocking)
   AiGenerationEvent.create({

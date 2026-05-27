@@ -46,7 +46,9 @@ export default function LoginPage() {
         </a>
       </div>
       <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-[var(--blue-600)]">{t('auth.eyebrow')}</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-[var(--blue-600)]">
+          {t('auth.eyebrow')}
+        </p>
         <h1 className="mt-2 font-display text-4xl">{t('auth.welcome')}</h1>
         <p className="mt-2 text-sm text-[var(--text-2)]">{t('auth.signInSubtitle')}</p>
       </div>

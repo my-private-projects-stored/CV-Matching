@@ -30,7 +30,8 @@
     "optional": "Tùy chọn",
     "popupBlocked": "Trình duyệt đã chặn cửa sổ bật lên. Vui lòng nhấp vào đây để mở: {url}",
     "unknown": "Lỗi không xác định",
-    "ok": "Đồng ý"
+    "ok": "Đồng ý",
+    "reset": "Đặt lại"
   },
   "app": {
     "name": "CV Matching",
@@ -337,6 +338,7 @@
     "defaultTitle": "CV",
     "untitled": "CV chưa đặt tên",
     "masterBadge": "CHÍNH",
+    "statusProcessing": "Đang phân tích…",
     "renameAria": "Đổi tên CV",
     "renameTitle": "Đổi tên",
     "history": "Lịch sử",
@@ -442,6 +444,7 @@
       "jdMatch": "Khớp JD"
     },
     "alerts": {
+      "analyzingCv": "AI đang phân tích và tối ưu hóa CV của bạn trong nền...",
       "reloadFailed": "Tải lại dữ liệu thất bại",
       "saveNotAvailable": "Lưu CV không khả dụng",
       "saveFailed": "Lưu CV thất bại",
@@ -613,7 +616,8 @@
         "hint": "Hướng dẫn bổ sung cho AI (không bắt buộc):",
         "placeholder": "vd. Viết các mô tả ngắn gọn, làm nổi bật kết quả kinh doanh bằng con số thực tế...",
         "backButton": "Quay lại",
-        "generateButton": "Tối ưu ngay"
+        "generateButton": "Tối ưu ngay",
+        "defaultInstruction": "Tối ưu hóa nội dung để phù hợp với mô tả công việc. Tập trung vào các động từ hành động mạnh mẽ, kỹ năng kỹ thuật và các chỉ số đo lường kết quả."
       },
       "diffPreview": {
         "title": "So sánh kết quả tối ưu bằng AI",
@@ -640,7 +644,8 @@
       "coverLetterDescription": "AI sẽ tự động viết một thư xin việc (cover letter) chuyên nghiệp, làm nổi bật các điểm mạnh phù hợp nhất của bạn.",
       "generateButton": "Tạo bằng AI",
       "outreachFooter": "* Bản nháp Email tiếp cận có thể được cá nhân hóa thêm trước khi sao chép gửi.",
-      "coverLetterFooter": "* Thư xin việc có thể được lưu trữ và tải xuống dưới dạng PDF."
+      "coverLetterFooter": "* Thư xin việc có thể được lưu trữ và tải xuống dưới dạng PDF.",
+      "notTailoredNote": "Lưu ý: Để có kết quả tốt nhất, hãy tối ưu hóa CV cho một tin tuyển dụng cụ thể từ trang Tối ưu hóa. AI sẽ tạo nội dung chung chung hơn nếu không có mô tả công việc."
     },
     "jdMatch": {
       "aboutTitle": "Về tính năng Khớp JD",
@@ -665,7 +670,11 @@
       "yourResume": "Bản CV của bạn",
       "matchingKeywordsHighlighted": "(Các từ khóa khớp được tô sáng)",
       "atSeparator": " tại ",
-      "roleSeparator": " với vai trò "
+      "roleSeparator": " với vai trò ",
+      "pasteJDTitle": "Dán mô tả công việc để so khớp",
+      "pasteJDHint": "Dán nội dung mô tả công việc (JD) vào ô bên dưới. Hệ thống sẽ tự động trích xuất từ khóa và so sánh với CV của bạn.",
+      "pasteJDPlaceholder": "Dán mô tả công việc vào đây...",
+      "noJDPlaceholder": "Dán mô tả công việc ở bên trái để xem phân tích từ khóa"
     },
     "footer": {
       "moduleLabel": "Mô-đun CV AI",
@@ -1138,6 +1147,8 @@
       "summary": "Tóm tắt",
       "questionsInGroups": "câu hỏi trong {count} nhóm",
       "regenerate": "Tạo lại",
+      "generate": "Tạo câu hỏi",
+      "generateSubtitle": "Tạo bộ câu hỏi phỏng vấn cấu trúc dựa trên CV của ứng viên và yêu cầu tuyển dụng bằng AI.",
       "subtitleGenerated": "{count} câu hỏi · Tạo lúc {date}",
       "subtitleDefault": "Do AI tạo từ CV ứng viên",
       "generating": "Đang tạo câu hỏi từ CV…",
@@ -1354,6 +1365,7 @@
     "scoreBreakdown": "Phân tích điểm",
     "scoreBreakdownDescription": "Điểm hybrid là tín hiệu xếp hạng. Điểm ngữ nghĩa đo mức độ phù hợp về nghĩa, còn điểm từ khóa phản ánh các thuật ngữ bắt buộc có trong CV của bạn.",
     "pipelineStatus": "Trạng thái pipeline",
+    "statusTimeline": "Lịch sử trạng thái",
     "currentStatus": "Trạng thái hiện tại:",
     "noStatusChanges": "Chưa có thay đổi trạng thái nào được ghi nhận.",
     "improvementSuggestions": "Gợi ý cải thiện",
@@ -1432,6 +1444,7 @@
       "emptyTitle": "Chưa có thư xin việc",
       "emptyDescription": "Chọn tab để AI tự động tạo thư xin việc, hoặc tự soạn thảo."
     },
+    "generate": "Tạo thư xin việc bằng AI",
     "regenerate": "Tạo lại bằng AI"
   },
   "outreach": {
@@ -1458,6 +1471,7 @@
     "copied": "Đã sao chép!",
     "copyToClipboard": "Sao chép",
     "copy": "Sao chép vào Clipboard",
+    "generate": "Tạo email tiếp cận bằng AI",
     "regenerate": "Tạo lại bằng AI"
   }
 }

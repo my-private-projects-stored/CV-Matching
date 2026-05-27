@@ -2,13 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  PageHeader,
-  EmptyState,
-  ErrorBanner,
-  SkeletonRow,
-  ConfirmDialog,
-} from '@/components/ui';
+import { PageHeader, EmptyState, ErrorBanner, SkeletonRow, ConfirmDialog } from '@/components/ui';
 import { usePageHeader } from '@/lib/i18n/use-page-header';
 import { useTranslations } from '@/lib/i18n/translations';
 import {
@@ -171,10 +165,16 @@ export default function RecruiterJobsPage() {
                 <span>{job.status === 'active' ? t('jobs.active') : t('jobs.closed')}</span>
                 <span>{formatDate(job.applicationDeadline)}</span>
                 <span className="flex flex-wrap gap-2">
-                  <Link className="text-[var(--blue-700)]" href={`/recruiter/jobs/${job._id}/candidates`}>
+                  <Link
+                    className="text-[var(--blue-700)]"
+                    href={`/recruiter/jobs/${job._id}/candidates`}
+                  >
                     {t('recruiter.jobs.candidatesLink')}
                   </Link>
-                  <Link className="text-[var(--blue-700)]" href={`/recruiter/jobs/${job._id}/find-candidates`}>
+                  <Link
+                    className="text-[var(--blue-700)]"
+                    href={`/recruiter/jobs/${job._id}/find-candidates`}
+                  >
                     {t('recruiter.jobs.findCvs')}
                   </Link>
                   <Link className="text-[var(--blue-700)]" href={`/recruiter/jobs/${job._id}/edit`}>
@@ -182,7 +182,9 @@ export default function RecruiterJobsPage() {
                   </Link>
                   <button
                     className="text-[var(--warning)] disabled:opacity-50"
-                    onClick={() => setPendingAction({ type: job.status === 'active' ? 'close' : 'reopen', job })}
+                    onClick={() =>
+                      setPendingAction({ type: job.status === 'active' ? 'close' : 'reopen', job })
+                    }
                     disabled={busy}
                     type="button"
                   >

@@ -3,12 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import {
-  AiScoreWidget,
-  AiStatusIndicator,
-  ErrorBanner,
-  SkeletonCard,
-} from '@/components/ui';
+import { AiScoreWidget, AiStatusIndicator, ErrorBanner, SkeletonCard } from '@/components/ui';
 import { usePageHeader } from '@/lib/i18n/use-page-header';
 import { useTranslations } from '@/lib/i18n/translations';
 import {
@@ -61,7 +56,9 @@ export default function CandidateApplicationDetailPage() {
       })
       .catch((requestError) => {
         if (!active) return;
-        setError(requestError instanceof Error ? requestError.message : t('errors.loadApplication'));
+        setError(
+          requestError instanceof Error ? requestError.message : t('errors.loadApplication')
+        );
         setFeedback(null);
         setHistory([]);
         setJob(null);

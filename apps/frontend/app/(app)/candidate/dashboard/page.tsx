@@ -58,8 +58,7 @@ export default function CandidateDashboardPage() {
     const loaded = applications.length;
     const avgScore = loaded
       ? Math.round(
-          (applications.reduce((acc, item) => acc + (item.scores?.hybrid_score ?? 0), 0) /
-            loaded) *
+          (applications.reduce((acc, item) => acc + (item.scores?.hybrid_score ?? 0), 0) / loaded) *
             100
         )
       : 0;

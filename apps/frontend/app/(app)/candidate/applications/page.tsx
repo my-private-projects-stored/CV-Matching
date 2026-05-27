@@ -70,7 +70,9 @@ export default function CandidateApplicationsPage() {
       })
       .catch((requestError) => {
         if (!active) return;
-        setError(requestError instanceof Error ? requestError.message : t('errors.loadApplication'));
+        setError(
+          requestError instanceof Error ? requestError.message : t('errors.loadApplication')
+        );
         setApplications([]);
         setTotalPages(1);
       })

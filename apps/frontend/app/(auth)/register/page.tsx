@@ -56,7 +56,9 @@ export default function RegisterPage() {
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
       <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-[var(--blue-600)]">{t('auth.eyebrow')}</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-[var(--blue-600)]">
+          {t('auth.eyebrow')}
+        </p>
         <h1 className="mt-2 font-display text-4xl">{t('auth.registerTitle')}</h1>
         <p className="mt-2 text-sm text-[var(--text-2)]">{t('auth.getStarted')}</p>
       </div>

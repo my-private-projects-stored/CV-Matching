@@ -91,7 +91,8 @@ export default function CandidateJobDetailPage() {
                     {job.experienceLevel ? <span>💼 {job.experienceLevel}</span> : null}
                     {job.applicationDeadline ? (
                       <span>
-                        ⏰ {t('jobs.deadlineLabel', { date: formatDeadline(job.applicationDeadline) })}
+                        ⏰{' '}
+                        {t('jobs.deadlineLabel', { date: formatDeadline(job.applicationDeadline) })}
                       </span>
                     ) : null}
                     <span className="rounded-full bg-[var(--blue-50)] px-2 py-0.5 text-[var(--blue-700)]">
@@ -179,9 +180,7 @@ export default function CandidateJobDetailPage() {
                 <div>
                   <dt className="text-xs text-[var(--text-3)]">{t('jobs.status')}</dt>
                   <dd className={job.status === 'active' ? 'text-green-600' : 'text-gray-500'}>
-                    {job.status === 'active'
-                      ? t('jobs.acceptingApplications')
-                      : t('jobs.closed')}
+                    {job.status === 'active' ? t('jobs.acceptingApplications') : t('jobs.closed')}
                   </dd>
                 </div>
               </dl>

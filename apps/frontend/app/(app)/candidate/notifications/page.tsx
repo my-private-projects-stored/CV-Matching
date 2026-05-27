@@ -24,23 +24,24 @@ export default function CandidateNotificationsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [markingAll, setMarkingAll] = useState(false);
 
-  const loadPage = useCallback(async (nextPage: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await fetchNotifications({ page: nextPage, limit: 20 });
-      setItems(result.data);
-      setTotalPages(result.pagination.totalPages || 1);
-      setPage(nextPage);
-    } catch (loadError) {
-      setError(
-        loadError instanceof Error ? loadError.message : t('errors.loadNotifications')
-      );
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
+  const loadPage = useCallback(
+    async (nextPage: number) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await fetchNotifications({ page: nextPage, limit: 20 });
+        setItems(result.data);
+        setTotalPages(result.pagination.totalPages || 1);
+        setPage(nextPage);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : t('errors.loadNotifications'));
+        setItems([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t]
+  );
 
   useEffect(() => {
     void loadPage(1);
@@ -82,7 +83,11 @@ export default function CandidateNotificationsPage() {
             onClick={() => void handleMarkAllRead()}
             type="button"
           >
-            {markingAll ? <Loader2 className="size-4 animate-spin" /> : <CheckCheck className="size-4" />}
+            {markingAll ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CheckCheck className="size-4" />
+            )}
             {t('common.markAllRead')}
           </button>
         }

@@ -4,7 +4,12 @@ import type { Resume } from '@/types';
 const fetchMock = vi.fn();
 
 describe('api client', () => {
+  const originalApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const originalApiUrl = process.env.NEXT_PUBLIC_API_URL;
+
   beforeEach(() => {
+    process.env.NEXT_PUBLIC_API_BASE_URL = '/';
+    delete process.env.NEXT_PUBLIC_API_URL;
     vi.resetModules();
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
@@ -12,6 +17,16 @@ describe('api client', () => {
   });
 
   afterEach(() => {
+    if (originalApiBaseUrl === undefined) {
+      delete process.env.NEXT_PUBLIC_API_BASE_URL;
+    } else {
+      process.env.NEXT_PUBLIC_API_BASE_URL = originalApiBaseUrl;
+    }
+    if (originalApiUrl === undefined) {
+      delete process.env.NEXT_PUBLIC_API_URL;
+    } else {
+      process.env.NEXT_PUBLIC_API_URL = originalApiUrl;
+    }
     vi.unstubAllGlobals();
   });
 
@@ -157,4 +172,3 @@ describe('api client', () => {
     expect(result.count).toBe(1);
   });
 });
-

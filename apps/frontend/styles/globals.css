@@ -1,10 +1,12 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @source "../{app,components,lib,types,styles}/**/*.{js,ts,jsx,tsx,mdx}";
 
 :root {
+  /* Color palette */
   --blue-900: #0f1f5c;
+  --blue-800: #1e40af;
   --blue-700: #1d4ed8;
   --blue-600: #2563eb;
   --blue-100: #dbeafe;
@@ -12,20 +14,36 @@
   --gold: #c9a84c;
   --gold-dim: rgba(201, 168, 76, 0.15);
   --gold-border: rgba(201, 168, 76, 0.28);
+
+  /* Surface & background tokens */
   --bg: #f8f7f4;
   --surface: #ffffff;
+  --surface-muted: #f1f5f9;
+  --secondary: #e2e8f0;
+
+  /* Border */
   --border: #e2e8f0;
+
+  /* Text tokens */
+  --foreground: #0f172a;
   --text-1: #0f172a;
   --text-2: #475569;
   --text-3: #94a3b8;
+  --text-subtle: #64748b;
+
+  /* Brand primary (Hyper Blue) */
+  --primary: #1d4ed8;
+
+  /* Semantic colors */
   --success: #16a34a;
   --warning: #d97706;
   --danger: #dc2626;
   --info: #0891b2;
 
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Playfair Display", Georgia, serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  /* Typography */
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 }
 
 @layer base {

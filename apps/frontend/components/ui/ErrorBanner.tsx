@@ -9,6 +9,8 @@ export function ErrorBanner({
   onRetry?: () => void;
   className?: string;
 }) {
+  if (!message) return null;
+
   return (
     <div
       className={cn(

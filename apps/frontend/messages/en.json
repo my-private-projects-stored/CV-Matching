@@ -30,7 +30,8 @@
     "optional": "Optional",
     "popupBlocked": "Popup was blocked by browser. Please click here to open: {url}",
     "unknown": "Unknown error",
-    "ok": "OK"
+    "ok": "OK",
+    "reset": "Reset"
   },
   "app": {
     "name": "CV Matching",
@@ -337,6 +338,7 @@
     "defaultTitle": "Resume",
     "untitled": "Untitled Resume",
     "masterBadge": "MASTER",
+    "statusProcessing": "Analyzing…",
     "renameAria": "Rename resume",
     "renameTitle": "Rename",
     "history": "History",
@@ -442,6 +444,7 @@
       "jdMatch": "JD Match"
     },
     "alerts": {
+      "analyzingCv": "AI is parsing and optimizing your CV in the background...",
       "reloadFailed": "Failed to reload data",
       "saveNotAvailable": "Save resume is not available",
       "saveFailed": "Failed to save resume",
@@ -613,7 +616,8 @@
         "hint": "Additional instructions for AI (optional):",
         "placeholder": "e.g. Keep descriptions concise, highlight business impact with metrics...",
         "backButton": "Back",
-        "generateButton": "Optimize Now"
+        "generateButton": "Optimize Now",
+        "defaultInstruction": "Optimize content to align with the target job description. Focus on strong action verbs, technical skills, and metrics."
       },
       "diffPreview": {
         "title": "Compare AI Optimization Results",
@@ -640,7 +644,8 @@
       "coverLetterDescription": "AI will draft a professional cover letter highlighting your most relevant strengths.",
       "generateButton": "Generate with AI",
       "outreachFooter": "* Outreach draft can be further personalized before copying and sending.",
-      "coverLetterFooter": "* Cover letter can be saved and downloaded as PDF."
+      "coverLetterFooter": "* Cover letter can be saved and downloaded as PDF.",
+      "notTailoredNote": "Tip: For best results, tailor your resume to a specific job from the Optimize page. AI will produce more generic content without a job description."
     },
     "jdMatch": {
       "aboutTitle": "About JD Match",
@@ -665,7 +670,11 @@
       "yourResume": "Your Resume",
       "matchingKeywordsHighlighted": "(Matching keywords are highlighted)",
       "atSeparator": " at ",
-      "roleSeparator": " as "
+      "roleSeparator": " as ",
+      "pasteJDTitle": "Paste Job Description to Compare",
+      "pasteJDHint": "Paste the job description (JD) below. The system will extract keywords and compare them against your resume automatically.",
+      "pasteJDPlaceholder": "Paste job description here...",
+      "noJDPlaceholder": "Paste a job description on the left to see keyword analysis"
     },
     "footer": {
       "moduleLabel": "AI Resume Module",
@@ -1138,6 +1147,8 @@
       "summary": "Summary",
       "questionsInGroups": "questions in {count} groups",
       "regenerate": "Regenerate",
+      "generate": "Generate Questions",
+      "generateSubtitle": "Generate structured interview questions customized to the candidate's resume and job requirements using AI.",
       "subtitleGenerated": "{count} questions · Generated {date}",
       "subtitleDefault": "AI-generated from candidate CV",
       "generating": "Generating questions from CV…",
@@ -1354,6 +1365,7 @@
     "scoreBreakdown": "Score Breakdown",
     "scoreBreakdownDescription": "Hybrid score is the ranking signal. Semantic score measures meaning alignment, while keyword score reflects required terms found in your resume.",
     "pipelineStatus": "Pipeline status",
+    "statusTimeline": "Status timeline",
     "currentStatus": "Current status:",
     "noStatusChanges": "No status changes recorded yet.",
     "improvementSuggestions": "Improvement Suggestions",
@@ -1432,6 +1444,7 @@
       "emptyTitle": "No Cover Letter Generated Yet",
       "emptyDescription": "Select the tab to let AI generate a cover letter, or draft it yourself."
     },
+    "generate": "Generate Cover Letter with AI",
     "regenerate": "Regenerate with AI"
   },
   "outreach": {
@@ -1458,6 +1471,7 @@
     "copied": "Copied!",
     "copyToClipboard": "Copy",
     "copy": "Copy to Clipboard",
+    "generate": "Generate Outreach with AI",
     "regenerate": "Regenerate with AI"
   }
 }

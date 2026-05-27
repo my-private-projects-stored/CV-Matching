@@ -65,7 +65,10 @@ export default function RecruiterCandidateProfilePage() {
             <p className="mt-2 text-sm text-[var(--text-2)]">{profile.profile.summary}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {profile.profile.skills.slice(0, 12).map((skill) => (
-                <span key={skill} className="rounded-full bg-[var(--blue-50)] px-2 py-1 text-xs text-[var(--blue-700)]">
+                <span
+                  key={skill}
+                  className="rounded-full bg-[var(--blue-50)] px-2 py-1 text-xs text-[var(--blue-700)]"
+                >
                   {skill}
                 </span>
               ))}

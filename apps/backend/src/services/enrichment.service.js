@@ -20,21 +20,21 @@ function getEnrichmentCopy(language) {
 
   if (lang === "vi") {
     return {
-      weaknessEmpty: "Muc nay chua co bullet do luong ro rang.",
-      weaknessBrief: "Mo ta con ngan va can bo sung ket qua cu the.",
-      weaknessDefault: "Co the cai thien bang dong tu hanh dong manh va tac dong do luong duoc.",
-      impactQuestion: "Ban da tao ra tac dong do luong nao trong vai tro nay?",
-      impactPlaceholder: "vd: tang ty le chuyen doi 18%, giam latency 40%",
-      projectQuestion: "Du an nay giai quyet van de gi va cong nghe nao quan trong?",
-      projectPlaceholder: "vd: xay dung X voi Y, phuc vu Z nguoi dung, giam chi phi ...",
+      weaknessEmpty: "Mục này chưa có mô tả đo lường rõ ràng.",
+      weaknessBrief: "Mô tả còn ngắn và cần bổ sung kết quả cụ thể.",
+      weaknessDefault: "Có thể cải thiện bằng động từ hành động mạnh và tác động đo lường được.",
+      impactQuestion: "Bạn đã tạo ra tác động đo lường nào trong vai trò này?",
+      impactPlaceholder: "vd: tăng tỷ lệ chuyển đổi 18%, giảm latency 40%",
+      projectQuestion: "Dự án này giải quyết vấn đề gì và công nghệ nào quan trọng?",
+      projectPlaceholder: "vd: xây dựng X với Y, phục vụ Z người dùng, giảm chi phí ...",
       analysisSummary: (count) =>
         count > 0
-          ? `Phat hien ${count} muc can bo sung chi tiet.`
-          : "Khong co muc can bo sung dang ke.",
-      impactLine: (text) => `Tao tac dong bang viec ${text}.`,
-      projectLine: (text) => `Trien khai giai phap giup ${text}.`,
-      defaultInstruction: "cai thien do ro rang va tac dong",
-      diffSummary: (count) => `Da viet lai ${count} bullet theo huong chi dan.`,
+          ? `Phát hiện ${count} mục cần bổ sung chi tiết.`
+          : "Không có mục cần bổ sung đáng kể.",
+      impactLine: (text) => `Tạo tác động bằng việc ${text}.`,
+      projectLine: (text) => `Triển khai giải pháp giúp ${text}.`,
+      defaultInstruction: "cải thiện độ rõ ràng và tác động",
+      diffSummary: (count) => `Đã viết lại ${count} gạch đầu dòng theo hướng chỉ dẫn.`,
     };
   }
 
@@ -125,6 +125,98 @@ function normalizeRegeneratedItems(items = [], outputLanguage = "en") {
     .filter((item) => item.item_id && item.new_content.length);
 }
 
+function normalizeEnhancedDescriptions(enhancements = [], parsedData = {}, outputLanguage = "en") {
+  const copy = getEnrichmentCopy(outputLanguage);
+  
+  return (Array.isArray(enhancements) ? enhancements : [])
+    .map((item, index) => {
+      let itemId = String(item?.item_id || "").trim();
+      let itemType = String(item?.item_type || "").trim();
+      let title = String(item?.title || "").trim();
+      let originalDescription = normalizeLines(item?.original_description || item?.original);
+      let enhancedDescription = normalizeLines(item?.enhanced_description || item?.improved);
+
+      const section = String(item?.section || "").trim();
+      const field = String(item?.field || "").trim();
+
+      if (!itemType) {
+        if (section === "workExperience" || field.toLowerCase().includes("experience") || itemId.startsWith("exp_")) {
+          itemType = "experience";
+        } else if (section === "personalProjects" || field.toLowerCase().includes("project") || itemId.startsWith("proj_")) {
+          itemType = "project";
+        } else {
+          itemType = "experience";
+        }
+      }
+
+      if (!itemId) {
+        if (itemType === "experience" && Array.isArray(parsedData.workExperience)) {
+          const originalText = originalDescription.join(" ").toLowerCase();
+          let matchedIndex = -1;
+          
+          if (originalText) {
+            matchedIndex = parsedData.workExperience.findIndex(exp => {
+              const desc = normalizeLines(exp?.description).join(" ").toLowerCase();
+              return desc.includes(originalText) || originalText.includes(desc);
+            });
+          }
+          
+          if (matchedIndex === -1 && parsedData.workExperience.length > 0) {
+            matchedIndex = 0;
+          }
+          
+          if (matchedIndex !== -1) {
+            itemId = `exp_${matchedIndex}`;
+            const exp = parsedData.workExperience[matchedIndex];
+            if (!title) title = exp?.title || "Experience";
+            if (originalDescription.length === 0) {
+              originalDescription = normalizeLines(exp?.description);
+            }
+          }
+        } else if (itemType === "project" && Array.isArray(parsedData.personalProjects)) {
+          const originalText = originalDescription.join(" ").toLowerCase();
+          let matchedIndex = -1;
+          
+          if (originalText) {
+            matchedIndex = parsedData.personalProjects.findIndex(proj => {
+              const desc = normalizeLines(proj?.description).join(" ").toLowerCase();
+              return desc.includes(originalText) || originalText.includes(desc);
+            });
+          }
+          
+          if (matchedIndex === -1 && parsedData.personalProjects.length > 0) {
+            matchedIndex = 0;
+          }
+          
+          if (matchedIndex !== -1) {
+            itemId = `proj_${matchedIndex}`;
+            const proj = parsedData.personalProjects[matchedIndex];
+            if (!title) title = proj?.name || "Project";
+            if (originalDescription.length === 0) {
+              originalDescription = normalizeLines(proj?.description);
+            }
+          }
+        }
+      }
+
+      if (!itemId) {
+        itemId = itemType === "project" ? `proj_${index}` : `exp_${index}`;
+      }
+      if (!title) {
+        title = itemType === "project" ? "Project" : "Experience";
+      }
+
+      return {
+        item_id: itemId,
+        item_type: itemType,
+        title,
+        original_description: originalDescription,
+        enhanced_description: enhancedDescription,
+      };
+    })
+    .filter((item) => item.item_id && item.enhanced_description.length > 0);
+}
+
 async function getRuntimeAndPromptConfig() {
   const [runtimeConfig, promptConfig] = await Promise.all([
     resolveLlmRuntimeConfig(),
@@ -191,6 +283,19 @@ function buildAnalyzePayload(parsedData, outputLanguage) {
   const questions = [];
 
   const experiences = Array.isArray(parsedData.workExperience) ? parsedData.workExperience : [];
+  const projects = Array.isArray(parsedData.personalProjects) ? parsedData.personalProjects : [];
+
+  if (experiences.length === 0 && projects.length === 0) {
+    const summary = outputLanguage === "vi"
+      ? "Không tìm thấy thông tin kinh nghiệm làm việc hoặc dự án trong CV. Vui lòng thêm các thông tin này trong Trình tạo CV để AI có thể phân tích và làm giàu nội dung."
+      : "No work experience or personal projects found in your resume. Please add these sections in the Resume Builder first so AI can analyze and enrich them.";
+    return {
+      items_to_enrich: [],
+      questions: [],
+      analysis_summary: summary,
+    };
+  }
+
   experiences.forEach((exp, index) => {
     const current = normalizeLines(exp?.description);
     const weak = current.length < 2 || current.join(" ").length < 120;
@@ -216,7 +321,6 @@ function buildAnalyzePayload(parsedData, outputLanguage) {
     });
   });
 
-  const projects = Array.isArray(parsedData.personalProjects) ? parsedData.personalProjects : [];
   projects.forEach((project, index) => {
     const current = normalizeLines(project?.description);
     const weak = current.length < 2 || current.join(" ").length < 120;
@@ -259,6 +363,7 @@ export async function analyzeResumeEnrichment(resumeId, outputLanguage = "en") {
   if (resolvedLang === "auto") {
     resolvedLang = detectLanguageOfResume(parsedData);
   }
+
 
   try {
     const { runtimeConfig, promptConfig } = await getRuntimeAndPromptConfig();
@@ -356,9 +461,10 @@ export async function enhanceResumeDescriptions({ resumeId, answers, outputLangu
       config: runtimeConfig,
     });
 
-    const enhancements = Array.isArray(result.data?.enhancements)
+    const rawEnhancements = Array.isArray(result.data?.enhancements)
       ? result.data.enhancements
       : [];
+    const enhancements = normalizeEnhancedDescriptions(rawEnhancements, parsedData, resolvedLang);
     if (enhancements.length) {
       return {
         enhancements,
@@ -444,26 +550,43 @@ export async function applyResumeEnhancements(resumeId, enhancements = []) {
 
     if (itemType === "experience") {
       const index = parseIndex(itemId, "exp");
-      if (index === null || !Array.isArray(parsedData.workExperience) || !parsedData.workExperience[index]) {
-        continue;
+      if (index === null) continue;
+      if (!Array.isArray(parsedData.workExperience)) {
+        parsedData.workExperience = [];
       }
 
-      const existing = normalizeLines(parsedData.workExperience[index].description);
-      parsedData.workExperience[index].description = [...existing, ...addedBullets];
+      if (!parsedData.workExperience[index]) {
+        parsedData.workExperience[index] = {
+          title: enhancement.title || "Experience",
+          company: "",
+          location: "",
+          years: "",
+          description: addedBullets,
+        };
+      } else {
+        const existing = normalizeLines(parsedData.workExperience[index].description);
+        parsedData.workExperience[index].description = [...existing, ...addedBullets];
+      }
     }
 
     if (itemType === "project") {
       const index = parseIndex(itemId, "proj");
-      if (
-        index === null ||
-        !Array.isArray(parsedData.personalProjects) ||
-        !parsedData.personalProjects[index]
-      ) {
-        continue;
+      if (index === null) continue;
+      if (!Array.isArray(parsedData.personalProjects)) {
+        parsedData.personalProjects = [];
       }
 
-      const existing = normalizeLines(parsedData.personalProjects[index].description);
-      parsedData.personalProjects[index].description = [...existing, ...addedBullets];
+      if (!parsedData.personalProjects[index]) {
+        parsedData.personalProjects[index] = {
+          name: enhancement.title || "Project",
+          role: "",
+          years: "",
+          description: addedBullets,
+        };
+      } else {
+        const existing = normalizeLines(parsedData.personalProjects[index].description);
+        parsedData.personalProjects[index].description = [...existing, ...addedBullets];
+      }
     }
   }
 

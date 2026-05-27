@@ -166,16 +166,18 @@ function ResumeCard({
 
   const displayResume = { ...resume, title: localTitle };
 
+  const isProcessing = resume.processing_status === 'processing';
+
   return (
     <div
       className={`card-hover rounded-2xl border bg-white p-4 ${
         resume.is_master ? 'border-[var(--gold-border)]' : 'border-[var(--border)]'
-      }`}
+      } ${isProcessing ? 'opacity-80' : ''}`}
     >
       <div className="flex items-start justify-between gap-2">
         <ResumeTitleEditor
           resume={displayResume}
-          disabled={busy}
+          disabled={busy || isProcessing}
           onRenamed={(resumeId, title) => {
             if (resumeId === resume.resume_id) setLocalTitle(title);
           }}
@@ -188,18 +190,51 @@ function ResumeCard({
       </div>
       <div className="mt-1 flex flex-wrap items-center gap-2">
         <p className="text-xs text-[var(--text-2)]">{formatDate(resume.updated_at)}</p>
-        <span className="rounded-full bg-[var(--blue-50)] px-2 py-0.5 text-xs text-[var(--blue-700)]">
-          {resume.processing_status}
-        </span>
+        {isProcessing ? (
+          <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700">
+            <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+              />
+            </svg>
+            {t('resumes.statusProcessing')}
+          </span>
+        ) : (
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs ${
+              resume.processing_status === 'ready'
+                ? 'bg-green-50 text-green-700'
+                : resume.processing_status === 'failed'
+                  ? 'bg-red-50 text-red-700'
+                  : 'bg-[var(--blue-50)] text-[var(--blue-700)]'
+            }`}
+          >
+            {resume.processing_status}
+          </span>
+        )}
       </div>
       <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--blue-700)]">
         <Link href={`/candidate/resumes/${resume.resume_id}/builder`}>{t('common.edit')}</Link>
         <Link href={`/candidate/resumes/${resume.resume_id}/history`}>{t('resumes.history')}</Link>
-        <button type="button" onClick={() => void handleDownload()} disabled={busy}>
+        <button type="button" onClick={() => void handleDownload()} disabled={busy || isProcessing}>
           {t('common.download')}
         </button>
         {!resume.is_master ? (
-          <button type="button" onClick={() => void handleSetMaster()} disabled={busy}>
+          <button
+            type="button"
+            onClick={() => void handleSetMaster()}
+            disabled={busy || isProcessing}
+          >
             {t('resumes.setAsMaster')}
           </button>
         ) : null}
@@ -231,23 +266,57 @@ export default function CandidateResumesPage() {
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  async function loadResumes() {
-    setLoading(true);
+  // Check if any resume is still being processed
+  function hasProcessingResumes(list: ResumeListItem[]) {
+    return list.some((r) => r.processing_status === 'processing');
+  }
+
+  // Stop the polling interval
+  function stopPolling() {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }
+
+  async function loadResumes(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const loaded = await fetchResumeList(true);
       setResumes(loaded);
       setError(null);
+
+      // If any resumes are still processing, start/continue polling
+      if (hasProcessingResumes(loaded)) {
+        startPolling();
+      } else {
+        stopPolling();
+      }
+      return loaded;
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : t('errors.loadResumes'));
       setResumes([]);
+      stopPolling();
+      return [];
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
+  }
+
+  // Start polling every 3 seconds until all resumes are done processing
+  function startPolling() {
+    stopPolling();
+    pollTimerRef.current = setInterval(() => {
+      void loadResumes(true);
+    }, 3000);
   }
 
   useEffect(() => {
     void loadResumes();
+    return () => stopPolling();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function uploadResume(file: File) {
@@ -261,7 +330,10 @@ export default function CandidateResumesPage() {
       if (!response.ok) {
         throw new Error(await response.text());
       }
+      // Reload immediately — the new resume will show with 'processing' status
       await loadResumes();
+      // Start polling to update status once LLM parsing completes in background
+      startPolling();
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : t('errors.uploadResume'));
     } finally {

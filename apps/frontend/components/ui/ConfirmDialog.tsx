@@ -30,7 +30,9 @@ export function ConfirmDialog({
         <div className="mt-6 flex justify-end gap-2">
           <button
             type="button"
-            className={cn('rounded-lg border border-[var(--border)] px-4 py-2 text-sm disabled:opacity-60')}
+            className={cn(
+              'rounded-lg border border-[var(--border)] px-4 py-2 text-sm disabled:opacity-60'
+            )}
             onClick={onCancel}
             disabled={disabled}
           >

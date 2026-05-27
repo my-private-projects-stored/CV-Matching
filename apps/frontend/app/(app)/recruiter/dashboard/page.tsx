@@ -104,7 +104,10 @@ export default function RecruiterDashboardPage() {
       {error ? <ErrorBanner message={error} /> : null}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard label={t('recruiter.dashboard.activeJobs')} value={String(activeJobs)} />
-        <StatCard label={t('recruiter.dashboard.totalApplicants')} value={String(totalApplicants)} />
+        <StatCard
+          label={t('recruiter.dashboard.totalApplicants')}
+          value={String(totalApplicants)}
+        />
         <StatCard label={t('recruiter.dashboard.avgMatchScore')} value={`${avgScore}%`} />
         <StatCard label={t('recruiter.dashboard.hiredThisMonth')} value={String(hiredCount)} />
       </div>
@@ -148,16 +151,18 @@ export default function RecruiterDashboardPage() {
               <Link
                 key={candidate.application_id}
                 href={`/recruiter/jobs/${selectedJobId}/candidates/${candidate.application_id}`}
-                className="grid gap-3 rounded-xl border border-[var(--border)] p-4 text-sm hover:bg-slate-50 md:grid-cols-[1fr_120px_120px]"
+                className="grid gap-3 rounded-xl border border-[var(--border)] p-4 text-sm hover:bg-slate-50 md:grid-cols-[1fr_120px_120px] items-center"
               >
                 <span>
                   <span className="block font-semibold">{candidate.candidate.full_name}</span>
                   <span className="text-xs text-[var(--text-3)]">{candidate.resume.title}</span>
                 </span>
-                <span className="font-mono">
+                <span className="font-mono text-left md:text-right font-semibold text-[var(--text-2)]">
                   {Math.round(candidate.scores.hybrid_score * 100)}%
                 </span>
-                <StatusBadge status={candidate.status} />
+                <div className="flex justify-start md:justify-end">
+                  <StatusBadge status={candidate.status} />
+                </div>
               </Link>
             ))}
           </div>
@@ -169,7 +174,9 @@ export default function RecruiterDashboardPage() {
         ) : null}
       </section>
       <section className="rounded-2xl border border-[var(--border)] bg-white p-5">
-        <h2 className="text-lg font-semibold">{t('recruiter.candidates.recentActivity', { count: changes.length })}</h2>
+        <h2 className="text-lg font-semibold">
+          {t('recruiter.candidates.recentActivity', { count: changes.length })}
+        </h2>
         <div className="mt-4 space-y-2">
           {changes.map((change) => (
             <div key={`${change.application_id}-${change.changed_at}`} className="text-sm">
@@ -181,7 +188,9 @@ export default function RecruiterDashboardPage() {
             </div>
           ))}
           {!changes.length && !loading ? (
-            <p className="text-sm text-[var(--text-3)]">{t('recruiter.candidates.noRecentChanges')}</p>
+            <p className="text-sm text-[var(--text-3)]">
+              {t('recruiter.candidates.noRecentChanges')}
+            </p>
           ) : null}
         </div>
       </section>

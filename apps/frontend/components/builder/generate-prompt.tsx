@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Loader2, FileText, Mail, ArrowRight } from 'lucide-react';
+import { Sparkles, Loader2, FileText, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/lib/i18n';
 
@@ -31,31 +31,8 @@ export function GeneratePrompt({
   const Icon = isOutreach ? Mail : FileText;
   const title = isOutreach ? t('outreach.title') : t('coverLetter.title');
 
-  // Show a different message if resume is not tailored
-  if (!isTailoredResume) {
-    return (
-      <div
-        className={cn(
-          'flex flex-col items-center justify-center min-h-[400px] p-12 text-center',
-          className
-        )}
-      >
-        <div className="w-16 h-16 border-2 border-gray-300 bg-gray-100 flex items-center justify-center mb-6">
-          <Icon className="w-8 h-8 text-gray-400" />
-        </div>
-        <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-gray-600 mb-3">
-          {t('builder.generatePrompt.notAvailableTitle', { title })}
-        </h3>
-        <p className="font-mono text-xs text-gray-500 max-w-md mb-6 leading-relaxed">
-          {t('builder.generatePrompt.notAvailableDescription', { title })}
-        </p>
-        <div className="flex items-center gap-2 text-blue-700 font-mono text-xs">
-          <span>{t('builder.generatePrompt.goToDashboard')}</span>
-          <ArrowRight className="w-4 h-4" />
-        </div>
-      </div>
-    );
-  }
+  // Show a softer note for non-tailored resumes — allow generation but explain it's generic
+  const isNotTailored = !isTailoredResume;
 
   return (
     <div
@@ -70,11 +47,16 @@ export function GeneratePrompt({
       <h3 className="font-mono text-sm font-bold uppercase tracking-wider mb-3">
         {t('builder.generatePrompt.generateTitle', { title })}
       </h3>
-      <p className="font-mono text-xs text-gray-600 max-w-md mb-6 leading-relaxed">
+      <p className="font-mono text-xs text-gray-600 max-w-md mb-4 leading-relaxed">
         {isOutreach
           ? t('builder.generatePrompt.outreachDescription')
           : t('builder.generatePrompt.coverLetterDescription')}
       </p>
+      {isNotTailored && (
+        <p className="font-mono text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 max-w-md mb-4 leading-relaxed">
+          {t('builder.generatePrompt.notTailoredNote')}
+        </p>
+      )}
       <Button onClick={onGenerate} disabled={isGenerating} className="gap-2">
         {isGenerating ? (
           <>

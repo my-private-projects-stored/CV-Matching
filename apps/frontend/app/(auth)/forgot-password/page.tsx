@@ -21,9 +21,7 @@ export default function ForgotPasswordPage() {
       const result = await forgotPassword(email);
       setMessage(result.message);
     } catch (requestError) {
-      setError(
-        requestError instanceof Error ? requestError.message : t('common.error')
-      );
+      setError(requestError instanceof Error ? requestError.message : t('common.error'));
     } finally {
       setLoading(false);
     }

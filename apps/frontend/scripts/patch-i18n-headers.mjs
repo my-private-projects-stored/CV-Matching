@@ -30,7 +30,7 @@ for (const [rel, key] of patches) {
     console.log('SKIP', rel);
     continue;
   }
-  if (!src.includes("usePageHeader")) {
+  if (!src.includes('usePageHeader')) {
     const importLine = "import { usePageHeader } from '@/lib/i18n/use-page-header';\n";
     const firstImportEnd = src.indexOf('\n', src.indexOf("'use client'"));
     if (src.startsWith("'use client'")) {
@@ -47,7 +47,8 @@ for (const [rel, key] of patches) {
   const fn = fnMatch[1];
   const fnStart = src.indexOf(`export default function ${fn}`);
   const brace = src.indexOf('{', fnStart);
-  src = src.slice(0, brace + 1) + `\n  const header = usePageHeader('${key}');` + src.slice(brace + 1);
+  src =
+    src.slice(0, brace + 1) + `\n  const header = usePageHeader('${key}');` + src.slice(brace + 1);
   src = src.replace(
     /<PageHeader title="[^"]+" subtitle="[^"]+" \/>/g,
     '<PageHeader title={header.title} subtitle={header.subtitle} />'

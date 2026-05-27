@@ -129,7 +129,12 @@ export default function RecruiterJobNewPage() {
             <button
               className="rounded-lg bg-[var(--blue-700)] px-4 py-2 text-sm text-white disabled:opacity-60"
               onClick={() => void handleSubmit()}
-              disabled={loading || !form.title.trim() || !form.description.trim() || !form.requirements.trim()}
+              disabled={
+                loading ||
+                !form.title.trim() ||
+                !form.description.trim() ||
+                !form.requirements.trim()
+              }
               type="button"
             >
               {loading ? t('recruiter.jobs.publishing') : t('recruiter.jobs.publishJob')}
@@ -149,7 +154,10 @@ export default function RecruiterJobNewPage() {
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             {keywordPreview.map((keyword) => (
-              <span key={keyword} className="rounded-full bg-[var(--blue-50)] px-2 py-1 text-xs text-[var(--blue-700)]">
+              <span
+                key={keyword}
+                className="rounded-full bg-[var(--blue-50)] px-2 py-1 text-xs text-[var(--blue-700)]"
+              >
                 {keyword}
               </span>
             ))}

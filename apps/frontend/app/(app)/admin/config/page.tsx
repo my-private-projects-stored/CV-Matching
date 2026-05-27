@@ -80,7 +80,7 @@ export default function AdminConfigPage() {
           setLlm(llmConfig);
           setFeatures(featureConfig);
           setLanguage(languageConfig);
-           setPrompts(promptConfig);
+          setPrompts(promptConfig);
           setTruthfulnessRulesInput(promptConfig.truthfulness_rules?.join('\n') || '');
           setPrivacy(privacyConfig);
           setApiKeyStatus(apiKeyStatus);
@@ -161,17 +161,34 @@ export default function AdminConfigPage() {
     setApiKeyStatus(refreshed);
   }
 
+  async function runConnectionTest() {
+    if (!llm) return;
+    setSaving(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await testLlmConnection(llm);
+      if (result.healthy) {
+        setMessage(t('admin.config.messages.connectionOk'));
+      } else {
+        setError(result.error || t('admin.config.messages.connectionFailed'));
+      }
+    } catch (testError) {
+      setError(
+        testError instanceof Error ? testError.message : t('admin.config.messages.connectionFailed')
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function askSave(operation: () => Promise<void>) {
     setConfirmSave(() => operation);
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={header.title}
-        subtitle={header.subtitle}
-        action={<SystemHealthBadge />}
-      />
+      <PageHeader title={header.title} subtitle={header.subtitle} action={<SystemHealthBadge />} />
       <div className="flex flex-wrap gap-2">
         {(
           [
@@ -238,17 +255,9 @@ export default function AdminConfigPage() {
           />
           <div className="flex gap-2">
             <button
-              className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm"
-              onClick={() =>
-                runSave(async () => {
-                  const result = await testLlmConnection(llm);
-                  setMessage(
-                    result.healthy
-                      ? t('admin.config.messages.connectionOk')
-                      : result.error || t('admin.config.messages.connectionFailed')
-                  );
-                })
-              }
+              className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm disabled:opacity-60"
+              disabled={saving}
+              onClick={runConnectionTest}
             >
               {t('admin.config.testConnection')}
             </button>
@@ -355,7 +364,9 @@ export default function AdminConfigPage() {
             <select
               className="w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
               value={prompts.default_prompt_id}
-              onChange={(event) => setPrompts({ ...prompts, default_prompt_id: event.target.value })}
+              onChange={(event) =>
+                setPrompts({ ...prompts, default_prompt_id: event.target.value })
+              }
             >
               {prompts.prompt_options.map((prompt) => (
                 <option key={prompt.id} value={prompt.id}>
@@ -383,68 +394,87 @@ export default function AdminConfigPage() {
           <hr className="border-[var(--border)]" />
 
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-[var(--text-1)]">{t('admin.config.prompts.templates')}</h3>
+            <h3 className="text-sm font-semibold text-[var(--text-1)]">
+              {t('admin.config.prompts.templates')}
+            </h3>
             <p className="text-xs text-[var(--text-2)]">
               {t('admin.config.prompts.templatesHelp')}
             </p>
 
             <div className="space-y-3">
               {/* Accordion for Tailor Resume Templates */}
-              <details className="group border border-[var(--border)] rounded-xl bg-white overflow-hidden" open>
+              <details
+                className="group border border-[var(--border)] rounded-xl bg-white overflow-hidden"
+                open
+              >
                 <summary className="flex items-center justify-between p-4 text-sm font-semibold cursor-pointer hover:bg-gray-50 list-none">
                   <span>{t('admin.config.prompts.tailor')}</span>
-                  <span className="text-xs text-[var(--text-3)] group-open:rotate-180 transition-transform">▼</span>
+                  <span className="text-xs text-[var(--text-3)] group-open:rotate-180 transition-transform">
+                    ▼
+                  </span>
                 </summary>
                 <div className="p-4 border-t border-[var(--border)] bg-gray-50/30 space-y-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.tailorNudge')}</label>
+                    <label className="text-xs font-semibold text-[var(--text-2)]">
+                      {t('admin.config.prompts.tailorNudge')}
+                    </label>
                     <textarea
                       className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
                       value={prompts.templates?.tailor?.nudge ?? ''}
-                      onChange={(e) => setPrompts({
-                        ...prompts,
-                        templates: {
-                          ...prompts.templates,
-                          tailor: {
-                            ...prompts.templates?.tailor,
-                            nudge: e.target.value
-                          }
-                        }
-                      })}
+                      onChange={(e) =>
+                        setPrompts({
+                          ...prompts,
+                          templates: {
+                            ...prompts.templates,
+                            tailor: {
+                              ...prompts.templates?.tailor,
+                              nudge: e.target.value,
+                            },
+                          },
+                        })
+                      }
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.tailorKeywords')}</label>
+                    <label className="text-xs font-semibold text-[var(--text-2)]">
+                      {t('admin.config.prompts.tailorKeywords')}
+                    </label>
                     <textarea
                       className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
                       value={prompts.templates?.tailor?.keywords ?? ''}
-                      onChange={(e) => setPrompts({
-                        ...prompts,
-                        templates: {
-                          ...prompts.templates,
-                          tailor: {
-                            ...prompts.templates?.tailor,
-                            keywords: e.target.value
-                          }
-                        }
-                      })}
+                      onChange={(e) =>
+                        setPrompts({
+                          ...prompts,
+                          templates: {
+                            ...prompts.templates,
+                            tailor: {
+                              ...prompts.templates?.tailor,
+                              keywords: e.target.value,
+                            },
+                          },
+                        })
+                      }
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.tailorFull')}</label>
+                    <label className="text-xs font-semibold text-[var(--text-2)]">
+                      {t('admin.config.prompts.tailorFull')}
+                    </label>
                     <textarea
                       className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
                       value={prompts.templates?.tailor?.full ?? ''}
-                      onChange={(e) => setPrompts({
-                        ...prompts,
-                        templates: {
-                          ...prompts.templates,
-                          tailor: {
-                            ...prompts.templates?.tailor,
-                            full: e.target.value
-                          }
-                        }
-                      })}
+                      onChange={(e) =>
+                        setPrompts({
+                          ...prompts,
+                          templates: {
+                            ...prompts.templates,
+                            tailor: {
+                              ...prompts.templates?.tailor,
+                              full: e.target.value,
+                            },
+                          },
+                        })
+                      }
                     />
                   </div>
                 </div>
@@ -454,35 +484,45 @@ export default function AdminConfigPage() {
               <details className="group border border-[var(--border)] rounded-xl bg-white overflow-hidden">
                 <summary className="flex items-center justify-between p-4 text-sm font-semibold cursor-pointer hover:bg-gray-50 list-none">
                   <span>{t('admin.config.prompts.coverOutreach')}</span>
-                  <span className="text-xs text-[var(--text-3)] group-open:rotate-180 transition-transform">▼</span>
+                  <span className="text-xs text-[var(--text-3)] group-open:rotate-180 transition-transform">
+                    ▼
+                  </span>
                 </summary>
                 <div className="p-4 border-t border-[var(--border)] bg-gray-50/30 space-y-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.coverLetter')}</label>
+                    <label className="text-xs font-semibold text-[var(--text-2)]">
+                      {t('admin.config.prompts.coverLetter')}
+                    </label>
                     <textarea
                       className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
                       value={prompts.templates?.cover_letter ?? ''}
-                      onChange={(e) => setPrompts({
-                        ...prompts,
-                        templates: {
-                          ...prompts.templates,
-                          cover_letter: e.target.value
-                        }
-                      })}
+                      onChange={(e) =>
+                        setPrompts({
+                          ...prompts,
+                          templates: {
+                            ...prompts.templates,
+                            cover_letter: e.target.value,
+                          },
+                        })
+                      }
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.outreach')}</label>
+                    <label className="text-xs font-semibold text-[var(--text-2)]">
+                      {t('admin.config.prompts.outreach')}
+                    </label>
                     <textarea
                       className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
                       value={prompts.templates?.outreach ?? ''}
-                      onChange={(e) => setPrompts({
-                        ...prompts,
-                        templates: {
-                          ...prompts.templates,
-                          outreach: e.target.value
-                        }
-                      })}
+                      onChange={(e) =>
+                        setPrompts({
+                          ...prompts,
+                          templates: {
+                            ...prompts.templates,
+                            outreach: e.target.value,
+                          },
+                        })
+                      }
                     />
                   </div>
                 </div>
@@ -492,20 +532,26 @@ export default function AdminConfigPage() {
               <details className="group border border-[var(--border)] rounded-xl bg-white overflow-hidden">
                 <summary className="flex items-center justify-between p-4 text-sm font-semibold cursor-pointer hover:bg-gray-50 list-none">
                   <span>{t('admin.config.prompts.interview')}</span>
-                  <span className="text-xs text-[var(--text-3)] group-open:rotate-180 transition-transform">▼</span>
+                  <span className="text-xs text-[var(--text-3)] group-open:rotate-180 transition-transform">
+                    ▼
+                  </span>
                 </summary>
                 <div className="p-4 border-t border-[var(--border)] bg-gray-50/30 space-y-2">
-                  <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.interviewDirectives')}</label>
+                  <label className="text-xs font-semibold text-[var(--text-2)]">
+                    {t('admin.config.prompts.interviewDirectives')}
+                  </label>
                   <textarea
                     className="w-full min-h-36 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
                     value={prompts.templates?.interview ?? ''}
-                    onChange={(e) => setPrompts({
-                      ...prompts,
-                      templates: {
-                        ...prompts.templates,
-                        interview: e.target.value
-                      }
-                    })}
+                    onChange={(e) =>
+                      setPrompts({
+                        ...prompts,
+                        templates: {
+                          ...prompts.templates,
+                          interview: e.target.value,
+                        },
+                      })
+                    }
                   />
                 </div>
               </details>
@@ -514,58 +560,72 @@ export default function AdminConfigPage() {
               <details className="group border border-[var(--border)] rounded-xl bg-white overflow-hidden">
                 <summary className="flex items-center justify-between p-4 text-sm font-semibold cursor-pointer hover:bg-gray-50 list-none">
                   <span>{t('admin.config.prompts.enrichment')}</span>
-                  <span className="text-xs text-[var(--text-3)] group-open:rotate-180 transition-transform">▼</span>
+                  <span className="text-xs text-[var(--text-3)] group-open:rotate-180 transition-transform">
+                    ▼
+                  </span>
                 </summary>
                 <div className="p-4 border-t border-[var(--border)] bg-gray-50/30 space-y-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.enrichmentAnalyze')}</label>
+                    <label className="text-xs font-semibold text-[var(--text-2)]">
+                      {t('admin.config.prompts.enrichmentAnalyze')}
+                    </label>
                     <textarea
                       className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
                       value={prompts.templates?.enrichment?.analyze ?? ''}
-                      onChange={(e) => setPrompts({
-                        ...prompts,
-                        templates: {
-                          ...prompts.templates,
-                          enrichment: {
-                            ...prompts.templates?.enrichment,
-                            analyze: e.target.value
-                          }
-                        }
-                      })}
+                      onChange={(e) =>
+                        setPrompts({
+                          ...prompts,
+                          templates: {
+                            ...prompts.templates,
+                            enrichment: {
+                              ...prompts.templates?.enrichment,
+                              analyze: e.target.value,
+                            },
+                          },
+                        })
+                      }
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.enrichmentEnhance')}</label>
+                    <label className="text-xs font-semibold text-[var(--text-2)]">
+                      {t('admin.config.prompts.enrichmentEnhance')}
+                    </label>
                     <textarea
                       className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
                       value={prompts.templates?.enrichment?.enhance ?? ''}
-                      onChange={(e) => setPrompts({
-                        ...prompts,
-                        templates: {
-                          ...prompts.templates,
-                          enrichment: {
-                            ...prompts.templates?.enrichment,
-                            enhance: e.target.value
-                          }
-                        }
-                      })}
+                      onChange={(e) =>
+                        setPrompts({
+                          ...prompts,
+                          templates: {
+                            ...prompts.templates,
+                            enrichment: {
+                              ...prompts.templates?.enrichment,
+                              enhance: e.target.value,
+                            },
+                          },
+                        })
+                      }
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-[var(--text-2)]">{t('admin.config.prompts.enrichmentRegenerate')}</label>
+                    <label className="text-xs font-semibold text-[var(--text-2)]">
+                      {t('admin.config.prompts.enrichmentRegenerate')}
+                    </label>
                     <textarea
                       className="w-full min-h-24 rounded-lg border border-[var(--border)] bg-white p-3 text-sm font-mono leading-6 focus:outline-none focus:ring-1 focus:ring-[var(--blue-700)]"
                       value={prompts.templates?.enrichment?.regenerate ?? ''}
-                      onChange={(e) => setPrompts({
-                        ...prompts,
-                        templates: {
-                          ...prompts.templates,
-                          enrichment: {
-                            ...prompts.templates?.enrichment,
-                            regenerate: e.target.value
-                          }
-                        }
-                      })}
+                      onChange={(e) =>
+                        setPrompts({
+                          ...prompts,
+                          templates: {
+                            ...prompts.templates,
+                            enrichment: {
+                              ...prompts.templates?.enrichment,
+                              regenerate: e.target.value,
+                            },
+                          },
+                        })
+                      }
                     />
                   </div>
                 </div>
@@ -602,62 +662,62 @@ export default function AdminConfigPage() {
         <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-white p-5">
           {(['openai', 'anthropic', 'google', 'openrouter', 'deepseek'] as ApiKeyProvider[]).map(
             (provider) => {
-            const status = apiKeyStatus.providers.find((item) => item.provider === provider);
-            const providerName = t(`admin.apiKeyProviders.${provider}.name`);
-            return (
-              <div key={provider} className="rounded-xl border border-[var(--border)] p-4">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold">{providerName}</p>
-                    <p className="text-xs text-[var(--text-3)]">
-                      {t(`admin.apiKeyProviders.${provider}.description`)}
-                    </p>
+              const status = apiKeyStatus.providers.find((item) => item.provider === provider);
+              const providerName = t(`admin.apiKeyProviders.${provider}.name`);
+              return (
+                <div key={provider} className="rounded-xl border border-[var(--border)] p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold">{providerName}</p>
+                      <p className="text-xs text-[var(--text-3)]">
+                        {t(`admin.apiKeyProviders.${provider}.description`)}
+                      </p>
+                      {status?.configured ? (
+                        <p className="mt-1 text-xs text-[var(--text-2)]">
+                          {t('admin.config.apiKeys.configured', { key: status.masked_key ?? '' })}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-xs text-[var(--text-3)]">
+                          {t('admin.config.apiKeys.notConfigured')}
+                        </p>
+                      )}
+                    </div>
                     {status?.configured ? (
-                      <p className="mt-1 text-xs text-[var(--text-2)]">
-                        {t('admin.config.apiKeys.configured', { key: status.masked_key ?? '' })}
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-xs text-[var(--text-3)]">
-                        {t('admin.config.apiKeys.notConfigured')}
-                      </p>
-                    )}
+                      <button
+                        className="text-xs font-semibold text-[var(--danger)] disabled:opacity-60"
+                        disabled={saving}
+                        onClick={() =>
+                          setConfirmDanger({
+                            title: t('admin.config.apiKeys.deleteTitle', {
+                              provider: providerName,
+                            }),
+                            description: t('admin.config.apiKeys.deleteDescription'),
+                            action: async () => {
+                              await deleteApiKey(provider);
+                              await refreshApiKeyStatus();
+                            },
+                          })
+                        }
+                        type="button"
+                      >
+                        {t('common.delete')}
+                      </button>
+                    ) : null}
                   </div>
-                  {status?.configured ? (
-                    <button
-                      className="text-xs font-semibold text-[var(--danger)] disabled:opacity-60"
-                      disabled={saving}
-                      onClick={() =>
-                        setConfirmDanger({
-                          title: t('admin.config.apiKeys.deleteTitle', {
-                            provider: providerName,
-                          }),
-                          description: t('admin.config.apiKeys.deleteDescription'),
-                          action: async () => {
-                            await deleteApiKey(provider);
-                            await refreshApiKeyStatus();
-                          },
-                        })
-                      }
-                      type="button"
-                    >
-                      {t('common.delete')}
-                    </button>
-                  ) : null}
+                  <input
+                    className="mt-3 w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
+                    placeholder={t('admin.config.apiKeys.newKey', {
+                      provider: providerName,
+                    })}
+                    type="password"
+                    value={apiKeyInputs[provider] ?? ''}
+                    onChange={(event) =>
+                      setApiKeyInputs((current) => ({ ...current, [provider]: event.target.value }))
+                    }
+                  />
                 </div>
-                <input
-                  className="mt-3 w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
-                  placeholder={t('admin.config.apiKeys.newKey', {
-                    provider: providerName,
-                  })}
-                  type="password"
-                  value={apiKeyInputs[provider] ?? ''}
-                  onChange={(event) =>
-                    setApiKeyInputs((current) => ({ ...current, [provider]: event.target.value }))
-                  }
-                />
-              </div>
-            );
-          }
+              );
+            }
           )}
           <button
             className="rounded-lg bg-[var(--blue-700)] px-4 py-2 text-sm text-white disabled:opacity-60"
@@ -716,8 +776,18 @@ export default function AdminConfigPage() {
               onClick={() => void loadLlmEvents()}
               type="button"
             >
-              <svg className={`h-3 w-3 ${eventsLoading ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+              <svg
+                className={`h-3 w-3 ${eventsLoading ? 'animate-spin' : ''}`}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+                />
               </svg>
               {t('admin.config.llmEvents.refresh')}
             </button>
@@ -736,7 +806,9 @@ export default function AdminConfigPage() {
             >
               <option value="">{t('admin.config.llmEvents.filters.allModes')}</option>
               <option value="llm">{t('admin.config.llmEvents.modes.llm')}</option>
-              <option value="template_fallback">{t('admin.config.llmEvents.modes.fallback')}</option>
+              <option value="template_fallback">
+                {t('admin.config.llmEvents.modes.fallback')}
+              </option>
             </select>
             <input
               className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
@@ -750,9 +822,13 @@ export default function AdminConfigPage() {
           </div>
 
           {eventsLoading && llmEvents.length === 0 ? (
-            <div className="py-12 text-center text-sm text-[var(--text-3)]">{t('admin.config.llmEvents.loading')}</div>
+            <div className="py-12 text-center text-sm text-[var(--text-3)]">
+              {t('admin.config.llmEvents.loading')}
+            </div>
           ) : llmEvents.length === 0 ? (
-            <div className="py-12 text-center text-sm text-[var(--text-3)]">{t('admin.config.llmEvents.empty')}</div>
+            <div className="py-12 text-center text-sm text-[var(--text-3)]">
+              {t('admin.config.llmEvents.empty')}
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left text-sm">
@@ -761,8 +837,12 @@ export default function AdminConfigPage() {
                     <th className="pb-3 pr-4">{t('admin.config.llmEvents.columns.timestamp')}</th>
                     <th className="pb-3 px-4">{t('admin.config.llmEvents.columns.feature')}</th>
                     <th className="pb-3 px-4">{t('admin.config.llmEvents.columns.mode')}</th>
-                    <th className="pb-3 px-4">{t('admin.config.llmEvents.columns.providerModel')}</th>
-                    <th className="pb-3 px-4">{t('admin.config.llmEvents.columns.statusReason')}</th>
+                    <th className="pb-3 px-4">
+                      {t('admin.config.llmEvents.columns.providerModel')}
+                    </th>
+                    <th className="pb-3 px-4">
+                      {t('admin.config.llmEvents.columns.statusReason')}
+                    </th>
                     <th className="pb-3 pl-4">{t('admin.config.llmEvents.columns.requestId')}</th>
                   </tr>
                 </thead>
@@ -772,22 +852,34 @@ export default function AdminConfigPage() {
                     const dateStr = new Date(event.createdAt).toLocaleString();
                     return (
                       <tr key={event._id} className="hover:bg-gray-50/50">
-                        <td className="py-3.5 pr-4 text-xs font-mono text-[var(--text-2)] whitespace-nowrap">{dateStr}</td>
-                        <td className="py-3.5 px-4 font-semibold text-[var(--text-1)]">{event.feature}</td>
+                        <td className="py-3.5 pr-4 text-xs font-mono text-[var(--text-2)] whitespace-nowrap">
+                          {dateStr}
+                        </td>
+                        <td className="py-3.5 px-4 font-semibold text-[var(--text-1)]">
+                          {event.feature}
+                        </td>
                         <td className="py-3.5 px-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                            isLlm
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}>
-                            {isLlm ? t('admin.config.llmEvents.modes.llm') : t('admin.config.llmEvents.modes.fallback')}
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              isLlm
+                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}
+                          >
+                            {isLlm
+                              ? t('admin.config.llmEvents.modes.llm')
+                              : t('admin.config.llmEvents.modes.fallback')}
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-xs">
                           {event.provider ? (
                             <div className="font-medium text-[var(--text-1)]">
                               {event.provider}
-                              {event.model && <span className="text-[var(--text-3)] font-normal font-mono ml-1">({event.model})</span>}
+                              {event.model && (
+                                <span className="text-[var(--text-3)] font-normal font-mono ml-1">
+                                  ({event.model})
+                                </span>
+                              )}
                             </div>
                           ) : (
                             <span className="text-[var(--text-3)]">—</span>
@@ -795,11 +887,16 @@ export default function AdminConfigPage() {
                         </td>
                         <td className="py-3.5 px-4 text-xs">
                           {isLlm ? (
-                            <span className="text-green-600 font-semibold">{t('admin.config.llmEvents.status.success')}</span>
+                            <span className="text-green-600 font-semibold">
+                              {t('admin.config.llmEvents.status.success')}
+                            </span>
                           ) : (
-                            <span className="text-amber-600 font-medium whitespace-nowrap" title={event.reason || ''}>
+                            <span
+                              className="text-amber-600 font-medium whitespace-nowrap"
+                              title={event.reason || ''}
+                            >
                               {t('admin.config.llmEvents.status.failed', {
-                                reason: event.reason || t('admin.config.llmEvents.status.unknown')
+                                reason: event.reason || t('admin.config.llmEvents.status.unknown'),
                               })}
                             </span>
                           )}

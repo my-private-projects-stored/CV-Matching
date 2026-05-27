@@ -72,6 +72,13 @@ interface ResumeResponse {
       processing_status: 'pending' | 'processing' | 'ready' | 'failed';
     };
     processed_resume: ProcessedResume | null;
+    builder_data?: {
+      sections?: Record<string, unknown>;
+      sectionMeta?: unknown[];
+      template?: string;
+      formatSettings?: Record<string, unknown>;
+      customSections?: Record<string, unknown>;
+    } | null;
     cover_letter?: string | null;
     outreach_message?: string | null;
     parent_id?: string | null; // For determining if resume is tailored

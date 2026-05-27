@@ -118,12 +118,7 @@ export {
 } from './candidate-profile';
 
 // Company operations
-export {
-  fetchMyCompany,
-  updateMyCompany,
-  fetchCompanyById,
-  type CompanyProfile,
-} from './company';
+export { fetchMyCompany, updateMyCompany, fetchCompanyById, type CompanyProfile } from './company';
 
 // Vector admin operations
 export {

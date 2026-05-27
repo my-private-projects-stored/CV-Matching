@@ -22,7 +22,10 @@ import {
   type RankedCandidateItem,
 } from '@/lib/api/applications';
 import { fetchJobById, type JobItem } from '@/lib/api/jobs';
-import { fetchCandidateProfileById, type CandidateProfileResponse } from '@/lib/api/candidate-profile';
+import {
+  fetchCandidateProfileById,
+  type CandidateProfileResponse,
+} from '@/lib/api/candidate-profile';
 import { downloadOriginalResumeFile } from '@/lib/api/resume';
 
 const ACTION_STATUSES: ApplicationStatus[] = ['interview', 'rejected', 'hired'];
@@ -72,7 +75,9 @@ export default function RecruiterCandidateDetailPage() {
       })
       .catch((requestError) => {
         if (!active) return;
-        setError(requestError instanceof Error ? requestError.message : t('errors.loadApplication'));
+        setError(
+          requestError instanceof Error ? requestError.message : t('errors.loadApplication')
+        );
         setFeedback(null);
       })
       .finally(() => {
@@ -93,7 +98,9 @@ export default function RecruiterCandidateDetailPage() {
       const updatedHistory = await fetchApplicationStatusHistory(applicationId);
       setHistory(updatedHistory.data.history ?? []);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : t('errors.statusUpdateFailed'));
+      setError(
+        requestError instanceof Error ? requestError.message : t('errors.statusUpdateFailed')
+      );
     } finally {
       setSaving(false);
     }
@@ -196,7 +203,10 @@ export default function RecruiterCandidateDetailPage() {
           <h2 className="text-sm font-semibold">{t('recruiter.candidateDetail.statusTimeline')}</h2>
           <div className="mt-3 space-y-2">
             {history.map((entry, index) => (
-              <div key={`${entry.changed_at}-${index}`} className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs">
+              <div
+                key={`${entry.changed_at}-${index}`}
+                className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs"
+              >
                 <span className="font-semibold">
                   {entry.from_status ? t(`status.${entry.from_status}`) : '-'} {'->'}{' '}
                   {t(`status.${entry.to_status}`)}

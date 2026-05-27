@@ -67,7 +67,9 @@ function ResetPasswordForm() {
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
       <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-[var(--blue-600)]">{t('auth.accountEyebrow')}</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-[var(--blue-600)]">
+          {t('auth.accountEyebrow')}
+        </p>
         <h1 className="mt-2 font-display text-4xl">{t('auth.setNewPassword')}</h1>
         <p className="mt-2 text-sm text-[var(--text-2)]">{t('auth.setNewPasswordHint')}</p>
       </div>

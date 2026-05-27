@@ -216,17 +216,18 @@ export default function CandidateRecommendationsPage() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetchMasterResume().catch(() => null), fetchResumeList(true).catch(() => [])]).then(
-      ([masterResume, resumeItems]) => {
-        if (!active) return;
-        if (masterResume?.resume_id) {
-          setMasterResumeId(masterResume.resume_id);
-        }
-        setResumes(resumeItems);
-        const master = resumeItems.find((item) => item.is_master);
-        setSelectedResumeId(master?.resume_id || resumeItems[0]?.resume_id || '');
+    Promise.all([
+      fetchMasterResume().catch(() => null),
+      fetchResumeList(true).catch(() => []),
+    ]).then(([masterResume, resumeItems]) => {
+      if (!active) return;
+      if (masterResume?.resume_id) {
+        setMasterResumeId(masterResume.resume_id);
       }
-    );
+      setResumes(resumeItems);
+      const master = resumeItems.find((item) => item.is_master);
+      setSelectedResumeId(master?.resume_id || resumeItems[0]?.resume_id || '');
+    });
     return () => {
       active = false;
     };

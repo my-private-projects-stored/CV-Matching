@@ -26,7 +26,9 @@ export default function RecruiterCompanyPage() {
       })
       .catch((requestError) => {
         if (!active) return;
-        setError(requestError instanceof Error ? requestError.message : t('errors.loadCompanyProfile'));
+        setError(
+          requestError instanceof Error ? requestError.message : t('errors.loadCompanyProfile')
+        );
         setProfile({});
       })
       .finally(() => {

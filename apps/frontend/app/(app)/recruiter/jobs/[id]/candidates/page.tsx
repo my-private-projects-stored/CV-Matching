@@ -74,7 +74,9 @@ export default function RecruiterCandidatesPage() {
       setSelectedIds(new Set());
       setError(null);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : t('errors.loadRankedCandidates'));
+      setError(
+        requestError instanceof Error ? requestError.message : t('errors.loadRankedCandidates')
+      );
       setCandidates([]);
     } finally {
       setLoading(false);
@@ -118,9 +120,7 @@ export default function RecruiterCandidatesPage() {
         applicationIds: Array.from(selectedIds),
         status: bulkStatus,
       });
-      setMessage(
-        t('recruiter.candidates.bulkUpdated', { count: result.data.updated_count })
-      );
+      setMessage(t('recruiter.candidates.bulkUpdated', { count: result.data.updated_count }));
       setConfirmBulk(false);
       await loadCandidates();
     } catch (requestError) {
@@ -237,6 +237,7 @@ export default function RecruiterCandidatesPage() {
           <div className="flex items-center gap-3 border-b border-[var(--border)] px-4 py-3">
             <input
               type="checkbox"
+              className="h-4 w-4 cursor-pointer rounded border-[var(--border)] text-[var(--blue-700)] focus:ring-[var(--blue-500)]"
               checked={allVisibleSelected}
               onChange={toggleAll}
               aria-label={t('recruiter.candidates.selectVisible')}
@@ -249,16 +250,19 @@ export default function RecruiterCandidatesPage() {
             {candidates.map((candidate) => (
               <div
                 key={candidate.application_id}
-                className="grid gap-4 px-4 py-4 text-sm md:grid-cols-[32px_1fr_180px_160px_120px]"
+                className="grid gap-4 px-4 py-4 text-sm md:grid-cols-[32px_1fr_180px_160px_120px] items-center"
               >
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(candidate.application_id)}
-                  onChange={() => toggleCandidate(candidate.application_id)}
-                  aria-label={t('recruiter.candidates.selectCandidate', {
-                    name: candidate.candidate.full_name,
-                  })}
-                />
+                <div className="flex items-center justify-start">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 cursor-pointer rounded border-[var(--border)] text-[var(--blue-700)] focus:ring-[var(--blue-500)]"
+                    checked={selectedIds.has(candidate.application_id)}
+                    onChange={() => toggleCandidate(candidate.application_id)}
+                    aria-label={t('recruiter.candidates.selectCandidate', {
+                      name: candidate.candidate.full_name,
+                    })}
+                  />
+                </div>
                 <div>
                   <p className="font-semibold">{candidate.candidate.full_name}</p>
                   <p className="text-xs text-[var(--text-3)]">{candidate.candidate.email}</p>
@@ -267,7 +271,10 @@ export default function RecruiterCandidatesPage() {
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {candidate.explainability.matched_keywords.slice(0, 6).map((keyword) => (
-                      <span key={keyword} className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] text-[var(--success)]">
+                      <span
+                        key={keyword}
+                        className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] text-[var(--success)]"
+                      >
                         {keyword}
                       </span>
                     ))}
@@ -290,7 +297,7 @@ export default function RecruiterCandidatesPage() {
                   <AiStatusBadge status={candidate.ai_status} />
                 </div>
                 <Link
-                  className="rounded-lg border border-[var(--border)] px-3 py-2 text-center text-xs font-semibold text-[var(--blue-700)]"
+                  className="inline-flex items-center justify-center rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-center text-xs font-semibold text-[var(--blue-700)] hover:bg-slate-50 transition-colors w-full"
                   href={`/recruiter/jobs/${jobId}/candidates/${candidate.application_id}`}
                 >
                   {t('common.review')}

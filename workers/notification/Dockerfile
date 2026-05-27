@@ -5,6 +5,6 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev
 
-COPY index.js ./
+COPY *.js ./
 
 CMD ["npm", "run", "start"]
