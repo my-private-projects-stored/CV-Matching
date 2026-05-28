@@ -9,7 +9,7 @@ import { completeJson, completeText, getLlmFailureReason, logLlmFallback } from 
 import { renderResumePdf } from "./pdf-renderer.service.js";
 import { extractRawTextFromFile, parseStructuredDataFromText } from "./resume-parsing.service.js";
 import { deleteResumeVector, upsertResumeVector } from "./vector-index.service.js";
-import { KEYWORD_STOPWORDS } from "./keyword-analysis.service.js";
+import { KEYWORD_STOPWORDS, tokenizeAllTokens } from "./keyword-analysis.service.js";
 
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 const DEFAULT_CANDIDATE_ID = "000000000000000000000001";
@@ -212,17 +212,9 @@ function syncParsedDataFromBuilder(parsedData, builderData) {
 }
 
 function extractJobKeywords(content, limit = 10) {
-  const words = String(content || "")
-    .toLowerCase()
-    .match(/[a-z0-9+#.]{3,}/g);
-
-  if (!Array.isArray(words)) {
-    return [];
-  }
-
+  const words = tokenizeAllTokens(content);
   const scores = new Map();
   for (const word of words) {
-    if (JOB_KEYWORD_STOPWORDS.has(word)) continue;
     scores.set(word, (scores.get(word) || 0) + 1);
   }
 
@@ -1239,11 +1231,7 @@ function resolveOutputLanguage(language) {
 }
 
 function tokenizeForMatch(value = "") {
-  const words = String(value || "")
-    .toLowerCase()
-    .match(/[a-z0-9+#.]{3,}/g);
-  if (!Array.isArray(words)) return [];
-  return words.filter((word) => !JOB_KEYWORD_STOPWORDS.has(word));
+  return tokenizeAllTokens(value);
 }
 
 function buildHighlights(text, matchedKeywords = [], missingKeywords = []) {

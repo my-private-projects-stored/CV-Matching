@@ -47,7 +47,7 @@ export default function RecruiterJobNewPage() {
     setError(null);
     try {
       const created = await createJob(form);
-      router.push(`/recruiter/jobs/${created._id}/candidates`);
+      router.push('/recruiter/jobs');
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : t('errors.loadJobs'));
     } finally {

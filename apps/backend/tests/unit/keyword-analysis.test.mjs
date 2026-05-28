@@ -49,6 +49,23 @@ test("tokenizeAllTokens extracts tokens including duplicates and ignores stopwor
   assert.deepEqual(tokens, ["node.js", "mongodb", "node.js", "python"]);
 });
 
+test("tokenizeAllTokens normalizes trailing dots and filters expanded stopwords", () => {
+  // "USERS." -> "users" (should be filtered since "users" is a stopword)
+  // "TEAMS." -> "teams" (should be filtered since "teams" is a stopword)
+  // "databases" -> "databases" (should be filtered)
+  // "requirements" -> "requirements" (should be filtered)
+  // "Restful" -> "restful" (not a stopword, should be kept)
+  // "Devops" -> "devops" (not a stopword, should be kept)
+  const tokens = tokenizeAllTokens("We need TEAMS. and USERS. for managing databases and requirements. Plus Restful Devops software.");
+  assert.ok(!tokens.includes("users"));
+  assert.ok(!tokens.includes("teams"));
+  assert.ok(!tokens.includes("databases"));
+  assert.ok(!tokens.includes("requirements"));
+  assert.ok(!tokens.includes("software"));
+  assert.ok(tokens.includes("restful"));
+  assert.ok(tokens.includes("devops"));
+});
+
 test("computeKeywordAnalysis calculates correct BM25 score with custom idfMap and docTokens", () => {
   const jobKeywords = ["Node.js", "MongoDB"];
   const resumeKeywords = ["node.js"];

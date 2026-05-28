@@ -11,6 +11,7 @@ import {
   fetchMasterResume,
   fetchResumeList,
   getJobRecommendations,
+  fetchMyApplicationHistory,
   type JobRecommendation,
   type RecommendationMeta,
   type ResumeListItem,
@@ -75,10 +76,12 @@ function JobRecommendationCard({
   job,
   onApply,
   disabled,
+  isApplied,
 }: {
   job: JobRecommendation;
   onApply: (job: JobRecommendation) => void;
   disabled?: boolean;
+  isApplied: boolean;
 }) {
   const { t } = useTranslations();
   const tierColor =
@@ -154,14 +157,24 @@ function JobRecommendationCard({
         >
           {t('recommendations.viewJob')}
         </Link>
-        <button
-          type="button"
-          onClick={() => onApply(job)}
-          disabled={disabled}
-          className="flex-1 rounded-lg border border-[var(--border)] py-2 text-sm font-semibold text-[var(--text-2)] transition hover:border-[var(--blue-700)] hover:text-[var(--blue-700)]"
-        >
-          {t('common.apply')}
-        </button>
+        {isApplied ? (
+          <button
+            type="button"
+            disabled
+            className="flex-1 rounded-lg bg-slate-100 border border-slate-200 py-2 text-sm font-semibold text-slate-400 cursor-not-allowed"
+          >
+            {t('jobs.alreadyApplied')}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onApply(job)}
+            disabled={disabled}
+            className="flex-1 rounded-lg border border-[var(--border)] py-2 text-sm font-semibold text-[var(--text-2)] transition hover:border-[var(--blue-700)] hover:text-[var(--blue-700)]"
+          >
+            {t('common.apply')}
+          </button>
+        )}
       </div>
     </article>
   );
@@ -209,6 +222,7 @@ export default function CandidateRecommendationsPage() {
   const [applyLoading, setApplyLoading] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [applyMessage, setApplyMessage] = useState<string | null>(null);
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
 
   // Filter state
   const [limit, setLimit] = useState(10);
@@ -219,7 +233,8 @@ export default function CandidateRecommendationsPage() {
     Promise.all([
       fetchMasterResume().catch(() => null),
       fetchResumeList(true).catch(() => []),
-    ]).then(([masterResume, resumeItems]) => {
+      fetchMyApplicationHistory({ limit: 100 }).catch(() => ({ data: { applications: [] } })),
+    ]).then(([masterResume, resumeItems, appHistory]) => {
       if (!active) return;
       if (masterResume?.resume_id) {
         setMasterResumeId(masterResume.resume_id);
@@ -227,6 +242,10 @@ export default function CandidateRecommendationsPage() {
       setResumes(resumeItems);
       const master = resumeItems.find((item) => item.is_master);
       setSelectedResumeId(master?.resume_id || resumeItems[0]?.resume_id || '');
+      
+      const appList = appHistory?.data?.applications || [];
+      const ids = new Set(appList.map((app) => app.job?.id).filter(Boolean) as string[]);
+      setAppliedJobIds(ids);
     });
     return () => {
       active = false;
@@ -280,6 +299,11 @@ export default function CandidateRecommendationsPage() {
     try {
       await createApplication({ job_id: applyJob.job_id, resume_id: selectedResumeId });
       setApplyMessage(t('jobs.applicationSubmitted'));
+      setAppliedJobIds((prev) => {
+        const next = new Set(prev);
+        next.add(applyJob.job_id);
+        return next;
+      });
       setTimeout(() => {
         setApplyJob(null);
         setApplyMessage(null);
@@ -413,6 +437,7 @@ export default function CandidateRecommendationsPage() {
               job={job}
               onApply={openApplyModal}
               disabled={applyLoading}
+              isApplied={appliedJobIds.has(job.job_id)}
             />
           ))}
         </div>
