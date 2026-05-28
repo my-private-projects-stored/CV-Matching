@@ -33,12 +33,14 @@ import {
 } from '@/lib/api/config';
 import { usePageHeader } from '@/lib/i18n/use-page-header';
 import { useTranslations } from '@/lib/i18n/translations';
+import { useStatusCache } from '@/lib/context/status-cache';
 
 type Tab = 'llm' | 'prompts' | 'features' | 'apiKeys' | 'language' | 'privacy' | 'llmEvents';
 
 export default function AdminConfigPage() {
   const header = usePageHeader('adminConfig');
   const { t } = useTranslations();
+  const { refreshStatus } = useStatusCache();
   const [tab, setTab] = useState<Tab>('llm');
   const [llm, setLlm] = useState<LLMConfig | null>(null);
   const [features, setFeatures] = useState<FeatureConfig | null>(null);
@@ -170,6 +172,7 @@ export default function AdminConfigPage() {
       const result = await testLlmConnection(llm);
       if (result.healthy) {
         setMessage(t('admin.config.messages.connectionOk'));
+        void refreshStatus();
       } else {
         setError(result.error || t('admin.config.messages.connectionFailed'));
       }
@@ -266,7 +269,9 @@ export default function AdminConfigPage() {
               disabled={saving}
               onClick={() =>
                 askSave(async () => {
-                  setLlm(await updateLlmConfig(llm));
+                  const updated = await updateLlmConfig(llm);
+                  setLlm(updated);
+                  void refreshStatus();
                 })
               }
             >
