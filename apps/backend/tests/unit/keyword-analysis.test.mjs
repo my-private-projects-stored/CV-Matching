@@ -56,12 +56,25 @@ test("tokenizeAllTokens normalizes trailing dots and filters expanded stopwords"
   // "requirements" -> "requirements" (should be filtered)
   // "Restful" -> "restful" (not a stopword, should be kept)
   // "Devops" -> "devops" (not a stopword, should be kept)
-  const tokens = tokenizeAllTokens("We need TEAMS. and USERS. for managing databases and requirements. Plus Restful Devops software.");
+  const tokens = tokenizeAllTokens("We need TEAMS. and USERS. for managing databases and requirements. Plus Restful Devops software seeking description join highly responsive friendly web tasks involve translate designs quality maximum.");
   assert.ok(!tokens.includes("users"));
   assert.ok(!tokens.includes("teams"));
   assert.ok(!tokens.includes("databases"));
   assert.ok(!tokens.includes("requirements"));
   assert.ok(!tokens.includes("software"));
+  assert.ok(!tokens.includes("seeking"));
+  assert.ok(!tokens.includes("description"));
+  assert.ok(!tokens.includes("join"));
+  assert.ok(!tokens.includes("highly"));
+  assert.ok(!tokens.includes("responsive"));
+  assert.ok(!tokens.includes("friendly"));
+  assert.ok(!tokens.includes("web"));
+  assert.ok(!tokens.includes("tasks"));
+  assert.ok(!tokens.includes("involve"));
+  assert.ok(!tokens.includes("translate"));
+  assert.ok(!tokens.includes("designs"));
+  assert.ok(!tokens.includes("quality"));
+  assert.ok(!tokens.includes("maximum"));
   assert.ok(tokens.includes("restful"));
   assert.ok(tokens.includes("devops"));
 });

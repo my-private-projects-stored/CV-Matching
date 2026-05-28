@@ -27,7 +27,7 @@ function createScoringError(message, code, statusCode = 503, options = {}) {
   return error;
 }
 
-function extractPointVector(point) {
+export function extractPointVector(point) {
   if (Array.isArray(point?.vector)) {
     return point.vector;
   }
@@ -39,7 +39,7 @@ function extractPointVector(point) {
   return null;
 }
 
-function cosineSimilarity(vectorA, vectorB) {
+export function cosineSimilarity(vectorA, vectorB) {
   if (!Array.isArray(vectorA) || !Array.isArray(vectorB) || vectorA.length !== vectorB.length) {
     throw createScoringError("Vector dimension mismatch", "vector_dim_mismatch", 422, {
       retryable: false,

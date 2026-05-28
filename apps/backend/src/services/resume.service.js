@@ -8,8 +8,9 @@ import { generateEmbedding } from "./embedding.service.js";
 import { completeJson, completeText, getLlmFailureReason, logLlmFallback } from "./llm.service.js";
 import { renderResumePdf } from "./pdf-renderer.service.js";
 import { extractRawTextFromFile, parseStructuredDataFromText } from "./resume-parsing.service.js";
-import { deleteResumeVector, upsertResumeVector } from "./vector-index.service.js";
-import { KEYWORD_STOPWORDS, tokenizeAllTokens } from "./keyword-analysis.service.js";
+import { deleteResumeVector, upsertResumeVector, getResumeVectorPoint } from "./vector-index.service.js";
+import { KEYWORD_STOPWORDS, tokenizeAllTokens, fetchIdfsForKeywords, computeKeywordAnalysis } from "./keyword-analysis.service.js";
+import { cosineSimilarity, extractPointVector } from "./semantic-search.service.js";
 
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 const DEFAULT_CANDIDATE_ID = "000000000000000000000001";
@@ -19,7 +20,19 @@ const ALLOWED_UPLOAD_TYPES = new Set([
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "text/plain",
 ]);
+const AllowedUploadTypes = ALLOWED_UPLOAD_TYPES;
 const JOB_KEYWORD_STOPWORDS = KEYWORD_STOPWORDS;
+
+export const jdMatchDependencies = {
+  getResumeVectorPoint,
+  generateEmbedding,
+  fetchIdfsForKeywords,
+  computeKeywordAnalysis,
+  cosineSimilarity,
+  extractPointVector,
+  tokenizeAllTokens,
+};
+
 const SUPPORTED_OUTPUT_LANGUAGES = new Set(["en", "vi", "auto"]);
 const DEFAULT_BUILDER_FORMAT_SETTINGS = {
   pageSize: "A4",
@@ -1283,9 +1296,43 @@ export async function buildResumeJdMatch(resumeId, input = {}) {
   const resumeTokens = new Set(tokenizeForMatch(resumeText));
   const matchedKeywords = jdKeywords.filter((keyword) => resumeTokens.has(keyword)).map(toDisplayKeyword);
   const missingKeywords = jdKeywords.filter((keyword) => !resumeTokens.has(keyword)).map(toDisplayKeyword);
-  const matchPercentage = jdKeywords.length
+
+  let matchPercentage = jdKeywords.length
     ? Math.round((matchedKeywords.length / jdKeywords.length) * 100)
     : 0;
+  let keywordScore = jdKeywords.length ? matchedKeywords.length / jdKeywords.length : 0;
+  let semanticScore = null;
+  let hybridScore = null;
+
+  if (resume.qdrantId) {
+    try {
+      const [resumePoint, jobVector, { idfMap }] = await Promise.all([
+        jdMatchDependencies.getResumeVectorPoint(resume.qdrantId, { withVector: true }),
+        jdMatchDependencies.generateEmbedding(jobText),
+        jdMatchDependencies.fetchIdfsForKeywords(jdKeywords, "resume"),
+      ]);
+
+      const resumeVector = resumePoint ? jdMatchDependencies.extractPointVector(resumePoint) : null;
+      if (resumeVector && jobVector) {
+        const rawSemantic = jdMatchDependencies.cosineSimilarity(jobVector, resumeVector);
+        semanticScore = Math.max(0, Math.min(1, rawSemantic));
+
+        const docTokens = jdMatchDependencies.tokenizeAllTokens(resumeText);
+        const keywordAnalysis = jdMatchDependencies.computeKeywordAnalysis(jdKeywords, [...resumeTokens], {
+          docTokens,
+          idfMap,
+        });
+        keywordScore = Math.max(0, Math.min(1, keywordAnalysis.keywordScore));
+
+        // Hybrid weight matches recruiter config (0.65 semantic, 0.35 keyword)
+        hybridScore = 0.65 * semanticScore + 0.35 * keywordScore;
+        matchPercentage = Math.round(hybridScore * 100);
+      }
+    } catch (error) {
+      console.warn("Failed to compute hybrid score for JD match, falling back to keyword ratio:", error?.message || error);
+    }
+  }
+
   const includeHighlights = input.include_highlights !== false;
   const recommendations = missingKeywords.slice(0, 8).map(
     (keyword) => `Add evidence for ${keyword} where it is truthful and relevant.`
@@ -1295,7 +1342,8 @@ export async function buildResumeJdMatch(resumeId, input = {}) {
     resume_id: String(resume._id),
     job_id: input.job_id || null,
     match_percentage: matchPercentage,
-    keyword_score: matchPercentage,
+    keyword_score: Math.round(keywordScore * 100),
+    semantic_score: semanticScore !== null ? Math.round(semanticScore * 100) : null,
     matched_keywords: matchedKeywords,
     missing_keywords: missingKeywords,
     jd_highlights: includeHighlights ? buildHighlights(jobText, matchedKeywords, missingKeywords) : [],

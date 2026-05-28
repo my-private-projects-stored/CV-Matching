@@ -4,6 +4,7 @@ import { useTranslations } from '@/lib/i18n/translations';
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { PageHeader, ErrorBanner } from '@/components/ui';
 import { GenerationModeBadge } from '@/components/ui/GenerationModeBadge';
 import {
@@ -104,6 +105,7 @@ function renderHighlights(segments: Array<{ text: string; type: string }>) {
 export default function CandidateOptimizePage() {
   const header = usePageHeader('candidateOptimize');
   const { t } = useTranslations();
+  const router = useRouter();
   const [resumes, setResumes] = useState<ResumeListItem[]>([]);
   const [resumeId, setResumeId] = useState('');
   const [tab, setTab] = useState<'jd' | 'enrichment'>('jd');
@@ -273,6 +275,7 @@ export default function CandidateOptimizePage() {
       await loadResumes();
       if (newResumeId) {
         setResumeId(newResumeId);
+        router.push(`/candidate/resumes/${newResumeId}/builder`);
       }
     } catch (requestError) {
       setError(
@@ -294,6 +297,10 @@ export default function CandidateOptimizePage() {
       setSuggestions(extractSuggestions(result));
       setSuccess(t('optimize.successSaved'));
       await loadResumes();
+      const newResumeId = result.data?.resume_id;
+      if (newResumeId) {
+        router.push(`/candidate/resumes/${newResumeId}/builder`);
+      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : t('errors.saveResumeFailed'));
     } finally {

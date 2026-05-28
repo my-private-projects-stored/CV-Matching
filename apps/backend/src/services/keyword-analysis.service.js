@@ -12,7 +12,11 @@ export const KEYWORD_STOPWORDS = new Set([
   "requirements", "benefits", "platforms", "databases", "developers", "engineers", "programmers", "analysts", "designers", "consultants", "administrators", "specialists", "experts",
   "companies", "clients", "customers", "partners", "candidates", "applicants", "recruiters", "managers", "leaders", "directors", "employees", "contractors", "interns", "students", "graduates",
   "software", "application", "applications", "database", "api", "apis", "server", "servers", "framework", "frameworks", "program", "programs", "code", "coding", "process", "processes",
-  "problem", "solving", "paced", "preferred", "qualification", "qualifications", "environment", "flag", "flags", "transaction", "transactions", "solution", "solutions"
+  "problem", "solving", "paced", "preferred", "qualification", "qualifications", "environment", "flag", "flags", "transaction", "transactions", "solution", "solutions",
+
+  // Additional generic words from JD contexts
+  "description", "descriptions", "seeking", "seek", "seeks", "join", "joining", "highly", "responsive", "friendly", "web", "task", "tasks", "involve", "involves", "involved", "involving",
+  "translate", "translating", "translation", "designs", "quality", "maximum", "welcome", "welcoming"
 ]);
 
 function toArray(value) {
