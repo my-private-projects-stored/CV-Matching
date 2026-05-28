@@ -6,6 +6,8 @@ import {
   computeKeywordAnalysis,
   extractJobKeywords,
   extractResumeKeywords,
+  fetchIdfsForKeywords,
+  tokenizeAllTokens,
 } from "./keyword-analysis.service.js";
 import {
   getJobVectorPoint,
@@ -150,7 +152,17 @@ export async function buildHybridScoreForPair({
     throw new Error("Job or Resume not found for hybrid scoring");
   }
 
-  const keywordAnalysis = computeKeywordAnalysis(extractJobKeywords(job), extractResumeKeywords(resume));
+  const jobKeywords = extractJobKeywords(job);
+  const resumeKeywords = extractResumeKeywords(resume);
+
+  // Fetch BM25 IDFs for jobKeywords from Resume collection (corpus we are scoring against)
+  const { idfMap } = await fetchIdfsForKeywords(jobKeywords, "resume");
+  const docTokens = tokenizeAllTokens(resume.rawText || "");
+
+  const keywordAnalysis = computeKeywordAnalysis(jobKeywords, resumeKeywords, {
+    docTokens,
+    idfMap,
+  });
 
   const boundedSemantic = boundScore(semanticScore);
   const boundedKeyword = boundScore(keywordAnalysis.keywordScore);

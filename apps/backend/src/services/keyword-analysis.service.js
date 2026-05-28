@@ -1,3 +1,6 @@
+import Resume from "../models/Resume.js";
+import Job from "../models/Job.js";
+
 export const KEYWORD_STOPWORDS = new Set([
   // Basic English Stopwords
   "a", "an", "and", "are", "as", "at", "be", "by", "can", "for", "from", "have", "in", "is", "it", "of", "on", "or", "our", "that", "the", "this", "to", "we", "with", "you", "your", "will", "about", "above", "after", "again", "against", "all", "am", "any", "because", "been", "before", "being", "below", "between", "both", "but", "could", "did", "do", "does", "doing", "down", "during", "each", "few", "further", "had", "has", "having", "he", "her", "here", "hers", "herself", "him", "himself", "his", "how", "if", "into", "its", "itself", "me", "more", "most", "my", "myself", "no", "nor", "not", "once", "only", "other", "ought", "ours", "ourselves", "out", "over", "own", "same", "she", "should", "so", "some", "such", "than", "their", "theirs", "them", "themselves", "then", "there", "these", "they", "this", "those", "through", "too", "under", "until", "up", "very", "was", "were", "what", "when", "where", "which", "who", "whom", "why", "would", "null", "undefined",
@@ -94,13 +97,116 @@ export function extractResumeKeywords(resumeDoc = {}, { limit = 80 } = {}) {
   );
 }
 
-export function computeKeywordAnalysis(jobKeywords = [], resumeKeywords = []) {
+export function tokenizeAllTokens(value = "") {
+  const text = String(value || "").toLowerCase();
+  const tokens = text.match(/[\p{L}\p{N}][\p{L}\p{N}+#.]{1,}/gu) || [];
+  const result = [];
+  for (const token of tokens) {
+    const normalized = normalizeKeyword(token);
+    if (normalized && !KEYWORD_STOPWORDS.has(normalized)) {
+      result.push(normalized);
+    }
+  }
+  return result;
+}
+
+export async function fetchIdfsForKeywords(keywords = [], corpusType = "resume") {
+  const Model = corpusType === "job" ? Job : Resume;
+  const uniqueKws = [...new Set(keywords.map(normalizeKeyword).filter(Boolean))];
+
+  if (uniqueKws.length === 0) return { idfMap: {}, totalDocs: 0 };
+
+  try {
+    const totalDocs = await Model.countDocuments();
+    if (totalDocs === 0) return { idfMap: {}, totalDocs: 0 };
+
+    const idfMap = {};
+    const counts = await Promise.all(
+      uniqueKws.map(async (kw) => {
+        let query;
+        if (corpusType === "job") {
+          query = {
+            $or: [
+              { keywords: kw },
+              { title: { $regex: new RegExp(`\\b${escapeRegExp(kw)}\\b`, "i") } }
+            ]
+          };
+        } else {
+          query = {
+            $or: [
+              { "parsedData.skills": kw },
+              { "parsedData.additional.technicalSkills": kw },
+              { "builderData.sections.additional.technicalSkills": kw }
+            ]
+          };
+        }
+        const n = await Model.countDocuments(query);
+        // BM25 IDF formula
+        const idf = Math.max(0.0001, Math.log(1 + (totalDocs - n + 0.5) / (n + 0.5)));
+        return { kw, idf };
+      })
+    );
+
+    for (const { kw, idf } of counts) {
+      idfMap[kw] = idf;
+    }
+
+    return { idfMap, totalDocs };
+  } catch (error) {
+    console.error("Failed to fetch IDFs:", error);
+    return { idfMap: {}, totalDocs: 0 };
+  }
+}
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function computeKeywordAnalysis(
+  jobKeywords = [],
+  resumeKeywords = [],
+  options = {}
+) {
   const jobSet = new Set(jobKeywords.map(normalizeKeyword).filter(Boolean));
   const resumeSet = new Set(resumeKeywords.map(normalizeKeyword).filter(Boolean));
 
   const matchedKeywords = [...jobSet].filter((keyword) => resumeSet.has(keyword));
   const missingKeywords = [...jobSet].filter((keyword) => !resumeSet.has(keyword));
-  const keywordScore = jobSet.size === 0 ? 0 : matchedKeywords.length / jobSet.size;
+
+  let keywordScore = 0;
+  if (jobSet.size > 0) {
+    const docTokens = options.docTokens || [...resumeSet];
+    const docLen = docTokens.length;
+    const avgdl = options.avgdl || docLen || 1;
+    const k1 = options.k1 ?? 1.2;
+    const b = options.b ?? 0.75;
+    const idfMap = options.idfMap || {};
+
+    // Count term frequencies
+    const tfMap = {};
+    for (const token of docTokens) {
+      const normToken = normalizeKeyword(token);
+      if (normToken) {
+        tfMap[normToken] = (tfMap[normToken] || 0) + 1;
+      }
+    }
+
+    let totalScore = 0;
+    let maxPossibleScore = 0;
+
+    for (const q of jobSet) {
+      const idf = idfMap[q] ?? 1.0; // Default to 1.0 if not provided
+      const tf = tfMap[q] ?? 0;
+      
+      const termScore = idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * (docLen / avgdl)));
+      totalScore += termScore;
+      
+      const maxTermScore = idf * (1 * (k1 + 1)) / (1 + k1);
+      maxPossibleScore += maxTermScore;
+    }
+
+    keywordScore = maxPossibleScore === 0 ? 0 : Math.min(1.0, totalScore / maxPossibleScore);
+  }
 
   return {
     matchedKeywords,
@@ -108,4 +214,6 @@ export function computeKeywordAnalysis(jobKeywords = [], resumeKeywords = []) {
     keywordScore,
   };
 }
+
+
 

@@ -7,6 +7,8 @@ import {
   computeKeywordAnalysis,
   extractJobKeywords,
   extractResumeKeywords,
+  fetchIdfsForKeywords,
+  tokenizeAllTokens,
 } from "./keyword-analysis.service.js";
 import {
   searchJobVectorsByResumeVector,
@@ -124,6 +126,7 @@ export async function getJobRecommendationsForResume(resumeId, options = {}) {
 
   const jobById = new Map(jobs.map((j) => [String(j._id), j]));
   const resumeKeywords = extractResumeKeywords(resume);
+  const { idfMap } = await fetchIdfsForKeywords(resumeKeywords, "job");
 
   // 4. Compute hybrid scores and build result
   const results = [];
@@ -134,7 +137,21 @@ export async function getJobRecommendationsForResume(resumeId, options = {}) {
     if (!job) continue;
 
     const jobKeywords = extractJobKeywords(job);
-    const keywordAnalysis = computeKeywordAnalysis(jobKeywords, resumeKeywords);
+    const docTokens = tokenizeAllTokens(
+      [
+        job.title,
+        job.description,
+        job.requirements,
+        job.benefits,
+        job.cleanText,
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
+    const keywordAnalysis = computeKeywordAnalysis(resumeKeywords, jobKeywords, {
+      docTokens,
+      idfMap,
+    });
     const keywordScore = keywordAnalysis.keywordScore;
     const hybridScore = computeHybridScore(meta.semanticScore, keywordScore, semanticWeight);
 
@@ -258,6 +275,7 @@ export async function getResumeRecommendationsForJob(jobId, options = {}) {
   }
 
   const jobKeywords = extractJobKeywords(job);
+  const { idfMap } = await fetchIdfsForKeywords(jobKeywords, "resume");
 
   // 4. Compute hybrid scores and build result
   const results = [];
@@ -268,7 +286,11 @@ export async function getResumeRecommendationsForJob(jobId, options = {}) {
     if (!resume) continue;
 
     const resumeKeywords = extractResumeKeywords(resume);
-    const keywordAnalysis = computeKeywordAnalysis(jobKeywords, resumeKeywords);
+    const docTokens = tokenizeAllTokens(resume.rawText || "");
+    const keywordAnalysis = computeKeywordAnalysis(jobKeywords, resumeKeywords, {
+      docTokens,
+      idfMap,
+    });
     const keywordScore = keywordAnalysis.keywordScore;
     const hybridScore = computeHybridScore(meta.semanticScore, keywordScore, semanticWeight);
 

@@ -54,7 +54,7 @@ const navConfig: Record<
       groupKey: 'nav.groups.system',
       items: [
         { labelKey: 'nav.admin.config', href: '/admin/config' },
-        { labelKey: 'nav.admin.vectors', href: '/admin/vectors' },
+        // { labelKey: 'nav.admin.vectors', href: '/admin/vectors' },
         { labelKey: 'nav.admin.users', href: '/admin/users' },
       ],
     },
