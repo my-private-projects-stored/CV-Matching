@@ -292,13 +292,22 @@ export async function restoreResumeVersion(
 
 export async function updateResume(
   resumeId: string,
-  resumeData: ProcessedResume
+  resumeData: ResumeData
 ): Promise<ResumeResponse['data']> {
-  const res = await apiPatch(`/resumes/${encodeURIComponent(resumeId)}`, resumeData);
+  const { sectionMeta, customSections, ...sections } = resumeData;
+  const payload = {
+    builderData: {
+      sections,
+      sectionMeta,
+      customSections,
+    },
+  };
+  const res = await apiPatch(`/resumes/${encodeURIComponent(resumeId)}`, payload);
   await assertOk(res, 'Failed to update resume');
-  const payload = (await res.json()) as ResumeResponse;
-  return payload.data;
+  const payloadData = (await res.json()) as ResumeResponse;
+  return payloadData.data;
 }
+
 
 export function getResumePdfUrl(
   resumeId: string,
@@ -464,6 +473,10 @@ export async function fetchJobDescription(
 export interface JdMatchResult {
   match_percentage: number;
   keyword_score?: number;
+  semantic_score?: number | null;
+  hybrid_score?: number | null;
+  score_method?: 'hybrid' | 'keyword_only';
+  score_weights?: { semantic: number; keyword: number } | null;
   matched_keywords: string[];
   missing_keywords: string[];
   jd_highlights: Array<{ text: string; type: string }>;

@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import { useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { Eye, EyeOff } from 'lucide-react';
 import { resetPassword } from '@/lib/api/auth';
 import { useTranslations } from '@/lib/i18n/translations';
 
@@ -11,6 +12,9 @@ function ResetPasswordForm() {
   const token = searchParams.get('token') || '';
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -74,24 +78,44 @@ function ResetPasswordForm() {
         <p className="mt-2 text-sm text-[var(--text-2)]">{t('auth.setNewPasswordHint')}</p>
       </div>
       <div className="space-y-3">
-        <input
-          className="w-full rounded-lg border border-[var(--border)] px-4 py-3 text-sm"
-          placeholder={t('auth.newPassword')}
-          type="password"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          minLength={8}
-          required
-        />
-        <input
-          className="w-full rounded-lg border border-[var(--border)] px-4 py-3 text-sm"
-          placeholder={t('auth.confirmPassword')}
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          minLength={8}
-          required
-        />
+        <div className="relative w-full">
+          <input
+            className="w-full rounded-lg border border-[var(--border)] pl-4 pr-10 py-3 text-sm"
+            placeholder={t('auth.newPassword')}
+            type={showPassword ? 'text' : 'password'}
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            minLength={8}
+            required
+          />
+          <button
+            type="button"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] hover:text-[var(--text-1)]"
+            onClick={() => setShowPassword((prev) => !prev)}
+            tabIndex={-1}
+          >
+            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          </button>
+        </div>
+        <div className="relative w-full">
+          <input
+            className="w-full rounded-lg border border-[var(--border)] pl-4 pr-10 py-3 text-sm"
+            placeholder={t('auth.confirmPassword')}
+            type={showConfirmPassword ? 'text' : 'password'}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            minLength={8}
+            required
+          />
+          <button
+            type="button"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] hover:text-[var(--text-1)]"
+            onClick={() => setShowConfirmPassword((prev) => !prev)}
+            tabIndex={-1}
+          >
+            {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          </button>
+        </div>
         {error ? (
           <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-[var(--danger)]">
             {error}
@@ -127,3 +151,4 @@ export default function ResetPasswordPage() {
 function ResetFormLoading({ message }: { message: string }) {
   return <div className="text-sm text-[var(--text-2)]">{message}</div>;
 }
+

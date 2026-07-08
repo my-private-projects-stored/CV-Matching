@@ -5,7 +5,7 @@ import { useTranslations } from '@/lib/i18n/translations';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { PageHeader, ErrorBanner } from '@/components/ui';
+import { PageHeader, ErrorBanner, AiScoreWidget } from '@/components/ui';
 import { GenerationModeBadge } from '@/components/ui/GenerationModeBadge';
 import {
   matchResumeToJd,
@@ -125,6 +125,7 @@ export default function CandidateOptimizePage() {
   const [loading, setLoading] = useState(false);
   const [enrichmentLoading, setEnrichmentLoading] = useState(false);
   const [outputLanguage, setOutputLanguage] = useState<SupportedLanguage>('en');
+  const [showAlgorithmInfo, setShowAlgorithmInfo] = useState(false);
 
   const selectedResume = resumes.find((item) => item.resume_id === resumeId);
 
@@ -614,51 +615,106 @@ export default function CandidateOptimizePage() {
         </div>
       ) : null}
       {match && tab === 'jd' ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <section className="rounded-2xl border border-[var(--border)] bg-white p-4">
-            <h3 className="text-sm font-semibold">{t('optimize.jdMatch')}</h3>
-            <p className="mt-2 font-mono text-3xl">{match.match_percentage}%</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {match.matched_keywords.slice(0, 12).map((keyword) => (
-                <span
-                  key={keyword}
-                  className="rounded-full bg-green-50 px-2 py-1 text-xs text-[var(--success)]"
-                >
-                  {keyword}
-                </span>
-              ))}
-            </div>
-            {match.recommendations?.length ? (
-              <ul className="mt-4 space-y-1 text-xs text-[var(--text-2)]">
+        <div className="space-y-4">
+          {/* Score Widget */}
+          <AiScoreWidget
+            semanticScore={(match.semantic_score ?? match.match_percentage) / 100}
+            keywordScore={(match.keyword_score ?? match.match_percentage) / 100}
+            hybridScore={match.match_percentage / 100}
+            matchedKeywords={match.matched_keywords}
+            missingKeywords={match.missing_keywords}
+          />
+
+          {/* Recommendations */}
+          {match.recommendations?.length ? (
+            <section className="rounded-2xl border border-[var(--border)] bg-white p-4">
+              <h3 className="text-sm font-semibold">{t('optimize.aiSuggestions')}</h3>
+              <ul className="mt-3 space-y-2 text-sm text-[var(--text-2)]">
                 {match.recommendations.map((item) => (
-                  <li key={item}>{item}</li>
+                  <li key={item} className="flex items-start gap-2">
+                    <span className="mt-0.5 text-[var(--warning)]">💡</span>
+                    <span>{item}</span>
+                  </li>
                 ))}
               </ul>
-            ) : null}
-          </section>
+            </section>
+          ) : null}
+
+          {/* Highlighted Comparison */}
           <section className="rounded-2xl border border-[var(--border)] bg-white p-4">
-            <h3 className="text-sm font-semibold">{t('optimize.missingKeywords')}</h3>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {match.missing_keywords.slice(0, 16).map((keyword) => (
-                <span
-                  key={keyword}
-                  className="rounded-full bg-red-50 px-2 py-1 text-xs text-[var(--danger)]"
-                >
-                  {keyword}
-                </span>
-              ))}
+            <h3 className="text-sm font-semibold">{t('optimize.highlights')}</h3>
+            <div className="mt-2 mb-3 flex flex-wrap items-center gap-3 text-xs text-[var(--text-3)]">
+              <span className="inline-flex items-center gap-1">
+                <span className="inline-block h-3 w-3 rounded-sm bg-green-100" />
+                {t('optimize.highlightLegendMatched')}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="inline-block h-3 w-3 rounded-sm bg-red-100" />
+                {t('optimize.highlightLegendMissing')}
+              </span>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-3)]">
+                  📄 {t('optimize.jdHighlightsTitle')}
+                </p>
+                <div className="max-h-80 overflow-auto whitespace-pre-wrap rounded-lg border border-[var(--border)] p-3 text-xs leading-6">
+                  {renderHighlights(match.jd_highlights)}
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-3)]">
+                  📋 {t('optimize.resumeHighlightsTitle')}
+                </p>
+                <div className="max-h-80 overflow-auto whitespace-pre-wrap rounded-lg border border-[var(--border)] p-3 text-xs leading-6">
+                  {renderHighlights(match.resume_highlights)}
+                </div>
+              </div>
             </div>
           </section>
-          <section className="rounded-2xl border border-[var(--border)] bg-white p-4 lg:col-span-2">
-            <h3 className="text-sm font-semibold">{t('optimize.highlights')}</h3>
-            <div className="mt-3 grid gap-4 lg:grid-cols-2">
-              <div className="max-h-80 overflow-auto whitespace-pre-wrap rounded-lg border border-[var(--border)] p-3 text-xs leading-6">
-                {renderHighlights(match.jd_highlights)}
+
+          {/* Algorithm Info (collapsible) */}
+          <section className="rounded-2xl border border-[var(--border)] bg-white">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between p-4 text-left text-sm font-semibold hover:bg-[var(--blue-50)] transition-colors rounded-2xl"
+              onClick={() => setShowAlgorithmInfo(!showAlgorithmInfo)}
+            >
+              <span>🧪 {t('optimize.algorithmInfo')}</span>
+              <span className="text-[var(--text-3)] text-xs">{showAlgorithmInfo ? '▲' : '▼'}</span>
+            </button>
+            {showAlgorithmInfo && (
+              <div className="border-t border-[var(--border)] px-4 pb-4 pt-3 space-y-3 text-sm text-[var(--text-2)]">
+                <p className="text-xs text-[var(--text-3)]">{t('optimize.algorithmInfoDesc')}</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg border border-[var(--border)] p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-3)] mb-1">
+                      {t('optimize.scoreBreakdown')}
+                    </p>
+                    <p className="font-mono text-xs">
+                      {match.score_method === 'hybrid'
+                        ? t('optimize.scoreMethodHybrid', {
+                            semantic: String(Math.round((match.score_weights?.semantic ?? 0.65) * 100)),
+                            keyword: String(Math.round((match.score_weights?.keyword ?? 0.35) * 100)),
+                          })
+                        : t('optimize.scoreMethodKeyword')}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-[var(--border)] p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-3)] mb-1">
+                      {t('optimize.scoreBreakdown')}
+                    </p>
+                    <ul className="space-y-1 font-mono text-xs">
+                      <li>Semantic: {match.semantic_score ?? '—'}% ({t('optimize.semanticExplain')})</li>
+                      <li>Keyword: {match.keyword_score ?? '—'}% ({t('optimize.keywordExplain')})</li>
+                      {match.hybrid_score != null && (
+                        <li className="font-semibold">Hybrid: {match.hybrid_score}%</li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
               </div>
-              <div className="max-h-80 overflow-auto whitespace-pre-wrap rounded-lg border border-[var(--border)] p-3 text-xs leading-6">
-                {renderHighlights(match.resume_highlights)}
-              </div>
-            </div>
+            )}
           </section>
         </div>
       ) : null}

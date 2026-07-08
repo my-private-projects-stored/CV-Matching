@@ -9,7 +9,7 @@ import { completeJson, completeText, getLlmFailureReason, logLlmFallback } from 
 import { renderResumePdf } from "./pdf-renderer.service.js";
 import { extractRawTextFromFile, parseStructuredDataFromText } from "./resume-parsing.service.js";
 import { deleteResumeVector, upsertResumeVector, getResumeVectorPoint } from "./vector-index.service.js";
-import { KEYWORD_STOPWORDS, tokenizeAllTokens, fetchIdfsForKeywords, computeKeywordAnalysis } from "./keyword-analysis.service.js";
+import { KEYWORD_STOPWORDS, tokenizeAllTokens, fetchIdfsForKeywords, computeKeywordAnalysis, normalizeKeyword } from "./keyword-analysis.service.js";
 import { cosineSimilarity, extractPointVector } from "./semantic-search.service.js";
 
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
@@ -1274,6 +1274,30 @@ function buildHighlights(text, matchedKeywords = [], missingKeywords = []) {
   return segments;
 }
 
+async function extractKeywordsWithLlm(jobText) {
+  try {
+    const config = await resolveLlmRuntimeConfig();
+    const systemPrompt = `You are an expert technical recruiter. Analyze the job description and extract up to 80 core technical skills, hard skills, programming languages, databases, cloud providers, concepts, tools, or methodologies. Do NOT extract generic adjectives or common action verbs (like "experienced", "skilled", "utilize", "contribute", "ideal", "requires", "team", "motivated", "successful", "reliable", "jd", "making"). Return ONLY a JSON object with a single key "keywords" containing an array of strings. Example format: { "keywords": ["React", "TypeScript", "Docker", "AWS", "CI/CD"] }`;
+    const prompt = `Job Description:\n\n${jobText}`;
+
+    const response = await completeJson({
+      feature: "jd_keyword_extraction",
+      prompt,
+      systemPrompt,
+      config,
+    });
+
+    if (response?.data?.keywords && Array.isArray(response.data.keywords)) {
+      return response.data.keywords
+        .map(normalizeKeyword)
+        .filter((kw) => kw && !KEYWORD_STOPWORDS.has(kw));
+    }
+  } catch (error) {
+    console.warn("Failed to extract keywords with LLM, falling back to regex tokenization:", error?.message || error);
+  }
+  return null;
+}
+
 export async function buildResumeJdMatch(resumeId, input = {}) {
   const resume = await getResumeByPublicId(resumeId);
   if (!resume) return null;
@@ -1292,7 +1316,16 @@ export async function buildResumeJdMatch(resumeId, input = {}) {
   }
 
   const resumeText = String(resume.rawText || JSON.stringify(resume.parsedData || {}));
-  const jdKeywords = [...new Set(tokenizeForMatch(jobText))].slice(0, 80);
+
+  // Try LLM keyword extraction first, with fallback to Regex tokenization
+  let jdKeywords;
+  const llmKeywords = await extractKeywordsWithLlm(jobText);
+  if (llmKeywords && llmKeywords.length > 0) {
+    jdKeywords = [...new Set(llmKeywords)].slice(0, 80);
+  } else {
+    jdKeywords = [...new Set(tokenizeForMatch(jobText))].slice(0, 80);
+  }
+
   const resumeTokens = new Set(tokenizeForMatch(resumeText));
   const matchedKeywords = jdKeywords.filter((keyword) => resumeTokens.has(keyword)).map(toDisplayKeyword);
   const missingKeywords = jdKeywords.filter((keyword) => !resumeTokens.has(keyword)).map(toDisplayKeyword);
@@ -1344,6 +1377,9 @@ export async function buildResumeJdMatch(resumeId, input = {}) {
     match_percentage: matchPercentage,
     keyword_score: Math.round(keywordScore * 100),
     semantic_score: semanticScore !== null ? Math.round(semanticScore * 100) : null,
+    hybrid_score: hybridScore !== null ? Math.round(hybridScore * 100) : null,
+    score_method: hybridScore !== null ? "hybrid" : "keyword_only",
+    score_weights: hybridScore !== null ? { semantic: 0.65, keyword: 0.35 } : null,
     matched_keywords: matchedKeywords,
     missing_keywords: missingKeywords,
     jd_highlights: includeHighlights ? buildHighlights(jobText, matchedKeywords, missingKeywords) : [],

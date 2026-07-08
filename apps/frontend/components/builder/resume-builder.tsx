@@ -377,7 +377,11 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
           }
           // Prefer processed_resume if available
           if (data.processed_resume) {
-            const sanitized = sanitizeResumeData(data.processed_resume);
+            const sanitized = sanitizeResumeData({
+              ...data.processed_resume,
+              sectionMeta: data.builder_data?.sectionMeta,
+              customSections: data.builder_data?.customSections,
+            });
             setResumeData(sanitized);
             setLastSavedData(sanitized);
             setLoadingState('loaded');
@@ -398,7 +402,11 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
               try {
                 const polled = await fetchResume(resumeId);
                 if (polled.processed_resume) {
-                  const sanitized = sanitizeResumeData(polled.processed_resume);
+                  const sanitized = sanitizeResumeData({
+                    ...polled.processed_resume,
+                    sectionMeta: polled.builder_data?.sectionMeta,
+                    customSections: polled.builder_data?.customSections,
+                  });
                   setResumeData(sanitized);
                   setLastSavedData(sanitized);
                   setIsBuilderProcessing(false);
@@ -421,7 +429,11 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
           if (data.builder_data?.sections) {
             const sections = data.builder_data.sections;
             if (sections && typeof sections === 'object' && Object.keys(sections).length > 0) {
-              const sanitized = sanitizeResumeData(sections);
+              const sanitized = sanitizeResumeData({
+                ...sections,
+                sectionMeta: data.builder_data?.sectionMeta,
+                customSections: data.builder_data?.customSections,
+              });
               setResumeData(sanitized);
               setLastSavedData(sanitized);
               setLoadingState('loaded');

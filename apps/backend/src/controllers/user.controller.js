@@ -51,6 +51,9 @@ export async function listUsersHandler(req, res, next) {
 export async function updateUserStatusHandler(req, res, next) {
   try {
     const disabled = Boolean(req.body?.disabled);
+    if (disabled && req.auth?.userId === req.params.id) {
+      return res.status(400).json({ message: "You cannot disable your own account" });
+    }
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { disabled },
