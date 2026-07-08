@@ -1274,7 +1274,7 @@ function buildHighlights(text, matchedKeywords = [], missingKeywords = []) {
   return segments;
 }
 
-async function extractKeywordsWithLlm(jobText) {
+export async function extractKeywordsWithLlm(jobText) {
   try {
     const config = await resolveLlmRuntimeConfig();
     const systemPrompt = `You are an expert technical recruiter. Analyze the job description and extract up to 80 core technical skills, hard skills, programming languages, databases, cloud providers, concepts, tools, or methodologies. Do NOT extract generic adjectives or common action verbs (like "experienced", "skilled", "utilize", "contribute", "ideal", "requires", "team", "motivated", "successful", "reliable", "jd", "making"). Return ONLY a JSON object with a single key "keywords" containing an array of strings. Example format: { "keywords": ["React", "TypeScript", "Docker", "AWS", "CI/CD"] }`;

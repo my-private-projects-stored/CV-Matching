@@ -66,6 +66,8 @@ function extractImprovedData(payload: ImprovedResult): ResumeData | undefined {
   if (p.improved_data) return p.improved_data as ResumeData;
   const data = payload.data;
   if (!data || typeof data !== 'object') return undefined;
+  if ('resume_preview' in data && (data as Record<string, unknown>).resume_preview)
+    return (data as Record<string, unknown>).resume_preview as ResumeData;
   if ('improved_data' in data && (data as Record<string, unknown>).improved_data)
     return (data as Record<string, unknown>).improved_data as ResumeData;
   if ('resume' in data && (data as Record<string, unknown>).resume)
