@@ -63,6 +63,7 @@ Desktop.ini
 # ----- Docker local overrides -----
 **/docker-compose.override.yml
 
+docs/
 errors/
 homework/
 issues/
