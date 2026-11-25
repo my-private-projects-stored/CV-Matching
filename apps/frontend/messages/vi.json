@@ -861,6 +861,7 @@
     "results": "Kết quả",
     "jobsCount": "{count} việc làm",
     "semanticWeight": "Trọng số ngữ nghĩa: {percent}%",
+    "minSimilarity": "Độ tương đồng tối thiểu: {percent}%",
     "searching": "Đang tìm…",
     "refresh": "Làm mới",
     "matchesFound": "Tìm thấy {count} kết quả phù hợp",

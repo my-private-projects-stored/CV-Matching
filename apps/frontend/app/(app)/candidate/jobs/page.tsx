@@ -143,7 +143,7 @@ export default function CandidateBrowseJobsPage() {
           {jobs.map((job) => (
             <div
               key={job._id}
-              className="card-hover flex flex-col rounded-2xl border border-[var(--border)] bg-white p-5"
+              className="card-hover flex h-full flex-col rounded-2xl border border-[var(--border)] bg-white p-5"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex min-w-0 gap-3">
@@ -174,7 +174,7 @@ export default function CandidateBrowseJobsPage() {
               <p className="mt-3 line-clamp-3 text-xs text-[var(--text-2)] leading-5">
                 {job.description}
               </p>
-              <div className="mt-4 flex gap-2">
+              <div className="mt-auto flex gap-2 pt-4">
                 <a
                   className="flex-1 rounded-lg border border-[var(--border)] px-3 py-2 text-center text-xs hover:bg-gray-50"
                   href={`/candidate/jobs/${job._id}`}
@@ -182,7 +182,7 @@ export default function CandidateBrowseJobsPage() {
                   {t('jobs.viewDetails')}
                 </a>
                 <button
-                  className="flex-1 rounded-lg bg-[var(--blue-700)] px-3 py-2 text-xs font-semibold text-white hover:opacity-90"
+                  className="flex-1 rounded-lg bg-[var(--blue-700)] px-3 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => {
                     setApplyingJobId(job._id);
                     setApplyError(null);

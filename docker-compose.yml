@@ -477,7 +477,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: cvm-frontend
     working_dir: /workspace
-    command: [ "npm", "run", "dev", "--", "--hostname", "0.0.0.0", "--port", "3000" ]
+    command: [ "sh", "-c", "rm -rf /workspace/.next/* && npm run dev -- --webpack --hostname 0.0.0.0 --port 3000" ]
     volumes:
       - ./apps/frontend:/workspace
       - frontend_node_modules:/workspace/node_modules

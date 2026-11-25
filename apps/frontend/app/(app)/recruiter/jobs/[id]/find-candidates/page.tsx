@@ -205,6 +205,7 @@ export default function FindCandidatesPage() {
 
   const [limit, setLimit] = useState(10);
   const [semanticWeight, setSemanticWeight] = useState(0.65);
+  const [scoreThreshold, setScoreThreshold] = useState(0.3);
 
   // Fetch job title
   useEffect(() => {
@@ -221,6 +222,7 @@ export default function FindCandidatesPage() {
     const result = await getResumeRecommendations(jobId, {
       limit,
       semantic_weight: semanticWeight,
+      score_threshold: scoreThreshold,
     });
     if ('error' in result) {
       setError(result.error);
@@ -230,7 +232,7 @@ export default function FindCandidatesPage() {
       setMeta(result.meta);
     }
     setLoading(false);
-  }, [jobId, limit, semanticWeight]);
+  }, [jobId, limit, semanticWeight, scoreThreshold]);
 
   useEffect(() => {
     fetchCandidates();
@@ -298,6 +300,22 @@ export default function FindCandidatesPage() {
             step={0.05}
             value={semanticWeight}
             onChange={(e) => setSemanticWeight(Number(e.target.value))}
+            className="w-full accent-[var(--blue-700)]"
+          />
+        </div>
+
+        <div className="min-w-[160px] flex-1 space-y-1">
+          <label className="text-xs font-semibold uppercase tracking-widest text-[var(--text-3)]">
+            {t('recommendations.minSimilarity', { percent: Math.round(scoreThreshold * 100) })}
+          </label>
+          <input
+            id="score-threshold"
+            type="range"
+            min={0.1}
+            max={0.85}
+            step={0.05}
+            value={scoreThreshold}
+            onChange={(e) => setScoreThreshold(Number(e.target.value))}
             className="w-full accent-[var(--blue-700)]"
           />
         </div>

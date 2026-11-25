@@ -93,7 +93,7 @@ function JobRecommendationCard({
 
   return (
     <article
-      className="card-hover animate-fade-up flex flex-col gap-4 rounded-2xl border bg-white p-5 shadow-[var(--shadow-elev-1)]"
+      className="card-hover animate-fade-up flex h-full flex-col gap-4 rounded-2xl border bg-white p-5 shadow-[var(--shadow-elev-1)]"
       style={{ borderLeftWidth: 3, borderLeftColor: tierColor }}
     >
       {/* Header row */}
@@ -150,7 +150,7 @@ function JobRecommendationCard({
       )}
 
       {/* Actions */}
-      <div className="flex gap-2 pt-1">
+      <div className="mt-auto flex gap-2 pt-2">
         <Link
           href={`/candidate/jobs/${job.job_id}`}
           className="flex-1 rounded-lg bg-[var(--blue-700)] py-2 text-center text-sm font-semibold text-white transition hover:bg-[#1e40af]"
@@ -227,6 +227,7 @@ export default function CandidateRecommendationsPage() {
   // Filter state
   const [limit, setLimit] = useState(10);
   const [semanticWeight, setSemanticWeight] = useState(0.65);
+  const [scoreThreshold, setScoreThreshold] = useState(0.3);
 
   useEffect(() => {
     let active = true;
@@ -259,6 +260,7 @@ export default function CandidateRecommendationsPage() {
       const result = await getJobRecommendations(resumeId, {
         limit,
         semantic_weight: semanticWeight,
+        score_threshold: scoreThreshold,
       });
       if ('error' in result) {
         setError(result.error);
@@ -269,7 +271,7 @@ export default function CandidateRecommendationsPage() {
       }
       setLoading(false);
     },
-    [limit, semanticWeight]
+    [limit, semanticWeight, scoreThreshold]
   );
 
   useEffect(() => {
@@ -358,6 +360,25 @@ export default function CandidateRecommendationsPage() {
             step={0.05}
             value={semanticWeight}
             onChange={(e) => setSemanticWeight(Number(e.target.value))}
+            className="w-full accent-[var(--blue-700)]"
+          />
+        </div>
+
+        {/* Min similarity */}
+        <div className="min-w-[160px] flex-1 space-y-1">
+          <label className="text-xs font-semibold uppercase tracking-widest text-[var(--text-3)]">
+            {t('recommendations.minSimilarity', {
+              percent: Math.round(scoreThreshold * 100),
+            })}
+          </label>
+          <input
+            id="score-threshold"
+            type="range"
+            min={0.1}
+            max={0.85}
+            step={0.05}
+            value={scoreThreshold}
+            onChange={(e) => setScoreThreshold(Number(e.target.value))}
             className="w-full accent-[var(--blue-700)]"
           />
         </div>

@@ -861,6 +861,7 @@
     "results": "Results",
     "jobsCount": "{count} jobs",
     "semanticWeight": "Semantic weight: {percent}%",
+    "minSimilarity": "Min similarity: {percent}%",
     "searching": "Searching…",
     "refresh": "Refresh",
     "matchesFound": "{count} match found",

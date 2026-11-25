@@ -69,7 +69,7 @@ export function createRecommendationService({
   jobCatalogClient,
   resumeCatalogClient,
   qdrantTimeoutMs = 1500,
-  defaultScoreThreshold = 0.6,
+  defaultScoreThreshold = 0.3,
   defaultSemanticWeight = 0.65,
 } = {}) {
   async function searchQdrantPoints(collectionName, { vector, limit, score_threshold, filter, with_payload = true }) {
@@ -182,7 +182,13 @@ export function createRecommendationService({
     }
 
     const safeLimit = Math.min(50, Math.max(1, Number.parseInt(String(limit), 10) || 10));
-    const safeThreshold = Number.isFinite(Number(scoreThreshold)) ? Number(scoreThreshold) : defaultScoreThreshold;
+    const safeThreshold =
+      scoreThreshold !== undefined &&
+      scoreThreshold !== null &&
+      scoreThreshold !== "" &&
+      Number.isFinite(Number(scoreThreshold))
+        ? Number(scoreThreshold)
+        : defaultScoreThreshold;
     const safeWeight = Number.isFinite(Number(semanticWeight)) ? Number(semanticWeight) : defaultSemanticWeight;
     const resumeText = [resume.rawText || "", ...(resume.parsedData?.skills || [])].join(" ");
 
@@ -220,6 +226,11 @@ export function createRecommendationService({
           company_name: job.companyName || "",
           category: job.category || "general",
           location: job.location || "",
+          experience_level: job.experienceLevel || "",
+          status: job.status || "active",
+          description_preview: String(job.description || "").slice(0, 180),
+          application_deadline: job.applicationDeadline || null,
+          created_at: job.createdAt || null,
           semantic_score: semanticScore,
           keyword_score: kw.keywordScore,
           hybrid_score: hybridScore,
@@ -266,6 +277,11 @@ export function createRecommendationService({
             company_name: job.companyName || "",
             category: job.category || "general",
             location: job.location || "",
+            experience_level: job.experienceLevel || "",
+            status: job.status || "active",
+            description_preview: String(job.description || "").slice(0, 180),
+            application_deadline: job.applicationDeadline || null,
+            created_at: job.createdAt || null,
             semantic_score: 0,
             keyword_score: kw.keywordScore,
             hybrid_score: kw.keywordScore,
@@ -320,7 +336,13 @@ export function createRecommendationService({
     }
 
     const safeLimit = Math.min(50, Math.max(1, Number.parseInt(String(limit), 10) || 10));
-    const safeThreshold = Number.isFinite(Number(scoreThreshold)) ? Number(scoreThreshold) : defaultScoreThreshold;
+    const safeThreshold =
+      scoreThreshold !== undefined &&
+      scoreThreshold !== null &&
+      scoreThreshold !== "" &&
+      Number.isFinite(Number(scoreThreshold))
+        ? Number(scoreThreshold)
+        : defaultScoreThreshold;
     const safeWeight = Number.isFinite(Number(semanticWeight)) ? Number(semanticWeight) : defaultSemanticWeight;
     const jobText = [job.title, job.category, ...(job.skills || []), job.description, job.requirements].join(" ");
 
