@@ -1602,6 +1602,8 @@
     "jobTitle": "Target Job Title",
     "skills": "Focus Skills (comma-separated)",
     "generate": "Generate Questions",
-    "starHint": "View STAR Answer Hint"
+    "starHint": "View STAR Answer Hint",
+    "sampleAnswer": "View Reference Sample Answer",
+    "sampleAnswerNote": "Use as phrasing inspiration — tailor with your own real project details and metrics."
   }
 }

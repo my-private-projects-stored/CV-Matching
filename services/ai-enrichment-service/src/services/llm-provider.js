@@ -136,7 +136,7 @@ export function createDynamicLlmProvider({
         `Generate exactly 3 concise ${langLabel} interview questions for audience "${targetAudience}" targeting role "${jobTitle}".`,
         `Skills: ${Array.isArray(skills) ? skills.join(", ") : ""}`,
         `Missing keywords: ${Array.isArray(missingKeywords) ? missingKeywords.join(", ") : ""}`,
-        `Return strict JSON only: {"questions":[{"category":"technical|gap_verification|behavioral","question":"...","expectedSignal":"...","difficulty":"easy|medium|hard"}]}`,
+        `Return strict JSON only: {"questions":[{"category":"technical|gap_verification|behavioral","question":"...","expectedSignal":"...","sampleAnswer":"...","difficulty":"easy|medium|hard"}]}`,
       ].join("\n");
 
       const raw = await callModel({ prompt, expectJson: true });
@@ -149,6 +149,7 @@ export function createDynamicLlmProvider({
         category: String(q.category || "technical"),
         question: String(q.question),
         expectedSignal: String(q.expectedSignal || ""),
+        sampleAnswer: String(q.sampleAnswer || ""),
         difficulty: String(q.difficulty || "medium"),
       }));
     },

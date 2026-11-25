@@ -5,6 +5,7 @@ const questionItemSchema = new mongoose.Schema(
     category: { type: String, default: "technical", trim: true },
     question: { type: String, required: true, trim: true },
     expectedSignal: { type: String, default: "", trim: true },
+    sampleAnswer: { type: String, default: "", trim: true },
     difficulty: { type: String, enum: ["easy", "medium", "hard"], default: "medium" },
   },
   { _id: false }

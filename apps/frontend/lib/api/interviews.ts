@@ -11,6 +11,7 @@ export interface PracticeQuestionItem {
   category: string;
   question: string;
   expectedSignal: string;
+  sampleAnswer?: string;
   difficulty: 'easy' | 'medium' | 'hard';
 }
 

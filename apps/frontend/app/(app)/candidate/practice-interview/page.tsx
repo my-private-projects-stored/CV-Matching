@@ -148,6 +148,19 @@ export default function CandidatePracticeInterviewPage() {
                     <p className="mt-1.5">{item.expectedSignal}</p>
                   </details>
                 ) : null}
+                {item.sampleAnswer ? (
+                  <details className="mt-2 rounded-lg border border-emerald-200/80 bg-emerald-50/50 p-3 text-xs text-[var(--text-2)]">
+                    <summary className="cursor-pointer font-semibold text-emerald-800">
+                      {t('practiceInterview.sampleAnswer')}
+                    </summary>
+                    <p className="mt-2 whitespace-pre-line leading-relaxed text-[var(--text-1)]">
+                      {item.sampleAnswer}
+                    </p>
+                    <p className="mt-2 text-[11px] italic text-[var(--text-3)]">
+                      {t('practiceInterview.sampleAnswerNote')}
+                    </p>
+                  </details>
+                ) : null}
               </div>
             ))}
           </div>

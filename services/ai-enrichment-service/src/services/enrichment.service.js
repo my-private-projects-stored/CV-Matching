@@ -59,6 +59,9 @@ function buildTemplateInterviewQuestions({
       expectedSignal: isVi
         ? "Trả lời theo cấu trúc STAR kèm số liệu cụ thể."
         : "Answer using STAR structure with measurable metrics.",
+      sampleAnswer: isVi
+        ? `Situation: Hệ thống xử lý yêu cầu bằng ${focusSkills} gặp độ trễ cao vào giờ cao điểm.\nTask: Giảm p99 latency xuống dưới 150ms mà không tăng chi phí hạ tầng.\nAction: Tối ưu truy vấn, bổ sung cache và cơ chế xử lý bất đồng bộ.\nResult: Độ trễ giảm 45% và hệ thống ổn định ở mức tải gấp đôi.`
+        : `Situation: Our production service using ${focusSkills} experienced high tail latency under peak load.\nTask: Reduce p99 latency below 150ms without scaling up infrastructure.\nAction: Profiled bottlenecks, added caching, and decoupled heavy work asynchronously.\nResult: Cut p99 latency by 45% while handling 2x traffic.`,
       difficulty: "medium",
     },
     {
@@ -69,6 +72,9 @@ function buildTemplateInterviewQuestions({
       expectedSignal: isVi
         ? "Liên hệ kinh nghiệm tương đồng và kế hoạch tự học."
         : "Connect adjacent experience and learning plan.",
+      sampleAnswer: isVi
+        ? `Dù chưa dùng trực tiếp ${gapSkill} ở quy mô lớn, tôi đã triển khai các bài toán tương đồng với ${focusSkills} và đã xây dựng prototype thử nghiệm ${gapSkill} để nắm rõ trade-off trước khi áp dụng.`
+        : `While I have not used ${gapSkill} at large scale yet, I have solved comparable problems using ${focusSkills} and built a working prototype with ${gapSkill} to understand its operational trade-offs.`,
       difficulty: "easy",
     },
   ];

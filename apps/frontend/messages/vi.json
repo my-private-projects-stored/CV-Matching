@@ -1602,6 +1602,8 @@
     "jobTitle": "Vị trí mục tiêu",
     "skills": "Kỹ năng trọng tâm (cách nhau dấu phẩy)",
     "generate": "Sinh câu hỏi luyện tập",
-    "starHint": "Xem gợi ý trả lời STAR"
+    "starHint": "Xem gợi ý trả lời STAR",
+    "sampleAnswer": "Xem câu trả lời mẫu tham khảo",
+    "sampleAnswerNote": "Dùng để tham khảo cách diễn đạt — hãy điều chỉnh lại theo dự án và số liệu thực tế của bạn."
   }
 }
