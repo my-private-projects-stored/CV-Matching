@@ -1,23 +1,46 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, LogOut } from 'lucide-react';
+import { Bell, LogOut, X } from 'lucide-react';
 import { NotificationPanel } from '@/components/ui/NotificationPanel';
+import { canonicalizeRole } from '@/lib/auth/roles';
 import { useAuth } from '@/lib/context/auth-context';
+import { useNotificationStream } from '@/lib/hooks/use-notification-stream';
 import { useTranslations } from '@/lib/i18n/translations';
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher';
+import type { NotificationItem } from '@/lib/api/notifications';
 
 export function Topbar({ breadcrumb, right }: { breadcrumb?: string; right?: ReactNode }) {
   const { t } = useTranslations();
-  const { user, signOut } = useAuth();
+  const { user, accessToken, signOut } = useAuth();
   const router = useRouter();
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const canUseNotifications = user?.role === 'candidate' || user?.role === 'recruiter';
+  const [liveToast, setLiveToast] = useState<NotificationItem | null>(null);
+
+  const canonicalRole = canonicalizeRole(user?.role);
+  const canUseNotifications = canonicalRole === 'candidate' || canonicalRole === 'recruiter';
+
+  const handleStreamNotification = useCallback((item: NotificationItem) => {
+    setUnreadCount((prev) => prev + 1);
+    setLiveToast(item);
+  }, []);
+
+  useNotificationStream({
+    enabled: canUseNotifications,
+    accessToken,
+    onNotification: handleStreamNotification,
+  });
+
+  useEffect(() => {
+    if (!liveToast) return;
+    const timer = window.setTimeout(() => setLiveToast(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [liveToast]);
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-[var(--border)] bg-white px-6">
+    <header className="relative flex h-14 items-center justify-between border-b border-[var(--border)] bg-white px-6">
       <div className="flex items-center gap-2 text-sm text-[var(--text-2)]">
         <span className="font-semibold text-[var(--text-1)]">{t('app.name')}</span>
         {breadcrumb ? <span className="text-[var(--text-3)]">/ {breadcrumb}</span> : null}
@@ -42,13 +65,13 @@ export function Topbar({ breadcrumb, right }: { breadcrumb?: string; right?: Rea
             <NotificationPanel
               open={notificationOpen}
               onClose={() => setNotificationOpen(false)}
-              role={user.role}
+              role={canonicalRole ?? 'candidate'}
               unreadCount={unreadCount}
               onUnreadCountChange={setUnreadCount}
             />
           </div>
         ) : null}
-        <UiLanguageSwitcher className="rounded-full border border-[var(--border)] bg-white px-3 py-1.5 text-xs text-[var(--text-2)] cursor-pointer focus:outline-none" />
+        <UiLanguageSwitcher className="cursor-pointer rounded-full border border-[var(--border)] bg-white px-3 py-1.5 text-xs text-[var(--text-2)] focus:outline-none" />
         <div className="flex items-center gap-2 rounded-full border border-[var(--border)] px-2 py-1">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--blue-100)] text-xs font-semibold text-[var(--blue-700)]">
             {(user?.full_name || user?.email || '?').slice(0, 1).toUpperCase()}
@@ -58,7 +81,7 @@ export function Topbar({ breadcrumb, right }: { breadcrumb?: string; right?: Rea
               {user?.full_name || user?.email || t('common.guest')}
             </p>
             <p className="truncate text-[10px] text-[var(--text-3)]">
-              {user?.role ? t(`roles.${user.role}`) : ''}
+              {canonicalRole ? t(`roles.${canonicalRole}`) : ''}
             </p>
           </div>
           <button
@@ -74,6 +97,24 @@ export function Topbar({ breadcrumb, right }: { breadcrumb?: string; right?: Rea
           </button>
         </div>
       </div>
+
+      {liveToast ? (
+        <div className="fixed right-6 top-16 z-50 flex max-w-sm items-start gap-3 rounded-xl border border-[var(--blue-200)] bg-white p-4 shadow-lg">
+          <Bell className="mt-0.5 size-4 shrink-0 text-[var(--blue-700)]" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-[var(--text-1)]">{liveToast.title}</p>
+            <p className="mt-0.5 text-xs text-[var(--text-2)]">{liveToast.body}</p>
+          </div>
+          <button
+            type="button"
+            className="text-[var(--text-3)] hover:text-[var(--text-1)]"
+            onClick={() => setLiveToast(null)}
+            aria-label="Close"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+      ) : null}
     </header>
   );
 }

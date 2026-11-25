@@ -69,6 +69,9 @@ export {
   fetchRecentStatusChanges,
   exportRecentStatusChangesCsv,
   fetchApplicationStatusHistory,
+  withdrawApplication,
+  triggerScoringRetry,
+  manualScreenApplication,
   type ApplicationStatus,
   type ApplicationAiStatus,
   type RankedCandidateItem,
@@ -118,7 +121,14 @@ export {
 } from './candidate-profile';
 
 // Company operations
-export { fetchMyCompany, updateMyCompany, fetchCompanyById, type CompanyProfile } from './company';
+export {
+  fetchMyCompany,
+  updateMyCompany,
+  fetchCompanyById,
+  fetchCompanies,
+  verifyCompany,
+  type CompanyProfile,
+} from './company';
 
 // Vector admin operations
 export {
@@ -142,7 +152,14 @@ export {
 } from './notifications';
 
 // User admin operations
-export { fetchUsers, updateUserDisabled, type UserListResponse } from './users';
+export {
+  fetchUsers,
+  updateUserDisabled,
+  suspendUser,
+  unsuspendUser,
+  updateUserRole,
+  type UserListResponse,
+} from './users';
 
 // Enrichment operations
 export {
@@ -171,4 +188,17 @@ export {
 } from './jobs';
 
 // Auth
-export { signup, login, fetchMe, forgotPassword, resetPassword, changePassword } from './auth';
+export {
+  signup,
+  login,
+  fetchMe,
+  forgotPassword,
+  resetPassword,
+  changePassword,
+  refreshAccessToken,
+  logoutRequest,
+} from './auth';
+
+// Ops & Owner Analytics
+export * from './ops-analytics';
+export * from './interviews';

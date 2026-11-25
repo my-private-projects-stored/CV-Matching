@@ -13,6 +13,7 @@ import {
   type HybridScorePairResult,
   type VectorSearchMatch,
 } from '@/lib/api/vectors';
+import { triggerVectorReindex } from '@/lib/api/ops-analytics';
 
 function parseVectorInput(value: string, invalidMessage: string): number[] {
   const trimmed = value.trim();
@@ -33,7 +34,9 @@ export default function AdminVectorsPage() {
   const { t } = useTranslations();
   const [jobId, setJobId] = useState('');
   const [resumeId, setResumeId] = useState('');
-  const [vectorInput, setVectorInput] = useState('[0.1, 0.2, 0.3]');
+  const [vectorInput, setVectorInput] = useState(() =>
+    JSON.stringify(Array.from({ length: 384 }, () => 0.05))
+  );
   const [limit, setLimit] = useState('10');
   const [scoreThreshold, setScoreThreshold] = useState('0.5');
   const [busy, setBusy] = useState(false);
@@ -41,6 +44,12 @@ export default function AdminVectorsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<VectorSearchMatch[]>([]);
   const [pairScore, setPairScore] = useState<HybridScorePairResult | null>(null);
+  const [reindexResult, setReindexResult] = useState<{
+    alias: string;
+    newCollection: string;
+    reindexedCount: number;
+    alias_swap_ms: number;
+  } | null>(null);
 
   async function runAction(action: () => Promise<void>) {
     setBusy(true);
@@ -195,6 +204,58 @@ export default function AdminVectorsPage() {
             {t('admin.vectors.scorePair')}
           </button>
         </div>
+      </section>
+
+      <section className="space-y-3 rounded-2xl border border-[var(--border)] bg-white p-5">
+        <h2 className="text-sm font-semibold">{t('admin.vectors.reindexTitle')}</h2>
+        <div className="flex flex-wrap gap-3">
+          <button
+            className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium disabled:opacity-60"
+            disabled={busy}
+            onClick={() =>
+              runAction(async () => {
+                const res = await triggerVectorReindex('resumes', 100);
+                setReindexResult(res);
+                setMessage(
+                  t('admin.vectors.messages.reindexed', {
+                    count: res.reindexedCount,
+                    collection: res.newCollection,
+                    ms: res.alias_swap_ms,
+                  })
+                );
+              })
+            }
+            type="button"
+          >
+            {t('admin.vectors.reindexResumes')}
+          </button>
+          <button
+            className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium disabled:opacity-60"
+            disabled={busy}
+            onClick={() =>
+              runAction(async () => {
+                const res = await triggerVectorReindex('jobs', 100);
+                setReindexResult(res);
+                setMessage(
+                  t('admin.vectors.messages.reindexed', {
+                    count: res.reindexedCount,
+                    collection: res.newCollection,
+                    ms: res.alias_swap_ms,
+                  })
+                );
+              })
+            }
+            type="button"
+          >
+            {t('admin.vectors.reindexJobs')}
+          </button>
+        </div>
+        {reindexResult ? (
+          <p className="font-mono text-xs text-[var(--text-2)]">
+            {reindexResult.alias} -&gt; {reindexResult.newCollection} (
+            {reindexResult.reindexedCount} vectors, swap {reindexResult.alias_swap_ms} ms)
+          </p>
+        ) : null}
       </section>
 
       {pairScore ? (

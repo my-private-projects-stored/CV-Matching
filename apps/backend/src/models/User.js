@@ -25,7 +25,7 @@ const userSchema = new Schema(
     // Vai trò người dùng để phân quyền luồng nghiệp vụ (candidate/recruiter/admin).
     role: {
       type: String,
-      enum: ["candidate", "recruiter", "admin"],
+      enum: ["candidate", "recruiter", "tech_staff", "platform_owner", "admin"],
       required: [true, "Role is required"],
       default: "candidate",
     },

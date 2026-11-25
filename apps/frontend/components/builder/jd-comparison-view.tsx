@@ -115,7 +115,9 @@ export function JDComparisonView({ jobDescription, resumeData }: JDComparisonVie
             <div className="flex items-center gap-4 text-xs font-mono text-gray-600">
               <div className="flex items-center gap-1.5">
                 <Target className="w-3.5 h-3.5 text-blue-600" />
-                <span>{t('builder.jdMatch.stats.keywordsExtracted', { count: keywords.size })}</span>
+                <span>
+                  {t('builder.jdMatch.stats.keywordsExtracted', { count: keywords.size })}
+                </span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle className="w-3.5 h-3.5 text-green-600" />

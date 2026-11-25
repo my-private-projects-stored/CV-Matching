@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { canonicalizeRole, defaultDashboardForRole } from './lib/auth/roles';
 
 const AUTH_COOKIE = 'cvm_token';
 
@@ -33,13 +34,7 @@ export function proxy(request: NextRequest) {
     const token = request.cookies.get(AUTH_COOKIE)?.value;
     if (token) {
       const role = decodeRole(token);
-      const dest =
-        role === 'admin'
-          ? '/admin/config'
-          : role === 'recruiter'
-            ? '/recruiter/dashboard'
-            : '/candidate/dashboard';
-      return NextResponse.redirect(new URL(dest, request.url));
+      return NextResponse.redirect(new URL(defaultDashboardForRole(role), request.url));
     }
     return NextResponse.next();
   }
@@ -47,7 +42,8 @@ export function proxy(request: NextRequest) {
   const isAppRoute =
     pathname.startsWith('/candidate') ||
     pathname.startsWith('/recruiter') ||
-    pathname.startsWith('/admin');
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/owner');
 
   if (!isAppRoute) {
     return NextResponse.next();
@@ -60,15 +56,28 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const role = decodeRole(token);
-  if (pathname.startsWith('/admin') && role !== 'admin') {
-    return NextResponse.redirect(new URL('/candidate/dashboard', request.url));
+  const canonicalRole = canonicalizeRole(decodeRole(token));
+  const fallbackDest = defaultDashboardForRole(canonicalRole);
+
+  if (pathname.startsWith('/owner') && canonicalRole !== 'platform_owner') {
+    return NextResponse.redirect(new URL(fallbackDest, request.url));
   }
-  if (pathname.startsWith('/recruiter') && role !== 'recruiter' && role !== 'admin') {
-    return NextResponse.redirect(new URL('/candidate/dashboard', request.url));
+  if (pathname.startsWith('/admin') && canonicalRole !== 'tech_staff') {
+    return NextResponse.redirect(new URL(fallbackDest, request.url));
   }
-  if (pathname.startsWith('/candidate') && role === 'recruiter') {
-    return NextResponse.redirect(new URL('/recruiter/dashboard', request.url));
+  if (
+    pathname.startsWith('/recruiter') &&
+    canonicalRole !== 'recruiter' &&
+    canonicalRole !== 'tech_staff'
+  ) {
+    return NextResponse.redirect(new URL(fallbackDest, request.url));
+  }
+  if (
+    pathname.startsWith('/candidate') &&
+    canonicalRole !== 'candidate' &&
+    canonicalRole !== 'tech_staff'
+  ) {
+    return NextResponse.redirect(new URL(fallbackDest, request.url));
   }
 
   return NextResponse.next();

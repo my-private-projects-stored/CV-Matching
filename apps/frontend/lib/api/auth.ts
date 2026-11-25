@@ -1,7 +1,8 @@
 import { apiFetch, apiPost } from './client';
 import { buildApiClientError } from './error';
+import type { UserRole } from '@/lib/auth/roles';
 
-export type UserRole = 'candidate' | 'recruiter' | 'admin';
+export type { UserRole };
 
 export interface AuthUser {
   id: string;
@@ -32,15 +33,45 @@ export async function signup(payload: {
   full_name: string;
   role?: UserRole;
 }): Promise<AuthResponse> {
-  const res = await apiPost('/auth/signup', payload);
+  const res = await apiFetch('/auth/signup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
   await throwIfNotOk(res, 'Signup failed');
   return (await res.json()) as AuthResponse;
 }
 
 export async function login(payload: { email: string; password: string }): Promise<AuthResponse> {
-  const res = await apiPost('/auth/login', payload);
+  const res = await apiFetch('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
   await throwIfNotOk(res, 'Login failed');
   return (await res.json()) as AuthResponse;
+}
+
+export async function refreshAccessToken(): Promise<{ access_token: string; user?: AuthUser }> {
+  const res = await apiFetch('/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({}),
+  });
+  await throwIfNotOk(res, 'Session refresh failed');
+  return (await res.json()) as { access_token: string; user?: AuthUser };
+}
+
+export async function logoutRequest(): Promise<void> {
+  await apiFetch('/auth/logout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({}),
+  }).catch(() => {});
 }
 
 export async function fetchMe(accessToken: string): Promise<{ user: AuthUser }> {

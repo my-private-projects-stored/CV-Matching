@@ -29,9 +29,17 @@ export function requireAuth(req, _res, next) {
 }
 
 export function requireRoles(...roles) {
-  const allowedRoles = new Set(
-    roles.map((role) => String(role || "").trim().toLowerCase()).filter(Boolean)
-  );
+  const allowedRoles = new Set();
+  for (const rawRole of roles) {
+    const normalized = String(rawRole || "").trim().toLowerCase();
+    if (!normalized) continue;
+    allowedRoles.add(normalized);
+    // Keep "admin" and "tech_staff" as equivalent transitional aliases.
+    if (normalized === "admin" || normalized === "tech_staff") {
+      allowedRoles.add("admin");
+      allowedRoles.add("tech_staff");
+    }
+  }
 
   return function requireRoleMiddleware(req, _res, next) {
     const role = String(req.auth?.role || "").trim().toLowerCase();

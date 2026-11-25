@@ -242,7 +242,7 @@ export default function CandidateRecommendationsPage() {
       setResumes(resumeItems);
       const master = resumeItems.find((item) => item.is_master);
       setSelectedResumeId(master?.resume_id || resumeItems[0]?.resume_id || '');
-      
+
       const appList = appHistory?.data?.applications || [];
       const ids = new Set(appList.map((app) => app.job?.id).filter(Boolean) as string[]);
       setAppliedJobIds(ids);

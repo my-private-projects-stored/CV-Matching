@@ -18,6 +18,8 @@ import { useTranslations } from '@/lib/i18n/translations';
 import {
   bulkUpdateApplicationStatus,
   fetchRankedApplications,
+  manualScreenApplication,
+  triggerScoringRetry,
   type ApplicationAiStatus,
   type ApplicationStatus,
   type RankedCandidateItem,
@@ -296,12 +298,50 @@ export default function RecruiterCandidatesPage() {
                   <StatusBadge status={candidate.status} />
                   <AiStatusBadge status={candidate.ai_status} />
                 </div>
-                <Link
-                  className="inline-flex items-center justify-center rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-center text-xs font-semibold text-[var(--blue-700)] hover:bg-slate-50 transition-colors w-full"
-                  href={`/recruiter/jobs/${jobId}/candidates/${candidate.application_id}`}
-                >
-                  {t('common.review')}
-                </Link>
+                <div className="flex flex-col gap-1.5">
+                  <Link
+                    className="inline-flex w-full items-center justify-center rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-center text-xs font-semibold text-[var(--blue-700)] transition-colors hover:bg-slate-50"
+                    href={`/recruiter/jobs/${jobId}/candidates/${candidate.application_id}`}
+                  >
+                    {t('common.review')}
+                  </Link>
+                  {candidate.ai_status === 'failed' ? (
+                    <>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={async () => {
+                          setBusy(true);
+                          try {
+                            await manualScreenApplication(candidate.application_id);
+                            await loadCandidates();
+                          } finally {
+                            setBusy(false);
+                          }
+                        }}
+                        className="rounded-lg bg-amber-600 px-2 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+                      >
+                        {t('recruiter.manualScreening')}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={async () => {
+                          setBusy(true);
+                          try {
+                            await triggerScoringRetry(candidate.application_id);
+                            await loadCandidates();
+                          } finally {
+                            setBusy(false);
+                          }
+                        }}
+                        className="rounded-lg border border-[var(--border)] px-2 py-1 text-[11px] font-semibold text-[var(--text-2)] disabled:opacity-50"
+                      >
+                        {t('recruiter.retryScoring')}
+                      </button>
+                    </>
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>

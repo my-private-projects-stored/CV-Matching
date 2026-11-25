@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { sendPasswordResetEmail } from "./mailer.service.js";
 
-const AUTH_ROLES = new Set(["candidate", "recruiter", "admin"]);
+const AUTH_ROLES = new Set(["candidate", "recruiter", "tech_staff", "platform_owner", "admin"]);
 const DEFAULT_ACCESS_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const DEFAULT_RESET_EXPIRES_IN = process.env.JWT_RESET_EXPIRES_IN || "30m";
 const DEFAULT_APP_BASE_URL = process.env.APP_BASE_URL || process.env.FRONTEND_URL || "http://localhost:3000";

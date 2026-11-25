@@ -1,0 +1,123 @@
+{
+  "generatedAt": "2026-11-25T06:56:45.214Z",
+  "environment": {
+    "mode": "embedded",
+    "nodeVersion": "v24.11.0",
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "prototype1": {
+    "description": "500 CV uploads (Magic Bytes + MinIO + Parse + 384-dim Embed + Qdrant)",
+    "total": 500,
+    "succeeded": 500,
+    "failed": 0,
+    "count": 500,
+    "minMs": 20.25,
+    "avgMs": 27.89,
+    "p50Ms": 26.19,
+    "p95Ms": 39.29,
+    "p99Ms": 52.56,
+    "maxMs": 57.21,
+    "durationSec": 1.403,
+    "throughputPerSec": 356.38,
+    "memory": {
+      "rssStartMB": 243.02,
+      "rssEndMB": 297.77,
+      "heapUsedStartMB": 108.61,
+      "heapUsedEndMB": 157.27,
+      "heapDeltaMB": 48.66
+    },
+    "slaPass": true
+  },
+  "prototype2": {
+    "description": "5,000 Applications (Phase 1 Outbox ACID) + worker-scoring (BLMOVE + LREM)",
+    "submit": {
+      "total": 5000,
+      "succeeded": 5000,
+      "failed": 0,
+      "count": 5000,
+      "minMs": 14.66,
+      "avgMs": 19.05,
+      "p50Ms": 18.19,
+      "p95Ms": 23.81,
+      "p99Ms": 34.53,
+      "maxMs": 47.89,
+      "durationSec": 11.936,
+      "throughputPerSec": 418.9
+    },
+    "outboxDrained": 5000,
+    "scoring": {
+      "scoredCount": 5000,
+      "scoringErrors": 0,
+      "durationSec": 13.696,
+      "throughputAppsPerSec": 365.07,
+      "mainQueueRemaining": 0,
+      "processingQueueRemaining": 0,
+      "dlqCount": 0,
+      "lostTasks": 0
+    },
+    "slaPass": true
+  },
+  "prototype3": {
+    "searchCacheMiss": {
+      "count": 50,
+      "minMs": 2.6,
+      "avgMs": 3.28,
+      "p50Ms": 3.16,
+      "p95Ms": 4.2,
+      "p99Ms": 9.1,
+      "maxMs": 9.1,
+      "durationSec": 0.167,
+      "throughputPerSec": 299.4,
+      "verifiedMisses": 50,
+      "slaPass": true
+    },
+    "searchCacheHit": {
+      "count": 200,
+      "minMs": 2.25,
+      "avgMs": 2.6,
+      "p50Ms": 2.5,
+      "p95Ms": 3.15,
+      "p99Ms": 3.39,
+      "maxMs": 5.13,
+      "durationSec": 0.528,
+      "throughputPerSec": 378.79,
+      "verifiedHits": 200,
+      "slaPass": true
+    },
+    "qdrantHnswRecommendation": {
+      "count": 100,
+      "minMs": 3.11,
+      "avgMs": 3.6,
+      "p50Ms": 3.51,
+      "p95Ms": 4.19,
+      "p99Ms": 5.35,
+      "maxMs": 7.12,
+      "durationSec": 0.36,
+      "throughputPerSec": 277.78,
+      "succeeded": 100,
+      "slaPass": true
+    },
+    "directCvJdMatch": {
+      "count": 20,
+      "minMs": 2.94,
+      "avgMs": 4.08,
+      "p50Ms": 3.17,
+      "p95Ms": 3.79,
+      "p99Ms": 21.05,
+      "maxMs": 21.05,
+      "durationSec": 0.082,
+      "throughputPerSec": 243.9,
+      "succeeded": 20,
+      "slaPass": true
+    },
+    "bulkWrite500": {
+      "status": 200,
+      "requestedCount": 500,
+      "updatedCount": 500,
+      "durationMs": 12.07,
+      "slaPass": true
+    }
+  },
+  "overallPass": true
+}

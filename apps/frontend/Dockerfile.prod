@@ -2,12 +2,14 @@ FROM node:20-alpine AS deps
 
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm install --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=20000
 
 FROM node:20-alpine AS builder
 
 WORKDIR /app
+ARG BACKEND_ORIGIN=http://api-gateway:3001
 ENV NODE_ENV=production
+ENV BACKEND_ORIGIN=${BACKEND_ORIGIN}
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

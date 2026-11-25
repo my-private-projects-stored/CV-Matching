@@ -31,7 +31,8 @@
     "popupBlocked": "Popup was blocked by browser. Please click here to open: {url}",
     "unknown": "Unknown error",
     "ok": "OK",
-    "reset": "Reset"
+    "reset": "Reset",
+    "refresh": "Refresh"
   },
   "app": {
     "name": "CV Matching",
@@ -42,7 +43,9 @@
     "candidate": "Candidate",
     "recruiter": "Recruiter",
     "admin": "Admin",
-    "workspace": "workspace"
+    "workspace": "workspace",
+    "tech_staff": "Tech Staff",
+    "platform_owner": "Platform Owner"
   },
   "nav": {
     "backToDashboard": "Back to Dashboard",
@@ -50,7 +53,8 @@
     "groups": {
       "workspace": "Workspace",
       "account": "Account",
-      "system": "System"
+      "system": "System",
+      "owner": "Executive BI"
     },
     "candidate": {
       "overview": "Overview",
@@ -61,7 +65,8 @@
       "optimize": "Optimize CV",
       "notifications": "Notifications",
       "profile": "Profile",
-      "settings": "Settings"
+      "settings": "Settings",
+      "practiceInterview": "Practice Interview"
     },
     "recruiter": {
       "overview": "Overview",
@@ -74,7 +79,14 @@
     "admin": {
       "config": "Config",
       "vectors": "Vector Ops",
-      "users": "Users"
+      "users": "Users",
+      "health": "Cluster Health",
+      "queues": "Redis Queues",
+      "auditLogs": "Audit Logs"
+    },
+    "owner": {
+      "dashboard": "KPI Dashboard",
+      "funnel": "Recruitment Funnel"
     }
   },
   "routes": {
@@ -97,7 +109,13 @@
     "coverLetter": "Cover Letter",
     "interview": "Interview Questions",
     "login": "Login",
-    "register": "Register"
+    "register": "Register",
+    "practiceInterview": "Practice Interview",
+    "adminHealth": "Cluster Health",
+    "adminQueues": "Redis Queues",
+    "adminAuditLogs": "Audit Logs",
+    "ownerDashboard": "Platform Overview",
+    "ownerFunnel": "Recruitment Funnel"
   },
   "auth": {
     "eyebrow": "SMART CV MATCHING",
@@ -173,7 +191,9 @@
     "interview": "Interview",
     "offer": "Offer",
     "hired": "Hired",
-    "rejected": "Rejected"
+    "rejected": "Rejected",
+    "draft": "Draft",
+    "withdrawn": "Withdrawn"
   },
   "aiStatus": {
     "pending": "Pending",
@@ -294,6 +314,30 @@
     "adminVectors": {
       "title": "Vector Ops",
       "subtitle": "Index vectors and run semantic search tools."
+    },
+    "ownerDashboard": {
+      "title": "Platform Owner Dashboard",
+      "subtitle": "KPIs, daily trends, and industry breakdown"
+    },
+    "ownerFunnel": {
+      "title": "Recruitment Funnel & AI Efficacy",
+      "subtitle": "Stage conversion rates and match-score correlation"
+    },
+    "adminHealth": {
+      "title": "Cluster Health Monitor",
+      "subtitle": "Live status and latency across microservices, workers, and datastores"
+    },
+    "adminQueues": {
+      "title": "Redis Queues & DLQ",
+      "subtitle": "Queue depths and dead-letter recovery"
+    },
+    "adminAuditLogs": {
+      "title": "System Audit Logs",
+      "subtitle": "Immutable governance, config, and DLQ actions"
+    },
+    "candidatePracticeInterview": {
+      "title": "AI Mock Interview Practice",
+      "subtitle": "Practice targeted technical and behavioral questions with STAR hints"
     }
   },
   "resume": {
@@ -371,7 +415,9 @@
     "sectionsLabel": "Sections",
     "customSectionPlaceholder": "Custom section",
     "add": "Add",
-    "pageSize": "Page size",
+    "pageSize": {
+      "usLetter": "Letter (US)"
+    },
     "pageSizeA4": "A4",
     "pageSizeLetter": "Letter",
     "baseFontSize": "Base font size",
@@ -547,9 +593,6 @@
       "effectiveBodyFont": "Effective body font",
       "compactHint": "* Super compact mode reduces spacing and font size by 15%.",
       "resetDefaults": "Reset Defaults"
-    },
-    "pageSize": {
-      "usLetter": "Letter (US)"
     },
     "sectionHeader": {
       "renameSection": "Rename Section",
@@ -882,7 +925,12 @@
       "api": "API",
       "ready": "Ready",
       "llm": "LLM",
-      "stale": "stale"
+      "stale": "stale",
+      "autoRefresh": "Auto-refresh",
+      "degradedAlert": "One or more cluster components are currently unreachable",
+      "microservicesGroup": "Domain Microservices",
+      "workersGroup": "AI & Async Workers",
+      "datastoresGroup": "Datastores & Object Storage"
     },
     "tabs": {
       "llm": "LLM Provider",
@@ -891,7 +939,9 @@
       "apiKeys": "API Keys",
       "language": "Language",
       "privacy": "Privacy",
-      "llmEvents": "LLM Logs"
+      "llmEvents": "LLM Logs",
+      "scoring": "Scoring Weights",
+      "maintenance": "Maintenance Mode"
     },
     "config": {
       "model": "Model",
@@ -998,7 +1048,9 @@
           "failed": "Failed: {reason}",
           "unknown": "unknown"
         }
-      }
+      },
+      "scoringDescription": "Adjust hybrid scoring weights (Semantic + Keyword must equal 100%).",
+      "maintenanceGlobal": "Enable Global Maintenance Mode"
     },
     "apiKeyProviders": {
       "openai": {
@@ -1036,7 +1088,12 @@
         "active": "Active"
       },
       "enable": "Enable",
-      "disable": "Disable"
+      "disable": "Disable",
+      "usersTab": "Users & 4-RBAC",
+      "companiesTab": "Company MST Verification",
+      "verifyCompany": "Verify",
+      "rejectCompany": "Reject",
+      "suspendReasonPlaceholder": "Enter mandatory reason for suspending this account..."
     },
     "vectors": {
       "sharedInput": "Shared vector input",
@@ -1053,13 +1110,31 @@
       "scorePair": "Score Job / Resume Pair",
       "pairScore": "Pair score",
       "searchResults": "Search results",
+      "reindexTitle": "Zero-Downtime Qdrant Alias Reindex",
+      "reindexResumes": "Reindex Resumes (Alias Swap)",
+      "reindexJobs": "Reindex Jobs (Alias Swap)",
       "messages": {
         "jobIndexed": "Job indexed: {id}",
         "resumeIndexed": "Resume indexed: {id}",
         "foundResumeMatches": "Found {count} resume matches",
         "foundJobMatches": "Found {count} job matches",
-        "hybridScoreComputed": "Hybrid score computed"
+        "hybridScoreComputed": "Hybrid score computed",
+        "reindexed": "Reindexed {count} vectors into {collection} (alias swap: {ms} ms)"
       }
+    },
+    "queues": {
+      "retryDlq": "Retry DLQ",
+      "emptyDlq": "No dead-lettered messages.",
+      "retriedNotice": "Re-enqueued messages"
+    },
+    "auditLogs": {
+      "allActions": "All Actions",
+      "empty": "No audit logs found.",
+      "time": "Timestamp",
+      "actor": "Actor",
+      "action": "Action",
+      "target": "Target",
+      "reason": "Reason"
     }
   },
   "recruiter": {
@@ -1178,11 +1253,14 @@
     },
     "company": {
       "saved": "Company profile saved",
-      "logoPreviewAlt": "Company logo preview"
+      "logoPreviewAlt": "Company logo preview",
+      "verificationLabel": "Company MST Verification Status"
     },
     "notifications": {
       "viewJobPostings": "View job postings"
-    }
+    },
+    "manualScreening": "Manual Screening",
+    "retryScoring": "Retry AI Scoring"
   },
   "emptyStates": {
     "noResumes": {
@@ -1293,7 +1371,13 @@
     "updateUser": "Failed to update user",
     "vectorOperationFailed": "Operation failed",
     "vectorMustBeArray": "Vector must be a JSON array of numbers",
-    "invalidJsonArray": "Expected a JSON array."
+    "invalidJsonArray": "Expected a JSON array.",
+    "loadAnalytics": "Failed to load analytics",
+    "loadClusterHealth": "Failed to load cluster health",
+    "loadQueues": "Failed to load Redis queues",
+    "retryDlq": "Failed to retry DLQ",
+    "loadAuditLogs": "Failed to load audit logs",
+    "loadInterview": "Failed to generate practice questions"
   },
   "forms": {
     "title": "Title",
@@ -1327,7 +1411,8 @@
     "resume": "Resume",
     "masterSuffix": " (Master)",
     "colorHexPlaceholder": "#1D4ED8",
-    "urlShortPlaceholder": "https://..."
+    "urlShortPlaceholder": "https://...",
+    "taxCode": "Tax Code (MST)"
   },
   "metadata": {
     "title": "CV Matching - AI Recruitment Platform",
@@ -1395,7 +1480,8 @@
     "statsInterviews": "Interviews",
     "statsPendingAi": "Pending AI",
     "hybridLabel": "Hybrid",
-    "statusTransition": "{from} → {to}"
+    "statusTransition": "{from} → {to}",
+    "withdraw": "Withdraw"
   },
   "settings": {
     "changePassword": "Change Password",
@@ -1489,5 +1575,32 @@
     "copy": "Copy to Clipboard",
     "generate": "Generate Outreach with AI",
     "regenerate": "Regenerate with AI"
+  },
+  "owner": {
+    "noData": "No analytics data recorded in this range.",
+    "dashboard": {
+      "totalUsers": "Total Users",
+      "totalResumes": "Uploaded CVs",
+      "activeJobs": "Active Jobs",
+      "totalApplications": "Total Applications",
+      "dailyTrend": "Daily Activity Trend",
+      "categoryDistribution": "Jobs by Category",
+      "usersByRole": "Users by Role"
+    },
+    "funnel": {
+      "stageTitle": "Pipeline Stage Distribution",
+      "aiCorrelationTitle": "AI Hybrid Score vs Hiring Outcome",
+      "aiCorrelationSubtitle": "Comparing high-match (>= 80%) vs low-match (< 50%) candidates",
+      "highScoreGroup": "High Match Group",
+      "lowScoreGroup": "Low Match Group",
+      "interviewRate": "Interview rate",
+      "exportCsv": "Export CSV"
+    }
+  },
+  "practiceInterview": {
+    "jobTitle": "Target Job Title",
+    "skills": "Focus Skills (comma-separated)",
+    "generate": "Generate Questions",
+    "starHint": "View STAR Answer Hint"
   }
 }

@@ -7,7 +7,15 @@ async function assertOk(res: Response, fallbackMessagePrefix: string): Promise<v
   throw buildApiClientError(res.status, body, fallbackMessagePrefix);
 }
 
-export type ApplicationStatus = 'new' | 'screening' | 'interview' | 'offer' | 'hired' | 'rejected';
+export type ApplicationStatus =
+  | 'draft'
+  | 'new'
+  | 'screening'
+  | 'interview'
+  | 'offer'
+  | 'hired'
+  | 'rejected'
+  | 'withdrawn';
 export type ApplicationAiStatus = 'pending' | 'parsing' | 'scoring' | 'completed' | 'failed';
 
 export interface RankedCandidateItem {
@@ -42,6 +50,39 @@ export interface RankedCandidateItem {
   } | null;
 }
 
+export async function withdrawApplication(
+  applicationId: string,
+  version?: number,
+  reason?: string
+): Promise<{ application: Record<string, unknown> }> {
+  const res = await apiPost(`/applications/${encodeURIComponent(applicationId)}/withdraw`, {
+    ...(version !== undefined ? { __v: version } : {}),
+    ...(reason ? { reason } : {}),
+  });
+  await assertOk(res, 'Failed to withdraw application');
+  return res.json();
+}
+
+export async function triggerScoringRetry(
+  applicationId: string
+): Promise<{ application: Record<string, unknown> }> {
+  const res = await apiPost(`/applications/${encodeURIComponent(applicationId)}/retry-scoring`, {});
+  await assertOk(res, 'Failed to retry AI scoring');
+  return res.json();
+}
+
+export async function manualScreenApplication(
+  applicationId: string,
+  reason?: string
+): Promise<{ application: Record<string, unknown> }> {
+  const res = await apiPatch(`/applications/${encodeURIComponent(applicationId)}/status`, {
+    status: 'screening',
+    action: 'MANUAL_SCREENING',
+    reason: reason || 'Manual screening override by recruiter',
+  });
+  await assertOk(res, 'Failed to manually screen application');
+  return res.json();
+}
 export interface RankedApplicationsResponse {
   request_id: string;
   data: {

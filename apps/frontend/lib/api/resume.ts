@@ -308,7 +308,6 @@ export async function updateResume(
   return payloadData.data;
 }
 
-
 export function getResumePdfUrl(
   resumeId: string,
   settings?: TemplateSettings,
@@ -358,7 +357,7 @@ export async function downloadResumePdf(
 
 export function getOriginalResumeDownloadUrl(resumeId: string): string {
   const normalizedId = normalizeResumeId(resumeId);
-  return `${API_BASE}/resumes/${encodeURIComponent(normalizedId)}/download`;
+  return `${API_BASE}/resumes/${encodeURIComponent(normalizedId)}/download?mode=stream`;
 }
 
 export async function downloadOriginalResumeFile(resumeId: string): Promise<Blob> {

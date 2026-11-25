@@ -6,6 +6,7 @@ import { Eye, EyeOff, X } from 'lucide-react';
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher';
 import { useAuth } from '@/lib/context/auth-context';
 import { useTranslations } from '@/lib/i18n/translations';
+import { defaultDashboardForRole } from '@/lib/auth/roles';
 import type { UserRole } from '@/lib/api/auth';
 import {
   getRememberedEmails,
@@ -14,9 +15,7 @@ import {
 } from '@/lib/utils/remembered-accounts';
 
 function dashboardPath(role: UserRole) {
-  if (role === 'recruiter') return '/recruiter/dashboard';
-  if (role === 'admin') return '/admin/config';
-  return '/candidate/dashboard';
+  return defaultDashboardForRole(role);
 }
 
 export default function LoginPage() {
@@ -25,7 +24,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const [rememberedEmails, setRememberedEmails] = useState<string[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -208,4 +207,3 @@ export default function LoginPage() {
     </form>
   );
 }
-

@@ -15,18 +15,21 @@ import { usePageHeader } from '@/lib/i18n/use-page-header';
 import { useTranslations } from '@/lib/i18n/translations';
 import {
   fetchMyApplicationHistory,
+  withdrawApplication,
   type ApplicationAiStatus,
   type ApplicationStatus,
   type CandidateHistoryItem,
 } from '@/lib/api/applications';
 
 const STATUS_OPTIONS: ApplicationStatus[] = [
+  'draft',
   'new',
   'screening',
   'interview',
   'offer',
   'hired',
   'rejected',
+  'withdrawn',
 ];
 const AI_STATUS_OPTIONS: ApplicationAiStatus[] = [
   'pending',
@@ -49,6 +52,7 @@ export default function CandidateApplicationsPage() {
   const [aiStatus, setAiStatus] = useState<ApplicationAiStatus | ''>('');
   const [submittedAfter, setSubmittedAfter] = useState('');
   const [submittedBefore, setSubmittedBefore] = useState('');
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -86,6 +90,23 @@ export default function CandidateApplicationsPage() {
 
   function resetPage() {
     setPage(1);
+  }
+
+  async function handleWithdraw(applicationId: string) {
+    setWithdrawingId(applicationId);
+    setError(null);
+    try {
+      await withdrawApplication(applicationId);
+      setApplications((prev) =>
+        prev.map((app) =>
+          app.application_id === applicationId ? { ...app, status: 'withdrawn' } : app
+        )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('errors.loadApplication'));
+    } finally {
+      setWithdrawingId(null);
+    }
   }
 
   return (
@@ -194,7 +215,17 @@ export default function CandidateApplicationsPage() {
                   color="var(--gold)"
                 />
               </div>
-              <div className="mt-3 flex justify-end">
+              <div className="mt-3 flex items-center justify-end gap-3">
+                {!['hired', 'rejected', 'withdrawn'].includes(item.status) ? (
+                  <button
+                    type="button"
+                    disabled={withdrawingId === item.application_id}
+                    onClick={() => void handleWithdraw(item.application_id)}
+                    className="rounded-lg border border-red-200 px-2.5 py-1 text-xs font-medium text-red-700 disabled:opacity-50"
+                  >
+                    {t('applications.withdraw')}
+                  </button>
+                ) : null}
                 <Link
                   className="text-xs text-[var(--blue-700)]"
                   href={`/candidate/applications/${item.application_id}`}

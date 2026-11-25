@@ -66,12 +66,12 @@ function extractImprovedData(payload: ImprovedResult): ResumeData | undefined {
   if (p.improved_data) return p.improved_data as ResumeData;
   const data = payload.data;
   if (!data || typeof data !== 'object') return undefined;
-  if ('resume_preview' in data && (data as Record<string, unknown>).resume_preview)
-    return (data as Record<string, unknown>).resume_preview as ResumeData;
-  if ('improved_data' in data && (data as Record<string, unknown>).improved_data)
-    return (data as Record<string, unknown>).improved_data as ResumeData;
-  if ('resume' in data && (data as Record<string, unknown>).resume)
-    return (data as Record<string, unknown>).resume as ResumeData;
+  if ('resume_preview' in data && (data as unknown as Record<string, unknown>).resume_preview)
+    return (data as unknown as Record<string, unknown>).resume_preview as ResumeData;
+  if ('improved_data' in data && (data as unknown as Record<string, unknown>).improved_data)
+    return (data as unknown as Record<string, unknown>).improved_data as ResumeData;
+  if ('resume' in data && (data as unknown as Record<string, unknown>).resume)
+    return (data as unknown as Record<string, unknown>).resume as ResumeData;
   return data as unknown as ResumeData;
 }
 
@@ -696,8 +696,12 @@ export default function CandidateOptimizePage() {
                     <p className="font-mono text-xs">
                       {match.score_method === 'hybrid'
                         ? t('optimize.scoreMethodHybrid', {
-                            semantic: String(Math.round((match.score_weights?.semantic ?? 0.65) * 100)),
-                            keyword: String(Math.round((match.score_weights?.keyword ?? 0.35) * 100)),
+                            semantic: String(
+                              Math.round((match.score_weights?.semantic ?? 0.65) * 100)
+                            ),
+                            keyword: String(
+                              Math.round((match.score_weights?.keyword ?? 0.35) * 100)
+                            ),
                           })
                         : t('optimize.scoreMethodKeyword')}
                     </p>
@@ -707,8 +711,12 @@ export default function CandidateOptimizePage() {
                       {t('optimize.scoreBreakdown')}
                     </p>
                     <ul className="space-y-1 font-mono text-xs">
-                      <li>Semantic: {match.semantic_score ?? '—'}% ({t('optimize.semanticExplain')})</li>
-                      <li>Keyword: {match.keyword_score ?? '—'}% ({t('optimize.keywordExplain')})</li>
+                      <li>
+                        Semantic: {match.semantic_score ?? '—'}% ({t('optimize.semanticExplain')})
+                      </li>
+                      <li>
+                        Keyword: {match.keyword_score ?? '—'}% ({t('optimize.keywordExplain')})
+                      </li>
                       {match.hybrid_score != null && (
                         <li className="font-semibold">Hybrid: {match.hybrid_score}%</li>
                       )}

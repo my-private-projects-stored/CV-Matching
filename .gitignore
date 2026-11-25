@@ -62,3 +62,9 @@ Desktop.ini
 
 # ----- Docker local overrides -----
 **/docker-compose.override.yml
+
+errors/
+homework/
+issues/
+memories/
+plans/

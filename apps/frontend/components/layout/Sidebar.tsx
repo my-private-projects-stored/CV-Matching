@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import type { UserRole } from '@/types';
+import { canonicalizeRole, type CanonicalRole } from '@/lib/auth/roles';
 import { useAuth } from '@/lib/context/auth-context';
 import { useTranslations } from '@/lib/i18n/translations';
 import { cn } from '@/lib/utils';
 
-const navConfig: Record<
-  UserRole,
-  Array<{ groupKey: string; items: Array<{ labelKey: string; href: string }> }>
-> = {
+type NavGroup = { groupKey: string; items: Array<{ labelKey: string; href: string }> };
+
+const navConfig: Record<CanonicalRole, NavGroup[]> = {
   candidate: [
     {
       groupKey: 'nav.groups.workspace',
@@ -20,6 +20,7 @@ const navConfig: Record<
         { labelKey: 'nav.candidate.jobs', href: '/candidate/jobs' },
         { labelKey: 'nav.candidate.recommendations', href: '/candidate/recommendations' },
         { labelKey: 'nav.candidate.optimize', href: '/candidate/optimize' },
+        { labelKey: 'nav.candidate.practiceInterview', href: '/candidate/practice-interview' },
       ],
     },
     {
@@ -49,13 +50,25 @@ const navConfig: Record<
       ],
     },
   ],
-  admin: [
+  tech_staff: [
     {
       groupKey: 'nav.groups.system',
       items: [
+        { labelKey: 'nav.admin.health', href: '/admin/health' },
+        { labelKey: 'nav.admin.queues', href: '/admin/queues' },
+        { labelKey: 'nav.admin.auditLogs', href: '/admin/audit-logs' },
         { labelKey: 'nav.admin.config', href: '/admin/config' },
-        // { labelKey: 'nav.admin.vectors', href: '/admin/vectors' },
         { labelKey: 'nav.admin.users', href: '/admin/users' },
+        { labelKey: 'nav.admin.vectors', href: '/admin/vectors' },
+      ],
+    },
+  ],
+  platform_owner: [
+    {
+      groupKey: 'nav.groups.owner',
+      items: [
+        { labelKey: 'nav.owner.dashboard', href: '/owner/dashboard' },
+        { labelKey: 'nav.owner.funnel', href: '/owner/funnel' },
       ],
     },
   ],
@@ -65,6 +78,8 @@ export function Sidebar({ role, activePath }: { role: UserRole; activePath?: str
   const { t } = useTranslations();
   const { user } = useAuth();
   const userEmail = user?.email ?? t('common.guest');
+  const resolvedRole: CanonicalRole = canonicalizeRole(role) ?? 'candidate';
+  const groups = navConfig[resolvedRole];
 
   return (
     <aside className="flex h-full w-56 flex-col border-r border-[var(--border)] bg-white px-4 py-6">
@@ -75,7 +90,7 @@ export function Sidebar({ role, activePath }: { role: UserRole; activePath?: str
         <span className="text-sm font-semibold">{t('app.name')}</span>
       </div>
       <nav className="flex-1 space-y-6">
-        {navConfig[role].map((group) => (
+        {groups.map((group) => (
           <div key={group.groupKey}>
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--text-3)]">
               {t(group.groupKey)}
@@ -103,7 +118,9 @@ export function Sidebar({ role, activePath }: { role: UserRole; activePath?: str
         ))}
       </nav>
       <div className="rounded-lg bg-[var(--blue-50)] px-3 py-2 text-xs text-[var(--text-2)]">
-        <p className="font-semibold capitalize text-[var(--blue-700)]">{t(`roles.${role}`)}</p>
+        <p className="font-semibold capitalize text-[var(--blue-700)]">
+          {t(`roles.${resolvedRole}`)}
+        </p>
         <p className="truncate" title={userEmail}>
           {userEmail}
         </p>

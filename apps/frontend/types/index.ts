@@ -1,8 +1,16 @@
-export type UserRole = 'candidate' | 'recruiter' | 'admin';
-export type ApplicationStatus = 'new' | 'screening' | 'interview' | 'offer' | 'hired' | 'rejected';
+export type UserRole = 'candidate' | 'recruiter' | 'tech_staff' | 'platform_owner' | 'admin';
+export type ApplicationStatus =
+  | 'draft'
+  | 'new'
+  | 'screening'
+  | 'interview'
+  | 'offer'
+  | 'hired'
+  | 'rejected'
+  | 'withdrawn';
 export type AiStatus = 'pending' | 'parsing' | 'scoring' | 'completed' | 'failed';
 export type JobCategory = 'IT' | 'Accounting' | 'Marketing';
-export type JobStatus = 'active' | 'closed' | 'deleted';
+export type JobStatus = 'draft' | 'active' | 'closed' | 'deleted';
 
 export interface AiScores {
   semanticScore: number;

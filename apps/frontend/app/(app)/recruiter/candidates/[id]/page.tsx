@@ -45,6 +45,7 @@ export default function RecruiterCandidateProfilePage() {
   const [profile, setProfile] = useState<CandidateProfileResponse['data'] | null>(null);
   const [applications, setApplications] = useState<CandidateHistoryItem[]>([]);
   const [masterResume, setMasterResume] = useState<ResumeListItem | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [resumeDetails, setResumeDetails] = useState<any | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingOriginal, setDownloadingOriginal] = useState(false);
@@ -177,7 +178,9 @@ export default function RecruiterCandidateProfilePage() {
                   >
                     <span>
                       <span className="block font-semibold">{application.job.title}</span>
-                      <span className="text-xs text-[var(--text-3)]">{application.resume.title}</span>
+                      <span className="text-xs text-[var(--text-3)]">
+                        {application.resume.title}
+                      </span>
                     </span>
                     <span className="font-semibold text-[var(--text-1)]">
                       {Math.round(application.scores.hybrid_score * 100)}%
@@ -306,27 +309,30 @@ export default function RecruiterCandidateProfilePage() {
                         {t('resumes.workExperience') || 'Work Experience'}
                       </h3>
                       <div className="space-y-4">
-                        {resumeDetails.processed_resume.workExperience.map((exp: any, index: number) => (
-                          <div key={exp.id || index} className="space-y-1 text-sm">
-                            <div className="flex flex-wrap justify-between items-start gap-1 font-semibold text-[var(--text-1)]">
-                              <span>{exp.title}</span>
-                              <span className="text-xs text-[var(--text-3)] font-normal flex items-center gap-1">
-                                <Calendar className="size-3" />
-                                {exp.years}
-                              </span>
+                        {resumeDetails.processed_resume.workExperience.map(
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          (exp: any, index: number) => (
+                            <div key={exp.id || index} className="space-y-1 text-sm">
+                              <div className="flex flex-wrap justify-between items-start gap-1 font-semibold text-[var(--text-1)]">
+                                <span>{exp.title}</span>
+                                <span className="text-xs text-[var(--text-3)] font-normal flex items-center gap-1">
+                                  <Calendar className="size-3" />
+                                  {exp.years}
+                                </span>
+                              </div>
+                              <div className="text-xs text-[var(--blue-700)] font-medium">
+                                {exp.company} {exp.location ? `· ${exp.location}` : ''}
+                              </div>
+                              {exp.description && Array.isArray(exp.description) && (
+                                <ul className="list-disc pl-5 text-xs text-[var(--text-2)] space-y-1 mt-1.5">
+                                  {exp.description.map((item: string, i: number) => (
+                                    <li key={i}>{item}</li>
+                                  ))}
+                                </ul>
+                              )}
                             </div>
-                            <div className="text-xs text-[var(--blue-700)] font-medium">
-                              {exp.company} {exp.location ? `· ${exp.location}` : ''}
-                            </div>
-                            {exp.description && Array.isArray(exp.description) && (
-                              <ul className="list-disc pl-5 text-xs text-[var(--text-2)] space-y-1 mt-1.5">
-                                {exp.description.map((item: string, i: number) => (
-                                  <li key={i}>{item}</li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        ))}
+                          )
+                        )}
                       </div>
                     </div>
                   )}
@@ -340,6 +346,7 @@ export default function RecruiterCandidateProfilePage() {
                         {t('resumes.education') || 'Education'}
                       </h3>
                       <div className="space-y-3">
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         {resumeDetails.processed_resume.education.map((edu: any, index: number) => (
                           <div key={edu.id || index} className="space-y-1 text-sm">
                             <div className="flex flex-wrap justify-between items-start gap-1 font-semibold text-[var(--text-1)]">
@@ -349,9 +356,7 @@ export default function RecruiterCandidateProfilePage() {
                                 {edu.years}
                               </span>
                             </div>
-                            <div className="text-xs text-[var(--text-2)]">
-                              {edu.institution}
-                            </div>
+                            <div className="text-xs text-[var(--text-2)]">{edu.institution}</div>
                             {edu.description && (
                               <p className="text-xs text-[var(--text-3)] mt-1">{edu.description}</p>
                             )}
@@ -370,27 +375,30 @@ export default function RecruiterCandidateProfilePage() {
                         {t('resumes.projects') || 'Personal Projects'}
                       </h3>
                       <div className="space-y-4">
-                        {resumeDetails.processed_resume.personalProjects.map((project: any, index: number) => (
-                          <div key={project.id || index} className="space-y-1 text-sm">
-                            <div className="flex flex-wrap justify-between items-start gap-1 font-semibold text-[var(--text-1)]">
-                              <span>{project.name}</span>
-                              <span className="text-xs text-[var(--text-3)] font-normal flex items-center gap-1">
-                                <Calendar className="size-3" />
-                                {project.years}
-                              </span>
+                        {resumeDetails.processed_resume.personalProjects.map(
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          (project: any, index: number) => (
+                            <div key={project.id || index} className="space-y-1 text-sm">
+                              <div className="flex flex-wrap justify-between items-start gap-1 font-semibold text-[var(--text-1)]">
+                                <span>{project.name}</span>
+                                <span className="text-xs text-[var(--text-3)] font-normal flex items-center gap-1">
+                                  <Calendar className="size-3" />
+                                  {project.years}
+                                </span>
+                              </div>
+                              <div className="text-xs text-[var(--blue-700)] font-medium">
+                                {project.role}
+                              </div>
+                              {project.description && Array.isArray(project.description) && (
+                                <ul className="list-disc pl-5 text-xs text-[var(--text-2)] space-y-1 mt-1.5">
+                                  {project.description.map((item: string, i: number) => (
+                                    <li key={i}>{item}</li>
+                                  ))}
+                                </ul>
+                              )}
                             </div>
-                            <div className="text-xs text-[var(--blue-700)] font-medium">
-                              {project.role}
-                            </div>
-                            {project.description && Array.isArray(project.description) && (
-                              <ul className="list-disc pl-5 text-xs text-[var(--text-2)] space-y-1 mt-1.5">
-                                {project.description.map((item: string, i: number) => (
-                                  <li key={i}>{item}</li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        ))}
+                          )
+                        )}
                       </div>
                     </div>
                   )}
@@ -412,11 +420,16 @@ export default function RecruiterCandidateProfilePage() {
                               {t('resumes.skills') || 'Technical Skills'}
                             </span>
                             <div className="flex flex-wrap gap-1.5">
-                              {resumeDetails.processed_resume.additional.technicalSkills.map((skill: string) => (
-                                <span key={skill} className="rounded-md bg-slate-100 text-slate-800 px-2 py-0.5 font-medium">
-                                  {skill}
-                                </span>
-                              ))}
+                              {resumeDetails.processed_resume.additional.technicalSkills.map(
+                                (skill: string) => (
+                                  <span
+                                    key={skill}
+                                    className="rounded-md bg-slate-100 text-slate-800 px-2 py-0.5 font-medium"
+                                  >
+                                    {skill}
+                                  </span>
+                                )
+                              )}
                             </div>
                           </div>
                         )}
@@ -430,27 +443,35 @@ export default function RecruiterCandidateProfilePage() {
                               {t('resumes.languages') || 'Languages'}
                             </span>
                             <div className="flex flex-wrap gap-1.5">
-                              {resumeDetails.processed_resume.additional.languages.map((lang: string) => (
-                                <span key={lang} className="rounded-md bg-slate-100 text-slate-800 px-2 py-0.5 font-medium">
-                                  {lang}
-                                </span>
-                              ))}
+                              {resumeDetails.processed_resume.additional.languages.map(
+                                (lang: string) => (
+                                  <span
+                                    key={lang}
+                                    className="rounded-md bg-slate-100 text-slate-800 px-2 py-0.5 font-medium"
+                                  >
+                                    {lang}
+                                  </span>
+                                )
+                              )}
                             </div>
                           </div>
                         )}
 
                       {/* Certifications */}
                       {resumeDetails.processed_resume.additional.certificationsTraining &&
-                        resumeDetails.processed_resume.additional.certificationsTraining.length > 0 && (
+                        resumeDetails.processed_resume.additional.certificationsTraining.length >
+                          0 && (
                           <div className="space-y-1.5 md:col-span-2">
                             <span className="font-semibold text-[var(--text-2)] flex items-center gap-1.5">
                               <Award className="size-3.5 text-[var(--blue-700)]" />
                               {t('resumes.certifications') || 'Certifications & Training'}
                             </span>
                             <ul className="list-disc pl-5 space-y-1 text-[var(--text-2)]">
-                              {resumeDetails.processed_resume.additional.certificationsTraining.map((cert: string) => (
-                                <li key={cert}>{cert}</li>
-                              ))}
+                              {resumeDetails.processed_resume.additional.certificationsTraining.map(
+                                (cert: string) => (
+                                  <li key={cert}>{cert}</li>
+                                )
+                              )}
                             </ul>
                           </div>
                         )}
@@ -464,9 +485,11 @@ export default function RecruiterCandidateProfilePage() {
                               {t('resumes.awards') || 'Awards & Honors'}
                             </span>
                             <ul className="list-disc pl-5 space-y-1 text-[var(--text-2)]">
-                              {resumeDetails.processed_resume.additional.awards.map((award: string) => (
-                                <li key={award}>{award}</li>
-                              ))}
+                              {resumeDetails.processed_resume.additional.awards.map(
+                                (award: string) => (
+                                  <li key={award}>{award}</li>
+                                )
+                              )}
                             </ul>
                           </div>
                         )}

@@ -28,7 +28,23 @@ import {
 } from '@/lib/api/candidate-profile';
 import { downloadOriginalResumeFile } from '@/lib/api/resume';
 
-const ACTION_STATUSES: ApplicationStatus[] = ['interview', 'rejected', 'hired'];
+const ACTION_STATUSES: ApplicationStatus[] = [
+  'screening',
+  'interview',
+  'offer',
+  'hired',
+  'rejected',
+];
+const ALLOWED_NEXT_STATUSES: Record<string, ApplicationStatus[]> = {
+  draft: [],
+  new: ['screening', 'rejected'],
+  screening: ['interview', 'rejected'],
+  interview: ['offer', 'rejected'],
+  offer: ['hired', 'rejected'],
+  hired: [],
+  rejected: [],
+  withdrawn: [],
+};
 
 export default function RecruiterCandidateDetailPage() {
   const { t } = useTranslations();
@@ -166,17 +182,23 @@ export default function RecruiterCandidateDetailPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {ACTION_STATUSES.map((status) => (
-            <button
-              key={status}
-              className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs disabled:opacity-60"
-              onClick={() => void handleStatus(status)}
-              disabled={saving || feedback?.status === status}
-              type="button"
-            >
-              {t(`status.${status}`)}
-            </button>
-          ))}
+          {ACTION_STATUSES.map((status) => {
+            const current = feedback?.status || '';
+            const allowed = ALLOWED_NEXT_STATUSES[current]
+              ? ALLOWED_NEXT_STATUSES[current].includes(status)
+              : true;
+            return (
+              <button
+                key={status}
+                className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs disabled:opacity-60"
+                onClick={() => void handleStatus(status)}
+                disabled={saving || current === status || !allowed}
+                type="button"
+              >
+                {t(`status.${status}`)}
+              </button>
+            );
+          })}
         </div>
         {feedback?.resume_id ? (
           <Link

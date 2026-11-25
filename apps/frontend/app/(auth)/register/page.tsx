@@ -6,16 +6,15 @@ import { Eye, EyeOff, X } from 'lucide-react';
 import { RoleToggle } from '@/components/ui/RoleToggle';
 import { useAuth } from '@/lib/context/auth-context';
 import { useTranslations } from '@/lib/i18n/translations';
+import { defaultDashboardForRole, type UserRole } from '@/lib/auth/roles';
 import {
   getRememberedEmails,
   saveRememberedEmail,
   removeRememberedEmail,
 } from '@/lib/utils/remembered-accounts';
 
-function dashboardPath(role: string) {
-  if (role === 'recruiter') return '/recruiter/dashboard';
-  if (role === 'admin') return '/admin/config';
-  return '/candidate/dashboard';
+function dashboardPath(role: UserRole | string) {
+  return defaultDashboardForRole(role as UserRole);
 }
 
 export default function RegisterPage() {
@@ -28,10 +27,10 @@ export default function RegisterPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   const [rememberedEmails, setRememberedEmails] = useState<string[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -257,4 +256,3 @@ export default function RegisterPage() {
     </form>
   );
 }
-

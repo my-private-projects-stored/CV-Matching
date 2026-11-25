@@ -11,7 +11,7 @@ import {
 } from 'react';
 
 import type { AuthUser } from '@/lib/api/auth';
-import { fetchMe, login, signup, type UserRole } from '@/lib/api/auth';
+import { fetchMe, login, logoutRequest, signup, type UserRole } from '@/lib/api/auth';
 import { AUTH_STORAGE_KEY, setAuthTokenCookie } from '@/lib/api/client';
 
 type AuthSession = {
@@ -83,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const signOut = useCallback(() => {
+    void logoutRequest();
     setUser(null);
     setAccessToken(null);
     writeSessionToStorage(null);

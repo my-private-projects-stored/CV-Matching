@@ -1,25 +1,183 @@
 services:
-  gateway-backend:
-    build:
-      context: ./apps/backend
-      dockerfile: Dockerfile.prod
-    command: ["npm", "run", "start"]
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: cvm-nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    mem_limit: 128m
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://127.0.0.1/nginx-health || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - cvm_net
+    profiles:
+      - app
+      - microservices
+
+  mongo:
+    restart: always
+    mem_limit: 1024m
+
+  redis:
+    restart: always
+    mem_limit: 512m
+
+  qdrant:
+    restart: always
+    mem_limit: 1024m
+
+  minio:
+    restart: always
+    mem_limit: 512m
+
+  auth-service:
+    restart: always
+    mem_limit: 256m
     environment:
       NODE_ENV: production
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      PORT: "3001"
-    volumes: []
+    healthcheck:
+      test: [ "CMD-SHELL", "node -e \"fetch('http://127.0.0.1:5001/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  resume-service:
+    restart: always
+    mem_limit: 256m
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test: [ "CMD-SHELL", "node -e \"fetch('http://127.0.0.1:5002/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  job-service:
+    restart: always
+    mem_limit: 256m
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test: [ "CMD-SHELL", "node -e \"fetch('http://127.0.0.1:5003/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  application-service:
+    restart: always
+    mem_limit: 256m
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test: [ "CMD-SHELL", "node -e \"fetch('http://127.0.0.1:5004/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  recommendation-service:
+    restart: always
+    mem_limit: 256m
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test: [ "CMD-SHELL", "node -e \"fetch('http://127.0.0.1:5005/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  ai-enrichment-service:
+    restart: always
+    mem_limit: 256m
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test: [ "CMD-SHELL", "node -e \"fetch('http://127.0.0.1:5006/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  notification-service:
+    restart: always
+    mem_limit: 256m
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test: [ "CMD-SHELL", "node -e \"fetch('http://127.0.0.1:5007/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  config-analytics-service:
+    restart: always
+    mem_limit: 256m
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test: [ "CMD-SHELL", "node -e \"fetch('http://127.0.0.1:5008/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  api-gateway:
+    restart: always
+    mem_limit: 256m
+    environment:
+      NODE_ENV: production
 
   frontend:
     build:
       context: ./apps/frontend
       dockerfile: Dockerfile.prod
-    command: ["node", "server.js"]
+      args:
+        BACKEND_ORIGIN: http://api-gateway:3001
+    working_dir: /app
+    command: [ "node", "server.js" ]
+    restart: always
+    mem_limit: 512m
     environment:
       NODE_ENV: production
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
-      BACKEND_ORIGIN: http://gateway-backend:3001
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
-      INTERNAL_API_BASE_URL: http://gateway-backend:3001
-    volumes: []
+      BACKEND_ORIGIN: http://api-gateway:3001
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost}
+      INTERNAL_API_BASE_URL: http://api-gateway:3001
+    volumes: !reset []
+
+  worker-parsing:
+    restart: always
+    mem_limit: 512m
+
+  worker-embedding-sbert:
+    restart: always
+    mem_limit: 2560m
+
+  worker-scoring:
+    restart: always
+    mem_limit: 256m
+    environment:
+      NODE_ENV: production
+
+  worker-notification:
+    restart: always
+    mem_limit: 256m
+    environment:
+      NODE_ENV: production

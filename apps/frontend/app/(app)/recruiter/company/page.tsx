@@ -70,11 +70,31 @@ export default function RecruiterCompanyPage() {
       ) : null}
       {!loading ? (
         <section className="grid gap-4 rounded-2xl border border-[var(--border)] bg-white p-5 md:grid-cols-2">
+          <div className="md:col-span-2 flex items-center justify-between rounded-xl bg-[var(--bg)] px-3 py-2 text-xs">
+            <span className="font-semibold text-[var(--text-2)]">
+              {t('recruiter.company.verificationLabel')}
+            </span>
+            <span
+              className={`rounded-full px-2.5 py-0.5 font-semibold uppercase ${
+                profile.verificationStatus === 'verified'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : 'bg-amber-100 text-amber-800'
+              }`}
+            >
+              {profile.verificationStatus || 'unverified'}
+            </span>
+          </div>
           <input
             className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
             placeholder={t('forms.companyName')}
             value={profile.name || profile.companyName || ''}
             onChange={(event) => update('name', event.target.value)}
+          />
+          <input
+            className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
+            placeholder={t('forms.taxCode')}
+            value={profile.taxCode || ''}
+            onChange={(event) => update('taxCode', event.target.value)}
           />
           <input
             className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm"

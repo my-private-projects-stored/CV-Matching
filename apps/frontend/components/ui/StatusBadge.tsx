@@ -5,12 +5,14 @@ import { cn } from '@/lib/utils';
 import { useTranslations } from '@/lib/i18n/translations';
 
 const statusMap: Record<ApplicationStatus, { className: string }> = {
+  draft: { className: 'bg-slate-100 text-slate-600' },
   new: { className: 'bg-[var(--blue-100)] text-[var(--blue-700)]' },
   screening: { className: 'bg-amber-50 text-[var(--warning)]' },
   interview: { className: 'bg-cyan-50 text-[var(--info)]' },
   offer: { className: 'bg-[var(--gold-dim)] text-[var(--gold)]' },
   hired: { className: 'bg-green-50 text-[var(--success)]' },
   rejected: { className: 'bg-red-50 text-[var(--danger)]' },
+  withdrawn: { className: 'bg-zinc-100 text-zinc-600' },
 };
 
 export function StatusBadge({

@@ -31,7 +31,8 @@
     "popupBlocked": "Trình duyệt đã chặn cửa sổ bật lên. Vui lòng nhấp vào đây để mở: {url}",
     "unknown": "Lỗi không xác định",
     "ok": "Đồng ý",
-    "reset": "Đặt lại"
+    "reset": "Đặt lại",
+    "refresh": "Làm mới"
   },
   "app": {
     "name": "CV Matching",
@@ -42,7 +43,9 @@
     "candidate": "Ứng viên",
     "recruiter": "Nhà tuyển dụng",
     "admin": "Quản trị",
-    "workspace": "không gian làm việc"
+    "workspace": "không gian làm việc",
+    "tech_staff": "Kỹ thuật viên",
+    "platform_owner": "Chủ nền tảng"
   },
   "nav": {
     "backToDashboard": "Quay lại Tổng quan",
@@ -50,7 +53,8 @@
     "groups": {
       "workspace": "Không gian làm việc",
       "account": "Tài khoản",
-      "system": "Hệ thống"
+      "system": "Hệ thống",
+      "owner": "Điều hành BI"
     },
     "candidate": {
       "overview": "Tổng quan",
@@ -61,7 +65,8 @@
       "optimize": "Tối ưu CV",
       "notifications": "Thông báo",
       "profile": "Hồ sơ",
-      "settings": "Cài đặt"
+      "settings": "Cài đặt",
+      "practiceInterview": "Luyện phỏng vấn"
     },
     "recruiter": {
       "overview": "Tổng quan",
@@ -74,7 +79,14 @@
     "admin": {
       "config": "Cấu hình",
       "vectors": "Vector Ops",
-      "users": "Người dùng"
+      "users": "Người dùng",
+      "health": "Sức khỏe cụm",
+      "queues": "Hàng đợi Redis",
+      "auditLogs": "Nhật ký kiểm toán"
+    },
+    "owner": {
+      "dashboard": "Tổng quan KPI",
+      "funnel": "Phễu tuyển dụng"
     }
   },
   "routes": {
@@ -97,7 +109,13 @@
     "coverLetter": "Thư xin việc",
     "interview": "Câu hỏi phỏng vấn",
     "login": "Đăng nhập",
-    "register": "Đăng ký"
+    "register": "Đăng ký",
+    "practiceInterview": "Luyện phỏng vấn",
+    "adminHealth": "Sức khỏe cụm",
+    "adminQueues": "Hàng đợi Redis",
+    "adminAuditLogs": "Nhật ký kiểm toán",
+    "ownerDashboard": "Tổng quan nền tảng",
+    "ownerFunnel": "Phễu tuyển dụng"
   },
   "auth": {
     "eyebrow": "SMART CV MATCHING",
@@ -173,7 +191,9 @@
     "interview": "Phỏng vấn",
     "offer": "Offer",
     "hired": "Đã tuyển",
-    "rejected": "Từ chối"
+    "rejected": "Từ chối",
+    "draft": "Nháp",
+    "withdrawn": "Đã rút"
   },
   "aiStatus": {
     "pending": "Chờ xử lý",
@@ -294,6 +314,30 @@
     "adminVectors": {
       "title": "Vector Ops",
       "subtitle": "Index vector và công cụ tìm kiếm ngữ nghĩa."
+    },
+    "ownerDashboard": {
+      "title": "Bảng điều khiển Chủ nền tảng",
+      "subtitle": "KPI tăng trưởng, xu hướng ngày và cơ cấu ngành nghề"
+    },
+    "ownerFunnel": {
+      "title": "Phễu tuyển dụng & Hiệu quả AI",
+      "subtitle": "Tỷ lệ chuyển đổi từng vòng và đối chứng điểm AI"
+    },
+    "adminHealth": {
+      "title": "Giám sát Sức khỏe Cụm",
+      "subtitle": "Trạng thái sống còn và độ trễ 8 Microservices, Workers và Datastores"
+    },
+    "adminQueues": {
+      "title": "Hàng đợi Redis & DLQ",
+      "subtitle": "Theo dõi LLEN và tái xử lý thông điệp lỗi"
+    },
+    "adminAuditLogs": {
+      "title": "Nhật ký Kiểm toán Hệ thống",
+      "subtitle": "Lưu vết bất biến thay đổi cấu hình, khóa tài khoản và retry DLQ"
+    },
+    "candidatePracticeInterview": {
+      "title": "Luyện tập Phỏng vấn Mô phỏng AI",
+      "subtitle": "Ôn luyện câu hỏi theo nhóm kỹ năng kèm gợi ý cấu trúc STAR"
     }
   },
   "resume": {
@@ -371,7 +415,9 @@
     "sectionsLabel": "Các mục",
     "customSectionPlaceholder": "Mục tuỳ chỉnh",
     "add": "Thêm",
-    "pageSize": "Khổ trang",
+    "pageSize": {
+      "usLetter": "Letter (US)"
+    },
     "pageSizeA4": "A4",
     "pageSizeLetter": "Letter",
     "baseFontSize": "Cỡ chữ cơ bản",
@@ -547,9 +593,6 @@
       "effectiveBodyFont": "Font nội dung thực tế",
       "compactHint": "* Chế độ siêu gọn giảm khoảng cách và cỡ chữ đi 15%.",
       "resetDefaults": "Đặt lại mặc định"
-    },
-    "pageSize": {
-      "usLetter": "Letter (US)"
     },
     "sectionHeader": {
       "renameSection": "Đổi tên mục",
@@ -882,7 +925,12 @@
       "api": "API",
       "ready": "Sẵn sàng",
       "llm": "LLM",
-      "stale": "cũ"
+      "stale": "cũ",
+      "autoRefresh": "Tự động cập nhật",
+      "degradedAlert": "Một hoặc nhiều thành phần trong cụm đang mất kết nối",
+      "microservicesGroup": "Microservices nghiệp vụ",
+      "workersGroup": "Workers AI & Bất đồng bộ",
+      "datastoresGroup": "Cơ sở dữ liệu & Object Storage"
     },
     "tabs": {
       "llm": "Nhà cung cấp LLM",
@@ -891,7 +939,9 @@
       "apiKeys": "API Keys",
       "language": "Ngôn ngữ",
       "privacy": "Quyền riêng tư",
-      "llmEvents": "Nhật ký LLM"
+      "llmEvents": "Nhật ký LLM",
+      "scoring": "Trọng số AI",
+      "maintenance": "Chế độ bảo trì"
     },
     "config": {
       "model": "Model",
@@ -998,7 +1048,9 @@
           "failed": "Thất bại: {reason}",
           "unknown": "không rõ"
         }
-      }
+      },
+      "scoringDescription": "Điều chỉnh trọng số Hybrid Scoring (Ngữ nghĩa + Từ khóa luôn bằng 100%).",
+      "maintenanceGlobal": "Bật bảo trì toàn hệ thống"
     },
     "apiKeyProviders": {
       "openai": {
@@ -1036,7 +1088,12 @@
         "active": "Đang hoạt động"
       },
       "enable": "Kích hoạt",
-      "disable": "Vô hiệu hóa"
+      "disable": "Vô hiệu hóa",
+      "usersTab": "Người dùng & 4-RBAC",
+      "companiesTab": "Duyệt xác minh MST",
+      "verifyCompany": "Xác minh",
+      "rejectCompany": "Từ chối",
+      "suspendReasonPlaceholder": "Nhập lý do bắt buộc khi khóa tài khoản này..."
     },
     "vectors": {
       "sharedInput": "Vector dùng chung",
@@ -1053,13 +1110,31 @@
       "scorePair": "Chấm điểm cặp Job / Resume",
       "pairScore": "Điểm cặp",
       "searchResults": "Kết quả tìm kiếm",
+      "reindexTitle": "Reindex Qdrant Zero-Downtime (Alias Swap)",
+      "reindexResumes": "Reindex bộ sưu tập Resumes (Alias Swap)",
+      "reindexJobs": "Reindex bộ sưu tập Jobs (Alias Swap)",
       "messages": {
         "jobIndexed": "Đã index job: {id}",
         "resumeIndexed": "Đã index resume: {id}",
         "foundResumeMatches": "Tìm thấy {count} resume phù hợp",
         "foundJobMatches": "Tìm thấy {count} job phù hợp",
-        "hybridScoreComputed": "Đã tính điểm hybrid"
+        "hybridScoreComputed": "Đã tính điểm hybrid",
+        "reindexed": "Đã reindex {count} vector sang {collection} (alias swap: {ms} ms)"
       }
+    },
+    "queues": {
+      "retryDlq": "Tái xử lý DLQ",
+      "emptyDlq": "Không có thông điệp lỗi trong DLQ.",
+      "retriedNotice": "Đã đẩy lại hàng đợi chính"
+    },
+    "auditLogs": {
+      "allActions": "Tất cả hành động",
+      "empty": "Chưa có nhật ký kiểm toán.",
+      "time": "Thời gian",
+      "actor": "Người thực hiện",
+      "action": "Hành động",
+      "target": "Đối tượng",
+      "reason": "Lý do"
     }
   },
   "recruiter": {
@@ -1178,11 +1253,14 @@
     },
     "company": {
       "saved": "Đã lưu hồ sơ công ty",
-      "logoPreviewAlt": "Xem trước logo công ty"
+      "logoPreviewAlt": "Xem trước logo công ty",
+      "verificationLabel": "Trạng thái xác minh MST doanh nghiệp"
     },
     "notifications": {
       "viewJobPostings": "Xem tin tuyển dụng"
-    }
+    },
+    "manualScreening": "Duyệt thủ công",
+    "retryScoring": "Chấm lại AI"
   },
   "emptyStates": {
     "noResumes": {
@@ -1293,7 +1371,13 @@
     "updateUser": "Không cập nhật được người dùng",
     "vectorOperationFailed": "Thao tác thất bại",
     "vectorMustBeArray": "Vector phải là mảng JSON các số",
-    "invalidJsonArray": "Cần nhập một mảng JSON."
+    "invalidJsonArray": "Cần nhập một mảng JSON.",
+    "loadAnalytics": "Không thể tải dữ liệu phân tích",
+    "loadClusterHealth": "Không thể tải trạng thái cụm",
+    "loadQueues": "Không thể tải hàng đợi Redis",
+    "retryDlq": "Không thể tái xử lý DLQ",
+    "loadAuditLogs": "Không thể tải nhật ký kiểm toán",
+    "loadInterview": "Không thể sinh câu hỏi luyện tập"
   },
   "forms": {
     "title": "Tiêu đề",
@@ -1327,7 +1411,8 @@
     "resume": "CV",
     "masterSuffix": " (Chính)",
     "colorHexPlaceholder": "#1D4ED8",
-    "urlShortPlaceholder": "https://..."
+    "urlShortPlaceholder": "https://...",
+    "taxCode": "Mã số thuế (MST)"
   },
   "metadata": {
     "title": "CV Matching - Nền tảng tuyển dụng AI",
@@ -1395,7 +1480,8 @@
     "statsInterviews": "Phỏng vấn",
     "statsPendingAi": "AI đang chờ",
     "hybridLabel": "Hybrid",
-    "statusTransition": "{from} → {to}"
+    "statusTransition": "{from} → {to}",
+    "withdraw": "Rút đơn"
   },
   "settings": {
     "changePassword": "Đổi mật khẩu",
@@ -1489,5 +1575,32 @@
     "copy": "Sao chép vào Clipboard",
     "generate": "Tạo email tiếp cận bằng AI",
     "regenerate": "Tạo lại bằng AI"
+  },
+  "owner": {
+    "noData": "Chưa có dữ liệu thống kê trong khoảng thời gian này.",
+    "dashboard": {
+      "totalUsers": "Tổng người dùng",
+      "totalResumes": "Tổng số CV",
+      "activeJobs": "Việc làm đang mở",
+      "totalApplications": "Tổng lượt ứng tuyển",
+      "dailyTrend": "Xu hướng hoạt động theo ngày",
+      "categoryDistribution": "Cơ cấu việc làm theo ngành",
+      "usersByRole": "Người dùng theo vai trò"
+    },
+    "funnel": {
+      "stageTitle": "Phân bố hồ sơ theo vòng tuyển dụng",
+      "aiCorrelationTitle": "Đối chứng điểm Hybrid AI & Kết quả tuyển",
+      "aiCorrelationSubtitle": "So sánh nhóm điểm cao (>= 80%) và điểm thấp (< 50%)",
+      "highScoreGroup": "Nhóm khớp cao",
+      "lowScoreGroup": "Nhóm khớp thấp",
+      "interviewRate": "Tỷ lệ vào phỏng vấn",
+      "exportCsv": "Xuất CSV"
+    }
+  },
+  "practiceInterview": {
+    "jobTitle": "Vị trí mục tiêu",
+    "skills": "Kỹ năng trọng tâm (cách nhau dấu phẩy)",
+    "generate": "Sinh câu hỏi luyện tập",
+    "starHint": "Xem gợi ý trả lời STAR"
   }
 }

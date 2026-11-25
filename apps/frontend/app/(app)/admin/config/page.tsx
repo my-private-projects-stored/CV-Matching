@@ -31,11 +31,28 @@ import {
   type PrivacyConfig,
   type LlmEvent,
 } from '@/lib/api/config';
+import {
+  fetchMaintenanceMode,
+  fetchScoringWeights,
+  updateMaintenanceMode,
+  updateScoringWeights,
+  type MaintenanceModeConfig,
+  type ScoringWeightsConfig,
+} from '@/lib/api/ops-analytics';
 import { usePageHeader } from '@/lib/i18n/use-page-header';
 import { useTranslations } from '@/lib/i18n/translations';
 import { useStatusCache } from '@/lib/context/status-cache';
 
-type Tab = 'llm' | 'prompts' | 'features' | 'apiKeys' | 'language' | 'privacy' | 'llmEvents';
+type Tab =
+  | 'llm'
+  | 'prompts'
+  | 'features'
+  | 'apiKeys'
+  | 'language'
+  | 'privacy'
+  | 'scoring'
+  | 'maintenance'
+  | 'llmEvents';
 
 export default function AdminConfigPage() {
   const header = usePageHeader('adminConfig');
@@ -48,6 +65,22 @@ export default function AdminConfigPage() {
   const [prompts, setPrompts] = useState<PromptConfig | null>(null);
   const [privacy, setPrivacy] = useState<PrivacyConfig | null>(null);
   const [apiKeyStatus, setApiKeyStatus] = useState<ApiKeyStatusResponse | null>(null);
+  const [scoringWeights, setScoringWeights] = useState<ScoringWeightsConfig>({
+    semanticWeight: 0.65,
+    keywordWeight: 0.35,
+  });
+  const [maintenance, setMaintenance] = useState<MaintenanceModeConfig>({
+    global: false,
+    modules: {
+      auth: false,
+      resumes: false,
+      jobs: false,
+      applications: false,
+      recommendations: false,
+      enrichment: false,
+      notifications: false,
+    },
+  });
   const [truthfulnessRulesInput, setTruthfulnessRulesInput] = useState<string>('');
   const [apiKeyInputs, setApiKeyInputs] = useState<ApiKeysUpdateRequest>({});
   const [llmEvents, setLlmEvents] = useState<LlmEvent[]>([]);
@@ -75,9 +108,20 @@ export default function AdminConfigPage() {
       fetchPromptConfig(),
       fetchPrivacyConfig(),
       fetchApiKeyStatus(),
+      fetchScoringWeights().catch(() => ({ semanticWeight: 0.65, keywordWeight: 0.35 })),
+      fetchMaintenanceMode().catch(() => null),
     ])
       .then(
-        ([llmConfig, featureConfig, languageConfig, promptConfig, privacyConfig, apiKeyStatus]) => {
+        ([
+          llmConfig,
+          featureConfig,
+          languageConfig,
+          promptConfig,
+          privacyConfig,
+          apiKeyStatus,
+          weightsConfig,
+          maintConfig,
+        ]) => {
           if (!active) return;
           setLlm(llmConfig);
           setFeatures(featureConfig);
@@ -86,6 +130,8 @@ export default function AdminConfigPage() {
           setTruthfulnessRulesInput(promptConfig.truthfulness_rules?.join('\n') || '');
           setPrivacy(privacyConfig);
           setApiKeyStatus(apiKeyStatus);
+          if (weightsConfig) setScoringWeights(weightsConfig);
+          if (maintConfig) setMaintenance(maintConfig);
           setError(null);
         }
       )
@@ -201,6 +247,8 @@ export default function AdminConfigPage() {
             ['apiKeys', 'admin.tabs.apiKeys'],
             ['language', 'admin.tabs.language'],
             ['privacy', 'admin.tabs.privacy'],
+            ['scoring', 'admin.tabs.scoring'],
+            ['maintenance', 'admin.tabs.maintenance'],
             ['llmEvents', 'admin.tabs.llmEvents'],
           ] as const
         ).map(([id, labelKey]) => (
@@ -219,6 +267,87 @@ export default function AdminConfigPage() {
         <p className="rounded-lg border border-green-100 bg-green-50 px-3 py-2 text-xs text-[var(--success)]">
           {message}
         </p>
+      ) : null}
+
+      {!loading && tab === 'scoring' ? (
+        <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-white p-5">
+          <p className="text-xs text-[var(--text-2)]">{t('admin.config.scoringDescription')}</p>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm font-semibold">
+              <span>Semantic: {Math.round(scoringWeights.semanticWeight * 100)}%</span>
+              <span>Keyword: {Math.round(scoringWeights.keywordWeight * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={Math.round(scoringWeights.semanticWeight * 100)}
+              onChange={(event) => {
+                const sem = Number(event.target.value) / 100;
+                const kw = Number((1 - sem).toFixed(2));
+                setScoringWeights({ semanticWeight: sem, keywordWeight: kw });
+              }}
+              className="w-full accent-[var(--blue-700)]"
+            />
+          </div>
+          <button
+            type="button"
+            className="rounded-lg bg-[var(--blue-700)] px-4 py-2 text-sm text-white"
+            onClick={() =>
+              askSave(async () => {
+                const res = await updateScoringWeights(scoringWeights);
+                setScoringWeights(res.value);
+              })
+            }
+          >
+            {t('common.save')}
+          </button>
+        </section>
+      ) : null}
+
+      {!loading && tab === 'maintenance' ? (
+        <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-white p-5">
+          <label className="flex items-center justify-between border-b border-[var(--border)] pb-3 text-sm font-semibold">
+            <span>{t('admin.config.maintenanceGlobal')}</span>
+            <input
+              type="checkbox"
+              checked={maintenance.global}
+              onChange={(event) => setMaintenance({ ...maintenance, global: event.target.checked })}
+            />
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(
+              Object.keys(maintenance.modules) as Array<keyof MaintenanceModeConfig['modules']>
+            ).map((modKey) => (
+              <label key={modKey} className="flex items-center justify-between text-sm capitalize">
+                <span>{modKey}</span>
+                <input
+                  type="checkbox"
+                  checked={maintenance.modules[modKey]}
+                  onChange={(event) =>
+                    setMaintenance({
+                      ...maintenance,
+                      modules: { ...maintenance.modules, [modKey]: event.target.checked },
+                    })
+                  }
+                />
+              </label>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="rounded-lg bg-[var(--blue-700)] px-4 py-2 text-sm text-white"
+            onClick={() =>
+              askSave(async () => {
+                const res = await updateMaintenanceMode(maintenance);
+                setMaintenance(res.value);
+              })
+            }
+          >
+            {t('common.save')}
+          </button>
+        </section>
       ) : null}
 
       {!loading && llm && tab === 'llm' ? (

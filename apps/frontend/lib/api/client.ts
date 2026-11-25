@@ -99,13 +99,76 @@ function buildRequestHeaders(headers?: HeadersInit): Headers {
   return mergedHeaders;
 }
 
+let silentRefreshPromise: Promise<string | null> | null = null;
+
+function isAuthBypassEndpoint(endpoint: string): boolean {
+  return (
+    endpoint.includes('/auth/login') ||
+    endpoint.includes('/auth/signup') ||
+    endpoint.includes('/auth/register') ||
+    endpoint.includes('/auth/refresh')
+  );
+}
+
+function updateStoredAccessToken(nextToken: string | null) {
+  if (typeof window === 'undefined') return;
+  if (!nextToken) {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    setAuthTokenCookie(null);
+    return;
+  }
+  try {
+    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    window.localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({ ...parsed, accessToken: nextToken })
+    );
+    setAuthTokenCookie(nextToken);
+  } catch {
+    // Ignore storage write errors
+  }
+}
+
+async function attemptSilentRefresh(refreshUrl: string): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+  if (!readAccessTokenFromStorage()) return null;
+
+  if (!silentRefreshPromise) {
+    silentRefreshPromise = (async () => {
+      try {
+        const res = await fetch(refreshUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({}),
+        });
+        if (!res.ok) {
+          updateStoredAccessToken(null);
+          return null;
+        }
+        const data = (await res.json()) as { access_token?: string; token?: string };
+        const nextToken = String(data?.access_token || data?.token || '').trim();
+        if (!nextToken) {
+          updateStoredAccessToken(null);
+          return null;
+        }
+        updateStoredAccessToken(nextToken);
+        return nextToken;
+      } catch {
+        return null;
+      } finally {
+        silentRefreshPromise = null;
+      }
+    })();
+  }
+
+  return silentRefreshPromise;
+}
+
 /**
- * Standard fetch wrapper with common error handling.
+ * Standard fetch wrapper with common error handling and deduplicated 401 Silent Refresh.
  * Returns the Response object for flexibility.
- *
- * @param endpoint - API endpoint path or absolute URL
- * @param options - Standard RequestInit options
- * @param timeoutMs - Optional request timeout in milliseconds (default: 240_000)
  */
 export async function apiFetch(
   endpoint: string,
@@ -120,11 +183,8 @@ export async function apiFetch(
   if (isAbsoluteUrl) {
     url = endpoint;
   } else if (isApiPath) {
-    // Ensure browser client calls to "/api/..." use the configured public API host
-    // when NEXT_PUBLIC_API_BASE_URL is set (e.g. http://localhost:3001).
     const publicBase = API_BASE_URL || '/';
     if (publicBase === '/' || publicBase === '') {
-      // Same-origin: keep relative API path
       url = normalizedEndpoint;
     } else {
       const host = publicBase.replace(/\/+$/, '');
@@ -132,18 +192,33 @@ export async function apiFetch(
     }
   }
 
-  // Matches the backend's 240s hard limit (resumes.py wait_for timeout)
   const timeout = timeoutMs ?? 240_000;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
 
   try {
     const headers = buildRequestHeaders(options?.headers);
-    return await fetch(url, {
+    const response = await fetch(url, {
       ...options,
       headers,
       signal: controller.signal,
     });
+
+    if (response.status === 401 && !isAuthBypassEndpoint(normalizedEndpoint)) {
+      const refreshUrl = isApiPath ? '/api/auth/refresh' : `${API_BASE}/auth/refresh`;
+      const refreshedToken = await attemptSilentRefresh(refreshUrl);
+      if (refreshedToken) {
+        const retryHeaders = new Headers(options?.headers || undefined);
+        retryHeaders.set('Authorization', `Bearer ${refreshedToken}`);
+        return await fetch(url, {
+          ...options,
+          headers: retryHeaders,
+          signal: controller.signal,
+        });
+      }
+    }
+
+    return response;
   } finally {
     clearTimeout(timer);
   }
