@@ -150,7 +150,7 @@ export default function RecruiterDashboardPage() {
             {candidates.map((candidate) => (
               <Link
                 key={candidate.application_id}
-                href={`/recruiter/jobs/${selectedJobId}/candidates/${candidate.application_id}`}
+                href={`/recruiter/applications/${candidate.application_id}?job_id=${selectedJobId}`}
                 className="grid gap-3 rounded-xl border border-[var(--border)] p-4 text-sm hover:bg-slate-50 md:grid-cols-[1fr_120px_120px] items-center"
               >
                 <span>

@@ -173,7 +173,7 @@ export default function RecruiterCandidateProfilePage() {
                 {applications.map((application) => (
                   <Link
                     key={application.application_id}
-                    href={`/recruiter/jobs/${application.job.id}/candidates/${application.application_id}`}
+                    href={`/recruiter/applications/${application.application_id}?job_id=${application.job.id}`}
                     className="grid gap-3 rounded-xl border border-[var(--border)] p-4 text-sm hover:bg-slate-50 md:grid-cols-[1fr_120px_100px] md:items-center"
                   >
                     <span>
