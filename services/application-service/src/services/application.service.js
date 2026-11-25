@@ -60,10 +60,11 @@ export function createApplicationService({
       throw createHttpError(400, "Initial application status must be 'new' or 'draft'", "invalid_initial_status");
     }
 
+    let remoteJob = null;
     let mirror = JobStatusMirrorModel ? await JobStatusMirrorModel.findOne({ jobId }) : null;
-    if ((!mirror || !mirror.recruiterId) && typeof resolveJobMetadata === "function") {
+    if ((!mirror || !mirror.recruiterId || !mirror.title) && typeof resolveJobMetadata === "function") {
       try {
-        const remoteJob = await resolveJobMetadata(jobId);
+        remoteJob = await resolveJobMetadata(jobId);
         if (remoteJob) {
           if (remoteJob.status && remoteJob.status !== "active" && remoteJob.status !== "open") {
             throw createHttpError(
@@ -142,6 +143,9 @@ export function createApplicationService({
           candidateName: String(candidateMeta?.fullName || payload.candidateName || payload.candidate_name || "").trim(),
           candidateEmail: String(candidateMeta?.email || payload.candidateEmail || payload.candidate_email || "").trim(),
           resumeTitle: String(resumeMeta?.title || payload.resumeTitle || payload.resume_title || "").trim(),
+          jobTitle: String(remoteJob?.title || mirror?.title || payload.jobTitle || payload.job_title || "").trim(),
+          jobLocation: String(remoteJob?.location || payload.jobLocation || payload.job_location || "").trim(),
+          jobCategory: String(remoteJob?.category || mirror?.category || payload.jobCategory || payload.job_category || "").trim(),
           status: initialStatus,
           aiStatus: "pending",
           aiScores: { semanticScore: 0, keywordScore: 0, hybridScore: 0 },
@@ -607,7 +611,64 @@ export function createApplicationService({
       }
     }
 
-    return ApplicationModel.find(filter, null, { sort: { createdAt: -1 } });
+    const apps = await ApplicationModel.find(filter, null, { sort: { createdAt: -1 } });
+    const missingJobIds = Array.from(
+      new Set(apps.filter((a) => !a.jobTitle && a.jobId).map((a) => String(a.jobId)))
+    );
+    if (missingJobIds.length === 0) {
+      return apps;
+    }
+
+    const jobMetaMap = new Map();
+    if (JobStatusMirrorModel && typeof JobStatusMirrorModel.find === "function") {
+      try {
+        const mirrors = await JobStatusMirrorModel.find({ jobId: { $in: missingJobIds } });
+        for (const m of mirrors || []) {
+          if (m?.jobId && m?.title) {
+            jobMetaMap.set(String(m.jobId), {
+              title: String(m.title),
+              location: m.location || null,
+              category: m.category || null,
+            });
+          }
+        }
+      } catch {
+        // Ignore mirror lookup errors
+      }
+    }
+
+    if (typeof resolveJobMetadata === "function") {
+      const stillMissing = missingJobIds.filter((id) => !jobMetaMap.has(id));
+      await Promise.all(
+        stillMissing.map(async (id) => {
+          try {
+            const job = await resolveJobMetadata(id);
+            if (job?.title) {
+              jobMetaMap.set(id, {
+                title: String(job.title),
+                location: job.location || null,
+                category: job.category || null,
+              });
+            }
+          } catch {
+            // Best-effort lookup
+          }
+        })
+      );
+    }
+
+    for (const app of apps) {
+      if (!app.jobTitle && app.jobId) {
+        const meta = jobMetaMap.get(String(app.jobId));
+        if (meta) {
+          app.jobTitle = meta.title;
+          if (!app.jobLocation && meta.location) app.jobLocation = meta.location;
+          if (!app.jobCategory && meta.category) app.jobCategory = meta.category;
+        }
+      }
+    }
+
+    return apps;
   }
 
   async function assertCanViewApplication(app, viewer) {

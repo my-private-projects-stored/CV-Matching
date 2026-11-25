@@ -63,6 +63,18 @@ const applicationSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    jobTitle: {
+      type: String,
+      default: "",
+    },
+    jobLocation: {
+      type: String,
+      default: "",
+    },
+    jobCategory: {
+      type: String,
+      default: "",
+    },
     status: {
       type: String,
       enum: ["draft", "new", "screening", "interview", "offer", "hired", "rejected", "withdrawn"],
