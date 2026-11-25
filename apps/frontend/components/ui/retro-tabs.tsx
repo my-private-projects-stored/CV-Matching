@@ -27,7 +27,12 @@ export const RetroTabs: React.FC<RetroTabsProps> = ({
   className,
 }) => {
   return (
-    <div className={cn('flex gap-1 border-b border-[color:var(--border)]', className)}>
+    <div
+      className={cn(
+        'inline-flex flex-wrap items-center gap-1 rounded-xl border border-[color:var(--border)] bg-[var(--surface-muted)] p-1',
+        className
+      )}
+    >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         const isDisabled = tab.disabled;
@@ -35,24 +40,17 @@ export const RetroTabs: React.FC<RetroTabsProps> = ({
         return (
           <button
             key={tab.id}
+            type="button"
             onClick={() => !isDisabled && onTabChange(tab.id)}
             disabled={isDisabled}
             className={cn(
-              'px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition-all',
-              'rounded-t-xl border border-b-0 border-[color:var(--border)]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2',
-              isActive && [
-                'bg-white text-[var(--foreground)]',
-                'shadow-[0_10px_18px_rgba(15,27,45,0.12)]',
-                'border-b-white',
-              ],
+              'rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all duration-150',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-1',
+              isActive && 'bg-white font-semibold text-[var(--blue-700)] shadow-sm',
               !isActive &&
-                !isDisabled && [
-                  'bg-[var(--surface-muted)] text-[color:var(--text-subtle)] hover:text-[var(--foreground)]',
-                ],
-              isDisabled && [
-                'bg-[var(--surface-muted)] text-[color:var(--text-subtle)] opacity-50 cursor-not-allowed',
-              ]
+                !isDisabled &&
+                'text-[var(--text-2)] hover:bg-white/60 hover:text-[var(--text-1)]',
+              isDisabled && 'cursor-not-allowed text-[var(--text-3)] opacity-50'
             )}
           >
             {tab.label}

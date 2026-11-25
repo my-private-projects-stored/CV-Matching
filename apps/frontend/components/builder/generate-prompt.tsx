@@ -37,27 +37,27 @@ export function GeneratePrompt({
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center min-h-[400px] p-12 text-center',
+        'flex flex-col items-center justify-center min-h-[380px] rounded-2xl border border-[var(--border)] bg-white p-10 text-center shadow-[var(--shadow-elev-1)]',
         className
       )}
     >
-      <div className="w-16 h-16 border-2 border-blue-700 bg-blue-50 flex items-center justify-center mb-6">
-        <Icon className="w-8 h-8 text-blue-700" />
+      <div className="w-14 h-14 rounded-2xl border border-[var(--blue-100)] bg-[var(--blue-50)] flex items-center justify-center mb-5">
+        <Icon className="w-7 h-7 text-[var(--blue-700)]" />
       </div>
-      <h3 className="font-mono text-sm font-bold uppercase tracking-wider mb-3">
+      <h3 className="font-display text-lg font-semibold text-[var(--text-1)] mb-2">
         {t('builder.generatePrompt.generateTitle', { title })}
       </h3>
-      <p className="font-mono text-xs text-gray-600 max-w-md mb-4 leading-relaxed">
+      <p className="text-sm text-[var(--text-2)] max-w-md mb-5 leading-relaxed">
         {isOutreach
           ? t('builder.generatePrompt.outreachDescription')
           : t('builder.generatePrompt.coverLetterDescription')}
       </p>
       {isNotTailored && (
-        <p className="font-mono text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 max-w-md mb-4 leading-relaxed">
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 max-w-md mb-5 leading-relaxed">
           {t('builder.generatePrompt.notTailoredNote')}
         </p>
       )}
-      <Button onClick={onGenerate} disabled={isGenerating} className="gap-2">
+      <Button type="button" onClick={onGenerate} disabled={isGenerating} className="gap-2">
         {isGenerating ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -70,7 +70,7 @@ export function GeneratePrompt({
           </>
         )}
       </Button>
-      <p className="font-mono text-xs text-gray-400 mt-4">
+      <p className="text-xs text-[var(--text-3)] mt-4">
         {isOutreach
           ? t('builder.generatePrompt.outreachFooter')
           : t('builder.generatePrompt.coverLetterFooter')}

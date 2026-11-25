@@ -221,7 +221,10 @@ export default function AdminUsersPage() {
           </div>
           <div className="mt-3 space-y-2 text-sm">
             {filteredUsers.map((user) => (
-              <div key={user._id} className="grid grid-cols-5 items-center gap-2">
+              <div
+                key={user._id}
+                className="grid grid-cols-5 items-center gap-2 rounded-xl px-2 py-2 transition-colors hover:bg-slate-50/80"
+              >
                 <span className="truncate">{user.email}</span>
                 <span className="truncate">{user.fullName}</span>
                 <span>

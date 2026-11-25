@@ -5,7 +5,7 @@ export function createParsingClient({
   baseUrl = process.env.PARSING_SERVICE_URL || "http://localhost:8020",
   timeoutMs = Number.parseInt(process.env.PARSING_TIMEOUT_MS || "15000", 10),
 } = {}) {
-  async function extractRawTextFromFile({ buffer, originalname = "resume.pdf", mimetype = "application/pdf" }) {
+  async function parseFile({ buffer, originalname = "resume.pdf", mimetype = "application/pdf" }) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -30,11 +30,19 @@ export function createParsingClient({
       if (!rawText) {
         throw new Error("Parsing service returned empty text");
       }
-      return rawText;
+      return {
+        rawText,
+        parsedData: data?.parsed_data && typeof data.parsed_data === "object" ? data.parsed_data : null,
+      };
     } finally {
       clearTimeout(timer);
     }
   }
 
-  return { extractRawTextFromFile };
+  async function extractRawTextFromFile(params) {
+    const { rawText } = await parseFile(params);
+    return rawText;
+  }
+
+  return { parseFile, extractRawTextFromFile };
 }

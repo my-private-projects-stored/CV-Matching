@@ -9,6 +9,7 @@ import {
   hasAnyRole,
   validateResumeUpload,
 } from "@cvm/shared";
+import { hasMeaningfulStructuredData, parseRawTextToStructuredData } from "./resume-parser.js";
 
 function sha256Text(text) {
   return crypto.createHash("sha256").update(String(text || "")).digest("hex");
@@ -141,6 +142,7 @@ export function createResumeService({
     });
 
     let rawText = "";
+    let parsedData = {};
     let isAnalyzed = false;
     let processingStatus = "pending";
     let processingError = "";
@@ -148,11 +150,23 @@ export function createResumeService({
     let queuedForRetry = false;
 
     try {
-      rawText = await parsingClient.extractRawTextFromFile({
+      const parseParams = {
         buffer: file.buffer,
         originalname: file.originalname || `resume.${validation.detectedType}`,
         mimetype: file.mimetype || "application/octet-stream",
-      });
+      };
+      if (typeof parsingClient.parseFile === "function") {
+        const parsedResult = await parsingClient.parseFile(parseParams);
+        rawText = parsedResult?.rawText || "";
+        if (hasMeaningfulStructuredData(parsedResult?.parsedData)) {
+          parsedData = parsedResult.parsedData;
+        }
+      } else {
+        rawText = await parsingClient.extractRawTextFromFile(parseParams);
+      }
+      if (rawText && !hasMeaningfulStructuredData(parsedData)) {
+        parsedData = parseRawTextToStructuredData(rawText) || {};
+      }
       const vector = await embeddingClient.embedText(rawText);
       await vectorStore.upsertResumeVector({
         resumeId,
@@ -187,6 +201,7 @@ export function createResumeService({
       fileSize: file.buffer.length,
       fileUrl: objectKey,
       storageBucket: bucket,
+      parsedData,
       rawText,
       rawTextHash: rawText ? sha256Text(rawText) : "",
       isAnalyzed,

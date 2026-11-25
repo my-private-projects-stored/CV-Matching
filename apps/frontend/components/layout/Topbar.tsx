@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, LogOut, X } from 'lucide-react';
+import { Bell, LogOut, Menu, X } from 'lucide-react';
 import { NotificationPanel } from '@/components/ui/NotificationPanel';
 import { canonicalizeRole } from '@/lib/auth/roles';
 import { useAuth } from '@/lib/context/auth-context';
@@ -11,7 +11,15 @@ import { useTranslations } from '@/lib/i18n/translations';
 import { UiLanguageSwitcher } from '@/components/ui/UiLanguageSwitcher';
 import type { NotificationItem } from '@/lib/api/notifications';
 
-export function Topbar({ breadcrumb, right }: { breadcrumb?: string; right?: ReactNode }) {
+export function Topbar({
+  breadcrumb,
+  right,
+  onMenuToggle,
+}: {
+  breadcrumb?: string;
+  right?: ReactNode;
+  onMenuToggle?: () => void;
+}) {
   const { t } = useTranslations();
   const { user, accessToken, signOut } = useAuth();
   const router = useRouter();
@@ -21,6 +29,16 @@ export function Topbar({ breadcrumb, right }: { breadcrumb?: string; right?: Rea
 
   const canonicalRole = canonicalizeRole(user?.role);
   const canUseNotifications = canonicalRole === 'candidate' || canonicalRole === 'recruiter';
+  const breadcrumbLabel =
+    breadcrumb === 'candidate'
+      ? t('roles.candidate')
+      : breadcrumb === 'recruiter'
+        ? t('roles.recruiter')
+        : breadcrumb === 'admin'
+          ? t('roles.tech_staff')
+          : breadcrumb === 'owner'
+            ? t('roles.platform_owner')
+            : breadcrumb;
 
   const handleStreamNotification = useCallback((item: NotificationItem) => {
     setUnreadCount((prev) => prev + 1);
@@ -40,10 +58,22 @@ export function Topbar({ breadcrumb, right }: { breadcrumb?: string; right?: Rea
   }, [liveToast]);
 
   return (
-    <header className="relative flex h-14 items-center justify-between border-b border-[var(--border)] bg-white px-6">
-      <div className="flex items-center gap-2 text-sm text-[var(--text-2)]">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-[var(--border)] bg-white/90 px-4 backdrop-blur-md sm:px-6">
+      <div className="flex items-center gap-2.5 text-sm text-[var(--text-2)]">
+        {onMenuToggle ? (
+          <button
+            type="button"
+            onClick={onMenuToggle}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border)] bg-white text-[var(--text-2)] hover:text-[var(--blue-700)] lg:hidden"
+            aria-label="Toggle navigation"
+          >
+            <Menu className="size-4" />
+          </button>
+        ) : null}
         <span className="font-semibold text-[var(--text-1)]">{t('app.name')}</span>
-        {breadcrumb ? <span className="text-[var(--text-3)]">/ {breadcrumb}</span> : null}
+        {breadcrumbLabel ? (
+          <span className="hidden text-[var(--text-3)] sm:inline">/ {breadcrumbLabel}</span>
+        ) : null}
       </div>
       <div className="flex items-center gap-3">
         {right}

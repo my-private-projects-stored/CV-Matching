@@ -34,20 +34,23 @@ export function CoverLetterEditor({
   const charCount = content.length;
 
   return (
-    <div className={cn('flex flex-col h-full', className)}>
+    <div
+      className={cn(
+        'flex flex-col h-full rounded-2xl border border-[var(--border)] bg-white shadow-[var(--shadow-elev-1)] overflow-hidden',
+        className
+      )}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b-2 border-black bg-[#F5F5F0]">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border)] bg-slate-50/70">
         <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4" />
-          <h2 className="font-mono text-sm font-bold uppercase tracking-wider">
-            {t('coverLetter.title')}
-          </h2>
+          <FileText className="w-4 h-4 text-[var(--blue-700)]" />
+          <h2 className="text-sm font-semibold text-[var(--text-1)]">{t('coverLetter.title')}</h2>
         </div>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-xs text-gray-500">
+          <span className="font-mono text-xs text-[var(--text-3)]">
             {t('builder.contentStats.wordsChars', { wordCount, charCount })}
           </span>
-          <Button size="sm" onClick={onSave} disabled={isSaving}>
+          <Button type="button" size="sm" onClick={onSave} disabled={isSaving}>
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {isSaving ? t('common.saving') : t('common.save')}
           </Button>
@@ -55,25 +58,25 @@ export function CoverLetterEditor({
       </div>
 
       {/* Editor Area */}
-      <div className="flex-1 p-4 overflow-hidden">
+      <div className="flex-1 p-5 overflow-hidden">
         <textarea
           value={content}
           onChange={(e) => onChange(e.target.value)}
           placeholder={t('coverLetter.editor.placeholder')}
           className={cn(
-            'w-full h-full min-h-[400px] p-4',
-            'font-mono text-sm leading-relaxed',
-            'border-2 border-black bg-white',
+            'w-full h-full min-h-[400px] p-4 rounded-xl',
+            'text-sm leading-relaxed text-[var(--text-1)]',
+            'border border-[var(--border)] bg-white',
             'resize-none',
-            'focus:outline-none focus:ring-2 focus:ring-blue-700 focus:ring-offset-2',
-            'placeholder:text-gray-400'
+            'focus:outline-none focus:border-[var(--blue-600)] focus:ring-4 focus:ring-blue-600/10',
+            'placeholder:text-[var(--text-3)]'
           )}
         />
       </div>
 
       {/* Footer Tips */}
-      <div className="p-4 border-t border-gray-200 bg-[#F5F5F0]">
-        <p className="font-mono text-xs text-gray-500">{t('coverLetter.editor.tip')}</p>
+      <div className="px-5 py-3 border-t border-[var(--border)] bg-slate-50/50">
+        <p className="text-xs text-[var(--text-3)]">{t('coverLetter.editor.tip')}</p>
       </div>
     </div>
   );

@@ -18,8 +18,12 @@
   /* Surface & background tokens */
   --bg: #f8f7f4;
   --surface: #ffffff;
+  --surface-subtle: #faf9f6;
   --surface-muted: #f1f5f9;
   --secondary: #e2e8f0;
+  --blue-200: #bfdbfe;
+  --shadow-elev-1: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
+  --shadow-elev-2: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 4px 10px -4px rgba(15, 23, 42, 0.04);
 
   /* Border */
   --border: #e2e8f0;

@@ -81,8 +81,8 @@ export const RegenerateInstructionDialog: React.FC<RegenerateInstructionDialogPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] p-0 gap-0 rounded-none">
-        <DialogHeader className="p-6 pb-4 border-b border-black">
+      <DialogContent className="sm:max-w-[600px] p-0 gap-0 rounded-lg">
+        <DialogHeader className="p-6 pb-4 border-b border-[var(--border)]">
           <DialogTitle className="font-serif text-xl font-bold uppercase tracking-tight">
             {t('builder.regenerate.instructionDialog.title')}
           </DialogTitle>
@@ -130,23 +130,23 @@ export const RegenerateInstructionDialog: React.FC<RegenerateInstructionDialogPr
               onKeyDown={handleKeyDown}
               maxLength={2000}
               placeholder={t('builder.regenerate.instructionDialog.placeholder')}
-              className="min-h-[120px] border-black"
+              className="min-h-[120px] border-[var(--border)]"
               disabled={isGenerating}
             />
           </div>
         </div>
 
-        <DialogFooter className="p-4 bg-[#E5E5E0] border-t border-black flex-row justify-between gap-3">
+        <DialogFooter className="p-4 bg-slate-100/80 border-t border-[var(--border)] flex-row justify-between gap-3">
           <Button
             variant="outline"
             onClick={onBack}
             disabled={isGenerating}
-            className="rounded-none border-black"
+            className="rounded-lg border-[var(--border)]"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             {t('builder.regenerate.instructionDialog.backButton')}
           </Button>
-          <Button onClick={onGenerate} disabled={isGenerating} className="rounded-none">
+          <Button onClick={onGenerate} disabled={isGenerating} className="rounded-lg">
             {isGenerating ? (
               <>
                 <Sparkles className="w-4 h-4 animate-spin" />

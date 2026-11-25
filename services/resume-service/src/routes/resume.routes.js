@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import { MAX_RESUME_UPLOAD_BYTES, ROLES } from "@cvm/shared";
 import { requireAuth, requireRole } from "../middleware/auth-context.js";
+import { hasMeaningfulStructuredData, parseRawTextToStructuredData } from "../services/resume-parser.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -59,8 +60,7 @@ function buildSimplePdfBuffer(title = "Document", lines = []) {
 }
 
 function formatResumeDetail(doc) {
-  const hasParsedData =
-    doc.parsedData && typeof doc.parsedData === "object" && Object.keys(doc.parsedData).length > 0;
+  const hasParsedData = hasMeaningfulStructuredData(doc.parsedData);
   const builderSections =
     doc.builderData?.sections &&
     typeof doc.builderData.sections === "object" &&
@@ -71,6 +71,11 @@ function formatResumeDetail(doc) {
           customSections: doc.builderData.customSections,
         }
       : null;
+
+  const processedResume =
+    builderSections ||
+    (hasParsedData ? doc.parsedData : null) ||
+    (doc.rawText ? parseRawTextToStructuredData(doc.rawText) : null);
 
   return {
     resume_id: String(doc._id),
@@ -83,7 +88,7 @@ function formatResumeDetail(doc) {
       created_at: doc.createdAt,
       processing_status: toUiProcessingStatus(doc.processingStatus),
     },
-    processed_resume: hasParsedData ? doc.parsedData : builderSections,
+    processed_resume: processedResume,
     builder_data: doc.builderData || null,
     cover_letter: doc.coverLetter || null,
     coverLetter: doc.coverLetter || null,

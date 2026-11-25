@@ -262,7 +262,7 @@ export const DynamicSectionForm: React.FC<DynamicSectionFormProps> = ({
 
   if (needsWrapper) {
     return (
-      <div className="space-y-6 border border-black p-6 bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+      <div className="space-y-6 border border-[var(--border)] p-6 bg-white shadow-[var(--shadow-elev-1)] rounded-2xl">
         <SectionHeader
           section={sectionMeta}
           onRename={handleRename}

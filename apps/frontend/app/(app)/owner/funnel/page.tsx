@@ -116,7 +116,7 @@ export default function OwnerFunnelPage() {
                     </div>
                     <div className="h-3 w-full overflow-hidden rounded-full bg-[var(--blue-50)]">
                       <div
-                        className="h-full rounded-full bg-[var(--blue-700)]"
+                        className="h-full rounded-full bg-gradient-to-r from-[var(--blue-700)] to-[var(--blue-500)] transition-all duration-300"
                         style={{ width: `${Math.round((count / maxStage) * 100)}%` }}
                       />
                     </div>

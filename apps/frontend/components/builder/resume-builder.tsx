@@ -733,23 +733,16 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
   };
 
   return (
-    <div
-      className="h-screen w-full bg-[#F0F0E8] flex justify-center items-center p-4 md:p-8"
-      style={{
-        backgroundImage:
-          'linear-gradient(rgba(29, 78, 216, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(29, 78, 216, 0.1) 1px, transparent 1px)',
-        backgroundSize: '40px 40px',
-      }}
-    >
-      {/* Main Container */}
-      <div className="w-full h-full max-w-[90%] md:max-w-[95%] xl:max-w-[1800px] border border-black bg-[#F0F0E8] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] flex flex-col">
-        {/* Header Section */}
-        <div className="border-b border-black p-6 md:p-8 bg-[#F0F0E8] no-print">
-          {/* Top Row: Back button and Actions */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-            <div className="flex flex-col gap-1">
+    <div className="mx-auto flex max-w-[1680px] flex-col gap-4">
+      {/* Top Action Toolbar */}
+      <div className="rounded-2xl border border-[var(--border)] bg-white px-5 py-3.5 shadow-[var(--shadow-elev-1)] no-print">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex flex-wrap items-center gap-3">
               <Button
-                variant="link"
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   if (user?.role === 'recruiter') {
                     router.push('/recruiter/dashboard');
@@ -759,413 +752,363 @@ const ResumeBuilderContent = ({ resumeId: resumeIdProp }: { resumeId?: string })
                     router.push('/candidate/dashboard');
                   }
                 }}
-                className="mb-2 -ml-1"
+                className="-ml-2 text-[var(--text-2)] hover:text-[var(--blue-700)]"
               >
                 <ArrowLeft className="w-4 h-4" />
                 {t('nav.backToDashboard')}
               </Button>
-              <h1 className="font-serif text-3xl md:text-5xl text-black tracking-tight leading-[0.95] uppercase">
-                {t('nav.builder')}
-              </h1>
-              <div className="mt-3 flex items-center gap-3">
-                <p className="text-sm font-mono text-blue-700 uppercase tracking-wide font-bold">
-                  {'// '}
-                  {resumeId ? t('builder.editMode') : t('builder.createAndPreview')}
-                </p>
-                {hasUnsavedChanges && (
-                  <span className="flex items-center gap-1 text-xs font-mono text-amber-600 bg-amber-50 px-2 py-1 border border-amber-200">
-                    <AlertTriangle className="w-3 h-3" />
-                    {t('builder.unsavedDraft')}
-                  </span>
-                )}
-              </div>
+              <span className="rounded-full bg-[var(--blue-50)] px-2.5 py-0.5 text-xs font-medium text-[var(--blue-700)]">
+                {resumeId ? t('builder.editMode') : t('builder.createAndPreview')}
+              </span>
+              {hasUnsavedChanges && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                  <AlertTriangle className="w-3 h-3" />
+                  {t('builder.unsavedDraft')}
+                </span>
+              )}
             </div>
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-[var(--text-1)]">
+              {t('nav.builder')}
+            </h1>
+          </div>
 
-            <div className="flex gap-3 mt-4 md:mt-0">
-              {/* Resume tab actions */}
-              {activeTab === 'resume' && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => regenerateWizard.startRegenerate()}
-                    disabled={!resumeId}
-                  >
+          <div className="flex flex-wrap items-center gap-2.5">
+            {activeTab === 'resume' && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => regenerateWizard.startRegenerate()}
+                  disabled={!resumeId}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {t('builder.regenerate.buttonLabel')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="warning"
+                  size="sm"
+                  onClick={handleReset}
+                  disabled={!hasUnsavedChanges}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  {t('common.reset')}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={!resumeId || isSaving}
+                >
+                  <Save className="w-4 h-4" />
+                  {isSaving ? t('common.saving') : t('common.save')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="success"
+                  size="sm"
+                  onClick={handleDownload}
+                  disabled={!resumeId || isDownloading}
+                >
+                  <Download className="w-4 h-4" />
+                  {isDownloading ? t('common.generating') : t('common.download')}
+                </Button>
+              </>
+            )}
+
+            {activeTab === 'cover-letter' && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateCoverLetter}
+                  disabled={isGeneratingCoverLetter || !resumeId}
+                >
+                  {isGeneratingCoverLetter ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
                     <Sparkles className="w-4 h-4" />
-                    {t('builder.regenerate.buttonLabel')}
-                  </Button>
+                  )}
+                  {coverLetter ? t('coverLetter.regenerate') : t('coverLetter.generate')}
+                </Button>
+                {coverLetter && (
                   <Button
-                    variant="warning"
-                    size="sm"
-                    onClick={handleReset}
-                    disabled={!hasUnsavedChanges}
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    {t('common.reset')}
-                  </Button>
-                  <Button size="sm" onClick={handleSave} disabled={!resumeId || isSaving}>
-                    <Save className="w-4 h-4" />
-                    {isSaving ? t('common.saving') : t('common.save')}
-                  </Button>
-                  <Button
+                    type="button"
                     variant="success"
                     size="sm"
-                    onClick={handleDownload}
+                    onClick={handleDownloadCoverLetter}
                     disabled={!resumeId || isDownloading}
                   >
                     <Download className="w-4 h-4" />
                     {isDownloading ? t('common.generating') : t('common.download')}
                   </Button>
-                </>
-              )}
+                )}
+              </>
+            )}
 
-              {/* Cover letter tab actions */}
-              {activeTab === 'cover-letter' && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGenerateCoverLetter}
-                    disabled={isGeneratingCoverLetter || !resumeId}
-                  >
-                    {isGeneratingCoverLetter ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="w-4 h-4" />
-                    )}
-                    {coverLetter ? t('coverLetter.regenerate') : t('coverLetter.generate')}
-                  </Button>
-                  {coverLetter && (
-                    <Button
-                      variant="success"
-                      size="sm"
-                      onClick={handleDownloadCoverLetter}
-                      disabled={!resumeId || isDownloading}
-                    >
-                      <Download className="w-4 h-4" />
-                      {isDownloading ? t('common.generating') : t('common.download')}
-                    </Button>
+            {activeTab === 'outreach' && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateOutreach}
+                  disabled={isGeneratingOutreach || !resumeId}
+                >
+                  {isGeneratingOutreach ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
                   )}
-                </>
-              )}
-
-              {/* Outreach tab actions */}
-              {activeTab === 'outreach' && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGenerateOutreach}
-                    disabled={isGeneratingOutreach || !resumeId}
-                  >
-                    {isGeneratingOutreach ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                  {outreachMessage ? t('outreach.regenerate') : t('outreach.generate')}
+                </Button>
+                {outreachMessage && (
+                  <Button type="button" variant="success" size="sm" onClick={handleCopyOutreach}>
+                    {isCopied ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        {t('outreach.copied')}
+                      </>
                     ) : (
-                      <Sparkles className="w-4 h-4" />
+                      <>
+                        <Copy className="w-4 h-4" />
+                        {t('outreach.copyToClipboard')}
+                      </>
                     )}
-                    {outreachMessage ? t('outreach.regenerate') : t('outreach.generate')}
                   </Button>
-                  {outreachMessage && (
-                    <Button variant="success" size="sm" onClick={handleCopyOutreach}>
-                      {isCopied ? (
-                        <>
-                          <Check className="w-4 h-4" />
-                          {t('outreach.copied')}
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4" />
-                          {t('outreach.copyToClipboard')}
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 
-        {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 bg-black gap-[1px] flex-1 min-h-0">
-          {/* Left Panel: Editor */}
-          <div className="bg-[#F0F0E8] p-6 md:p-8 overflow-y-auto no-print">
-            <div className="max-w-3xl mx-auto space-y-6">
-              <div className="flex items-center gap-2 border-b-2 border-black pb-2">
-                <div className="w-3 h-3 bg-blue-700"></div>
-                <h2 className="font-mono text-lg font-bold uppercase tracking-wider">
-                  {activeTab === 'resume' && t('builder.leftPanel.editorPanel')}
-                  {activeTab === 'cover-letter' && t('builder.leftPanel.coverLetterEditor')}
-                  {activeTab === 'outreach' && t('builder.leftPanel.outreachEditor')}
-                  {activeTab === 'jd-match' && t('builder.leftPanel.jdMatchAnalysis')}
-                </h2>
-              </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
+          <RetroTabs
+            tabs={[
+              { id: 'resume', label: t('builder.previewTabs.resume') },
+              { id: 'cover-letter', label: t('builder.previewTabs.coverLetter') },
+              { id: 'outreach', label: t('builder.previewTabs.outreach') },
+              { id: 'jd-match', label: t('builder.previewTabs.jdMatch') },
+            ]}
+            activeTab={activeTab}
+            onTabChange={(id) => setActiveTab(id as TabId)}
+          />
+          <div className="hidden sm:flex items-center gap-2 text-xs text-[var(--text-3)]">
+            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+            <span>
+              {templateSettings.template === 'swiss-single' ||
+              templateSettings.template === 'modern'
+                ? t('builder.footer.singleColumn')
+                : t('builder.footer.twoColumn')}
+            </span>
+            <span>·</span>
+            <span className="font-mono">
+              {templateSettings.pageSize === 'A4' ? 'A4' : t('builder.pageSize.usLetter')}
+            </span>
+          </div>
+        </div>
+      </div>
 
-              {/* Resume Editor */}
-              {activeTab === 'resume' && (
-                <>
-                  {isBuilderProcessing && (
-                    <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                      <svg
-                        className="h-4 w-4 shrink-0 animate-spin"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                        />
-                      </svg>
-                      <span>{t('builder.alerts.analyzingCv')}</span>
-                    </div>
-                  )}
-                  <FormattingControls settings={templateSettings} onChange={handleSettingsChange} />
-                  <ResumeForm resumeData={resumeData} onUpdate={handleUpdate} />
-                </>
-              )}
-
-              {/* Cover Letter Editor */}
-              {activeTab === 'cover-letter' &&
-                (coverLetter ? (
-                  <CoverLetterEditor
-                    content={coverLetter}
-                    onChange={setCoverLetter}
-                    onSave={handleSaveCoverLetter}
-                    isSaving={isCoverLetterSaving}
-                  />
-                ) : (
-                  <GeneratePrompt
-                    type="cover-letter"
-                    isGenerating={isGeneratingCoverLetter}
-                    onGenerate={handleGenerateCoverLetter}
-                    isTailoredResume={isTailoredResume}
-                  />
-                ))}
-
-              {/* Outreach Editor */}
-              {activeTab === 'outreach' &&
-                (outreachMessage ? (
-                  <OutreachEditor
-                    content={outreachMessage}
-                    onChange={setOutreachMessage}
-                    onSave={handleSaveOutreach}
-                    isSaving={isOutreachSaving}
-                  />
-                ) : (
-                  <GeneratePrompt
-                    type="outreach"
-                    isGenerating={isGeneratingOutreach}
-                    onGenerate={handleGenerateOutreach}
-                    isTailoredResume={isTailoredResume}
-                  />
-                ))}
-
-              {/* JD Match Info Panel */}
-              {activeTab === 'jd-match' && (
-                <div className="space-y-4">
-                  {/* JD Paste input — shown when no JD is auto-loaded (non-tailored resume) */}
-                  {!jobDescription && (
-                    <div className="border-2 border-black bg-white p-4">
-                      <h3 className="font-mono text-sm font-bold uppercase mb-2">
-                        {t('builder.jdMatch.pasteJDTitle')}
-                      </h3>
-                      <p className="font-mono text-xs text-gray-500 mb-3 leading-relaxed">
-                        {t('builder.jdMatch.pasteJDHint')}
-                      </p>
-                      <textarea
-                        className="w-full h-44 border border-gray-300 p-3 text-sm font-mono resize-y focus:outline-none focus:border-black bg-white"
-                        placeholder={t('builder.jdMatch.pasteJDPlaceholder')}
-                        value={customJD}
-                        onChange={(e) => setCustomJD(e.target.value)}
-                      />
-                    </div>
-                  )}
-
-                  {/* About box — only when JD is auto-loaded */}
-                  {jobDescription && (
-                    <div className="border-2 border-black bg-white p-4">
-                      <h3 className="font-mono text-sm font-bold uppercase mb-2">
-                        {t('builder.jdMatch.aboutTitle')}
-                      </h3>
-                      <p className="text-sm text-gray-600 leading-relaxed">
-                        {t('builder.jdMatch.aboutDescription')}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="border-2 border-black bg-[#F0F0E8] p-4">
-                    <h3 className="font-mono text-sm font-bold uppercase mb-2">
-                      {t('builder.jdMatch.highlightedKeywordsTitle')}
-                    </h3>
-                    <p className="text-sm text-gray-600 leading-relaxed">
-                      {(() => {
-                        const template = t(
-                          'builder.jdMatch.highlightedKeywordsDescriptionTemplate'
-                        );
-                        const parts = template.split('__COLOR__');
-                        if (parts.length < 2) return template;
-                        return (
-                          <>
-                            {parts[0]}
-                            <mark className="bg-yellow-200 px-1">
-                              {t('builder.jdMatch.highlightColor')}
-                            </mark>
-                            {parts.slice(1).join('__COLOR__')}
-                          </>
-                        );
-                      })()}
-                    </p>
-                  </div>
-
-                  <div className="border-2 border-black bg-white p-4">
-                    <h3 className="font-mono text-sm font-bold uppercase mb-2">
-                      {t('builder.jdMatch.tipsTitle')}
-                    </h3>
-                    <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
-                      <li>{t('builder.jdMatch.tips.items.addMissingKeywords')}</li>
-                      <li>{t('builder.jdMatch.tips.items.focusTechnicalSkills')}</li>
-                      <li>{t('builder.jdMatch.tips.items.matchActionVerbs')}</li>
-                    </ul>
-                  </div>
+      {/* 2-Column Split Workspace */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:h-[calc(100vh-190px)] lg:min-h-[600px]">
+        {/* Left Panel: Editor */}
+        <div className="space-y-4 lg:col-span-6 lg:h-full lg:overflow-y-auto lg:pr-2 pb-4 no-print">
+          {/* Resume Editor */}
+          {activeTab === 'resume' && (
+            <>
+              {isBuilderProcessing && (
+                <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                  <span>{t('builder.alerts.analyzingCv')}</span>
                 </div>
               )}
-            </div>
-          </div>
+              <FormattingControls settings={templateSettings} onChange={handleSettingsChange} />
+              <ResumeForm resumeData={resumeData} onUpdate={handleUpdate} />
+            </>
+          )}
 
-          {/* Right Panel: Preview with Tabs */}
-          <div className="bg-[#E5E5E0] overflow-hidden flex flex-col no-print">
-            {/* Tabs Header */}
-            <div className="px-6 pt-3 shrink-0 bg-[#E5E5E0]">
-              <RetroTabs
-                tabs={[
-                  { id: 'resume', label: t('builder.previewTabs.resume') },
-                  {
-                    id: 'cover-letter',
-                    label: t('builder.previewTabs.coverLetter'),
-                  },
-                  {
-                    id: 'outreach',
-                    label: t('builder.previewTabs.outreach'),
-                  },
-                  {
-                    id: 'jd-match',
-                    label: t('builder.previewTabs.jdMatch'),
-                  },
-                ]}
-                activeTab={activeTab}
-                onTabChange={(id) => setActiveTab(id as TabId)}
+          {/* Cover Letter Editor */}
+          {activeTab === 'cover-letter' &&
+            (coverLetter ? (
+              <CoverLetterEditor
+                content={coverLetter}
+                onChange={setCoverLetter}
+                onSave={handleSaveCoverLetter}
+                isSaving={isCoverLetterSaving}
               />
-            </div>
+            ) : (
+              <GeneratePrompt
+                type="cover-letter"
+                isGenerating={isGeneratingCoverLetter}
+                onGenerate={handleGenerateCoverLetter}
+                isTailoredResume={isTailoredResume}
+              />
+            ))}
 
-            {/* Preview Content */}
-            <div className="flex-1 overflow-y-auto">
-              {/* Resume Preview */}
-              {activeTab === 'resume' && (
-                <PaginatedPreview
-                  resumeData={localizedResumeDataForPreview}
-                  settings={templateSettings}
-                />
+          {/* Outreach Editor */}
+          {activeTab === 'outreach' &&
+            (outreachMessage ? (
+              <OutreachEditor
+                content={outreachMessage}
+                onChange={setOutreachMessage}
+                onSave={handleSaveOutreach}
+                isSaving={isOutreachSaving}
+              />
+            ) : (
+              <GeneratePrompt
+                type="outreach"
+                isGenerating={isGeneratingOutreach}
+                onGenerate={handleGenerateOutreach}
+                isTailoredResume={isTailoredResume}
+              />
+            ))}
+
+          {/* JD Match Info Panel */}
+          {activeTab === 'jd-match' && (
+            <div className="space-y-4">
+              {!jobDescription && (
+                <div className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-elev-1)]">
+                  <h3 className="text-sm font-semibold text-[var(--text-1)] mb-1">
+                    {t('builder.jdMatch.pasteJDTitle')}
+                  </h3>
+                  <p className="text-xs text-[var(--text-3)] mb-3 leading-relaxed">
+                    {t('builder.jdMatch.pasteJDHint')}
+                  </p>
+                  <textarea
+                    className="w-full h-44 rounded-xl border border-[var(--border)] p-3 text-sm resize-y focus:outline-none focus:border-[var(--blue-600)] focus:ring-4 focus:ring-blue-600/10 bg-white"
+                    placeholder={t('builder.jdMatch.pasteJDPlaceholder')}
+                    value={customJD}
+                    onChange={(e) => setCustomJD(e.target.value)}
+                  />
+                </div>
               )}
 
-              {/* Cover Letter Preview */}
-              {activeTab === 'cover-letter' &&
-                (coverLetter && resumeData.personalInfo ? (
-                  <div className="p-6">
-                    <CoverLetterPreview
-                      content={coverLetter}
-                      personalInfo={resumeData.personalInfo}
-                      pageSize={templateSettings.pageSize}
-                    />
-                  </div>
-                ) : (
-                  <GeneratePrompt
-                    type="cover-letter"
-                    isGenerating={isGeneratingCoverLetter}
-                    onGenerate={handleGenerateCoverLetter}
-                    isTailoredResume={isTailoredResume}
-                  />
-                ))}
-
-              {/* Outreach Preview */}
-              {activeTab === 'outreach' &&
-                (outreachMessage ? (
-                  <div className="p-6">
-                    <OutreachPreview content={outreachMessage} />
-                  </div>
-                ) : (
-                  <GeneratePrompt
-                    type="outreach"
-                    isGenerating={isGeneratingOutreach}
-                    onGenerate={handleGenerateOutreach}
-                    isTailoredResume={isTailoredResume}
-                  />
-                ))}
-
-              {/* JD Match Comparison */}
-              {activeTab === 'jd-match' && effectiveJD && (
-                <JDComparisonView jobDescription={effectiveJD} resumeData={resumeData} />
-              )}
-              {activeTab === 'jd-match' && !effectiveJD && (
-                <div className="flex flex-col items-center justify-center h-full p-8 text-center gap-4">
-                  <div className="w-16 h-16 border-2 border-gray-300 bg-gray-100 flex items-center justify-center">
-                    <svg
-                      className="w-8 h-8 text-gray-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                  </div>
-                  <p className="font-mono text-xs text-gray-500 uppercase tracking-wider max-w-xs">
-                    {t('builder.jdMatch.noJDPlaceholder')}
+              {jobDescription && (
+                <div className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-elev-1)]">
+                  <h3 className="text-sm font-semibold text-[var(--text-1)] mb-2">
+                    {t('builder.jdMatch.aboutTitle')}
+                  </h3>
+                  <p className="text-sm text-[var(--text-2)] leading-relaxed">
+                    {t('builder.jdMatch.aboutDescription')}
                   </p>
                 </div>
               )}
+
+              <div className="rounded-2xl border border-[var(--blue-100)] bg-[var(--blue-50)]/60 p-5">
+                <h3 className="text-sm font-semibold text-[var(--text-1)] mb-2">
+                  {t('builder.jdMatch.highlightedKeywordsTitle')}
+                </h3>
+                <p className="text-sm text-[var(--text-2)] leading-relaxed">
+                  {(() => {
+                    const template = t('builder.jdMatch.highlightedKeywordsDescriptionTemplate');
+                    const parts = template.split('__COLOR__');
+                    if (parts.length < 2) return template;
+                    return (
+                      <>
+                        {parts[0]}
+                        <mark className="rounded bg-yellow-200 px-1">
+                          {t('builder.jdMatch.highlightColor')}
+                        </mark>
+                        {parts.slice(1).join('__COLOR__')}
+                      </>
+                    );
+                  })()}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-elev-1)]">
+                <h3 className="text-sm font-semibold text-[var(--text-1)] mb-2">
+                  {t('builder.jdMatch.tipsTitle')}
+                </h3>
+                <ul className="text-sm text-[var(--text-2)] space-y-1.5 list-disc list-inside">
+                  <li>{t('builder.jdMatch.tips.items.addMissingKeywords')}</li>
+                  <li>{t('builder.jdMatch.tips.items.focusTechnicalSkills')}</li>
+                  <li>{t('builder.jdMatch.tips.items.matchActionVerbs')}</li>
+                </ul>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Footer */}
-        <div className="p-4 bg-[#F0F0E8] flex justify-between items-center font-mono text-xs text-blue-700 border-t border-black no-print">
-          <span className="uppercase font-bold flex items-center gap-2">
-            <Image
-              src="/logo.svg"
-              alt="Resume Matcher"
-              width={20}
-              height={20}
-              className="w-5 h-5"
-            />
-            {t('builder.footer.moduleLabel')}
-          </span>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-700"></div>
-              <span className="uppercase">
-                {templateSettings.template === 'swiss-single' ||
-                templateSettings.template === 'modern'
-                  ? t('builder.footer.singleColumn')
-                  : t('builder.footer.twoColumn')}
-              </span>
-            </div>
-            <span className="text-gray-400">|</span>
-            <span className="uppercase">
-              {templateSettings.pageSize === 'A4' ? 'A4' : t('builder.pageSize.usLetter')}
-            </span>
+        {/* Right Panel: Live Preview */}
+        <div className="lg:col-span-6 rounded-2xl border border-[var(--border)] bg-slate-100/80 overflow-hidden shadow-[var(--shadow-elev-1)] flex flex-col min-h-[540px] lg:h-full no-print">
+          <div
+            className={
+              activeTab === 'resume'
+                ? 'flex-1 min-h-0 overflow-hidden'
+                : 'flex-1 min-h-0 overflow-y-auto'
+            }
+          >
+            {activeTab === 'resume' && (
+              <PaginatedPreview
+                resumeData={localizedResumeDataForPreview}
+                settings={templateSettings}
+              />
+            )}
+
+            {activeTab === 'cover-letter' &&
+              (coverLetter && resumeData.personalInfo ? (
+                <div className="p-6">
+                  <CoverLetterPreview
+                    content={coverLetter}
+                    personalInfo={resumeData.personalInfo}
+                    pageSize={templateSettings.pageSize}
+                  />
+                </div>
+              ) : (
+                <div className="p-6">
+                  <GeneratePrompt
+                    type="cover-letter"
+                    isGenerating={isGeneratingCoverLetter}
+                    onGenerate={handleGenerateCoverLetter}
+                    isTailoredResume={isTailoredResume}
+                  />
+                </div>
+              ))}
+
+            {activeTab === 'outreach' &&
+              (outreachMessage ? (
+                <div className="p-6">
+                  <OutreachPreview content={outreachMessage} />
+                </div>
+              ) : (
+                <div className="p-6">
+                  <GeneratePrompt
+                    type="outreach"
+                    isGenerating={isGeneratingOutreach}
+                    onGenerate={handleGenerateOutreach}
+                    isTailoredResume={isTailoredResume}
+                  />
+                </div>
+              ))}
+
+            {activeTab === 'jd-match' && effectiveJD && (
+              <JDComparisonView jobDescription={effectiveJD} resumeData={resumeData} />
+            )}
+            {activeTab === 'jd-match' && !effectiveJD && (
+              <div className="flex flex-col items-center justify-center h-full min-h-[360px] p-8 text-center gap-4">
+                <div className="w-14 h-14 rounded-2xl border border-[var(--border)] bg-white flex items-center justify-center shadow-sm">
+                  <svg
+                    className="w-7 h-7 text-[var(--text-3)]"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </div>
+                <p className="text-xs text-[var(--text-3)] max-w-xs">
+                  {t('builder.jdMatch.noJDPlaceholder')}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -55,7 +55,7 @@ export function PageContainer({
     <div className="relative flex flex-col items-center">
       {/* Page wrapper with scale transform */}
       <div
-        className="relative bg-white border-2 border-black shadow-[6px_6px_0px_0px_#000000] origin-top"
+        className="relative bg-white rounded-[3px] border border-slate-200/90 shadow-[0_12px_36px_rgba(15,23,42,0.12)] origin-top"
         style={{
           width: pageWidthPx,
           height: pageHeightPx,

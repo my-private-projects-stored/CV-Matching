@@ -93,14 +93,14 @@ export const EducationForm: React.FC<EducationFormProps> = ({ data, onChange }) 
           variant="outline"
           size="sm"
           onClick={handleAdd}
-          className="rounded-none border-black hover:bg-black hover:text-white transition-colors"
+          className="rounded-lg border-[var(--border)] hover:bg-black hover:text-white transition-colors"
         >
           <Plus className="w-4 h-4 mr-2" /> {t('builder.forms.education.addSchool')}
         </Button>
       </div>
 
       {data.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 border border-dashed border-black">
+        <div className="text-center py-12 bg-gray-50 border border-dashed border-[var(--border)]">
           <p className="font-mono text-sm text-gray-500 mb-4">
             {t('builder.genericItemForm.noEntries', { label: t('resume.sections.education') })}
           </p>
@@ -108,7 +108,7 @@ export const EducationForm: React.FC<EducationFormProps> = ({ data, onChange }) 
             variant="outline"
             size="sm"
             onClick={handleAdd}
-            className="rounded-none border-black"
+            className="rounded-lg border-[var(--border)]"
           >
             <Plus className="w-4 h-4 mr-2" /> {t('builder.forms.education.addFirstSchool')}
           </Button>
@@ -122,7 +122,7 @@ export const EducationForm: React.FC<EducationFormProps> = ({ data, onChange }) 
             <div className="space-y-8">
               {data.map((item) => (
                 <DraggableListItem key={item.id} id={item.id}>
-                  <div className="p-6 border border-black bg-gray-50 relative group">
+                  <div className="p-6 border border-[var(--border)] bg-gray-50 relative group">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -141,7 +141,7 @@ export const EducationForm: React.FC<EducationFormProps> = ({ data, onChange }) 
                           value={item.institution || ''}
                           onChange={(e) => handleChange(item.id, 'institution', e.target.value)}
                           placeholder={t('builder.forms.education.placeholders.institution')}
-                          className="rounded-none border-black bg-white"
+                          className="rounded-lg border-[var(--border)] bg-white"
                         />
                       </div>
                       <div className="space-y-2">
@@ -152,7 +152,7 @@ export const EducationForm: React.FC<EducationFormProps> = ({ data, onChange }) 
                           value={item.degree || ''}
                           onChange={(e) => handleChange(item.id, 'degree', e.target.value)}
                           placeholder={t('builder.forms.education.placeholders.degree')}
-                          className="rounded-none border-black bg-white"
+                          className="rounded-lg border-[var(--border)] bg-white"
                         />
                       </div>
                       <div className="space-y-2">
@@ -163,7 +163,7 @@ export const EducationForm: React.FC<EducationFormProps> = ({ data, onChange }) 
                           value={item.years || ''}
                           onChange={(e) => handleChange(item.id, 'years', e.target.value)}
                           placeholder={t('builder.forms.education.placeholders.years')}
-                          className="rounded-none border-black bg-white"
+                          className="rounded-lg border-[var(--border)] bg-white"
                         />
                       </div>
                     </div>
@@ -175,7 +175,7 @@ export const EducationForm: React.FC<EducationFormProps> = ({ data, onChange }) 
                       <Textarea
                         value={item.description || ''}
                         onChange={(e) => handleChange(item.id, 'description', e.target.value)}
-                        className="min-h-[60px] text-black text-sm rounded-none border-black bg-white"
+                        className="min-h-[60px] text-black text-sm rounded-lg border-[var(--border)] bg-white"
                         placeholder={t('builder.forms.education.placeholders.description')}
                       />
                     </div>

@@ -238,7 +238,7 @@ export default function AdminConfigPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={header.title} subtitle={header.subtitle} action={<SystemHealthBadge />} />
-      <div className="flex flex-wrap gap-2">
+      <div className="inline-flex flex-wrap gap-1.5 rounded-2xl border border-[var(--border)] bg-white p-1.5 shadow-[var(--shadow-elev-1)]">
         {(
           [
             ['llm', 'admin.tabs.llm'],
@@ -254,7 +254,12 @@ export default function AdminConfigPage() {
         ).map(([id, labelKey]) => (
           <button
             key={id}
-            className={`rounded-lg border border-[var(--border)] px-3 py-2 text-xs ${tab === id ? 'bg-[var(--blue-50)] text-[var(--blue-700)]' : ''}`}
+            type="button"
+            className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-all ${
+              tab === id
+                ? 'bg-[var(--blue-700)] font-semibold text-white shadow-sm'
+                : 'text-[var(--text-2)] hover:bg-slate-50 hover:text-[var(--text-1)]'
+            }`}
             onClick={() => setTab(id as Tab)}
           >
             {t(labelKey)}
